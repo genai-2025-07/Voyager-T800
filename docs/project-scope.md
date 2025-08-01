@@ -116,15 +116,20 @@ The primary users of the application:
 
 ##  9. Weekly Milestone Alignment
 
-| **Week** | **Goal** |
-|----------|----------|
-| 1 | Prompt engineering, project outline |
-| 2 | LLM prototype, UI draft |
-| 3 | LangChain chain, itinerary logic |
-| 4 | Vector DB + early RAG |
-| 5–7 | Vision integration, agents, follow-up UX |
-| 8–10 | Deployment, evaluation, expansion |
-| 11–12 | Final polish and demo prep |
+| Milestone | Expected Completion Date | Description/Details |
+|-----------|-------------------------|-------------------|
+| **Project Kickoff & Team Formation** | August 1, 2025 | Complete onboarding, GitHub setup, team role assignments, Scope of Work, and initial travel data research |
+| **LLM Integration & Prompt Engineering** | August 8, 2025 | Working LLM integration with travel-focused prompts and basic conversation capabilities |
+| **Vector Database & LangChain Implementation** | August 15, 2025 | Functional vector database with travel location embeddings, LangChain workflows, and conversation memory |
+| **Basic UI** | August 25, 2025 | Chat-based UI using Streamlit or React for travel preferences|
+| **Demo 1: Foundation System** | August 25, 2025 | First demonstration of conversational AI with travel knowledge (Ukrainian cities focus) and basic multimodal capabilities |
+| **Multimodal Vision Integration**| August 29, 2025|Implement computer vision models for landmark/location recognition |
+| **RAG System & Advanced Features** | September 5, 2025 | Complete RAG implementation with travel database and advanced information retrieval |
+| **Multi-Agent Architecture** | September 15, 2025 | Specialized agents for travel coordination with LangGraph orchestration |
+| **Demo 2: Advanced Multimodal AI** | September 15, 2025 | Second demonstration showcasing multimodal processing, intelligent agents, and personalized recommendations |
+| **Advanced Features Integration** | September 26, 2025 | Photo organization, content generation, review summarization, and audio capabilities |
+| **AWS Bedrock Production Deployment** | October 3, 2025 | Scalable cloud deployment with performance monitoring and cost optimization |
+| **Demo 3: Final Presentation** | October 10, 2025 | Complete system demonstration with all features, evaluation results, and technical documentation |
 
 ---
 
