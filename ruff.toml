@@ -1,0 +1,41 @@
+line-length = 120
+target-version = "py312"
+show-fixes = true
+
+exclude = [
+    ".git",
+    ".idea",
+    ".vscode",
+    ".mypy_cache",
+    ".pytest_cache",
+    "venv",
+    ".venv",
+    "__pycache__",
+    "docker",
+    "__init__.py"
+]
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG001", # unused arguments in functions
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "W191",  # indentation contains tabs
+    "B904",  # ignore raise-without-from-inside-except
+]
+
+[lint.isort]
+lines-between-types = 1
+lines-after-imports = 2
+
+[format]
+quote-style = "single"
