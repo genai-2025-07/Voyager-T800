@@ -1,0 +1,16 @@
+---
+description: "Principles for our Retrieval-Augmented Generation (RAG) system. The quality of our context determines the quality of our output."
+globs: app/retrieval/**/*.py, app/chains/**/*.py
+---
+
+### **Principle 1: Garbage In, Garbage Out**
+The RAG system is only as good as the data in the vector store.
+- **Guideline: Pre-process and Chunk Strategically.** The data we embed into our vector store must be clean, relevant, and chunked into logical, self-contained segments. A chunk should ideally represent a single idea or attraction.
+
+### **Principle 2: Precision Over Raw Recall**
+Retrieving more documents is not always better. Retrieving the *right* documents is the goal.
+- **Guideline: Use Hybrid Search (Metadata + Semantic).** We should always strive to pre-filter our search using structured metadata (e.g., `city`, `category`) before applying the semantic similarity search. This dramatically narrows the search space and increases the relevance of the results.
+
+### **Principle 3: Clarity for the Model**
+The raw output from a vector store is not a suitable context for an LLM. We must format it for comprehension.
+- **Guideline: Format Retrieved Context for Readability.** The final context block passed to the prompt must be a clean, human-readable string. Each retrieved document should be formatted clearly, with labels for its key attributes (e.g., "Attraction: ...", "Description: ...") and a clear separator between documents.

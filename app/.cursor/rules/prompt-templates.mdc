@@ -1,0 +1,16 @@
+---
+description: "Principles for engineering prompts. A prompt is source code for the LLM and demands the same discipline."
+globs: app/prompts/**/*.py, app/chains/**/*.py
+---
+
+### **Principle 1: Clarity Through Structure**
+An ambiguous prompt will yield an ambiguous result. We must structure our prompts to be as clear and machine-readable as possible.
+- **Guideline: Use Delimiters to Separate Context.** We use XML-like tags (e.g., `<context>`, `<user_query>`) to create clear, logical separation between instructions, examples, retrieved data, and user input. This significantly reduces the risk of the model confusing instructions with data.
+
+### **Principle 2: Maintainability Through Separation**
+Complex prompts embedded deep in application logic are brittle and hard to maintain.
+- **Guideline: Store Prompts as Centralized Templates.** All prompts must be defined as templates in the `app/prompts/` directory and imported where needed. This treats the prompt as a reusable, testable asset.
+
+### **Principle 3: Guide, Don't Just Ask**
+We are not just asking the model a question; we are programming its response.
+- **Guideline: Assign a Role and Provide Examples.** Every system prompt should begin by assigning a clear role and persona to the model. For complex tasks requiring a specific output format (like JSON), provide one or two high-quality examples (few-shot prompting) within the prompt itself to guide the model's output structure.

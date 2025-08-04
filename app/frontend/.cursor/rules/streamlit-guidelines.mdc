@@ -1,0 +1,15 @@
+---
+@general-frontend-principles.mdc
+description: "Guiding principles for developing with Streamlit. We embrace its simplicity for rapid UI development."
+globs: app/frontend/**/*.py
+---
+
+### **Core Principle: Lean into Streamlit's Strengths**
+We chose Streamlit for its speed and simplicity. Our development practices should align with its "script-like" execution model, not fight against it. The goal is to build a functional, interactive UI with the least complexity possible.
+
+- **Guideline: Use Native State Management.** To maintain simplicity, we use Streamlit's built-in `st.session_state` for managing state across interactions. This avoids adding external state management libraries that complicate the simple execution flow.
+
+- **Guideline: Make Reruns Cheap.** Streamlit reruns the entire script on each interaction. To ensure a snappy user experience, we must prevent redundant, expensive computations.
+    - *Implementation:* We use Streamlit's native caching decorators (`@st.cache_data` and `@st.cache_resource`) to ensure that data fetching and resource initialization only happen when absolutely necessary.
+
+- **Guideline: Structure with Plain Python.** We keep our code organized and readable by using standard Python functions as our "components." This avoids the need for a complex component framework and aligns with the feel of writing a clean script.
