@@ -15,7 +15,7 @@ Before starting, ensure your system has:
 - **Network**: Stable internet connection for AI features
 
 ### 1.3 Required Software
-- [Python 3.12+](https://www.python.org/downloads/)
+- [Python 3.12+](https://www.python.org/downloads/)  (You can refer to section 2.3.6 for installation guide)
 - [Git](https://git-scm.com/)
 
 ## 2. Cursor IDE Setup
@@ -99,7 +99,8 @@ Then confirm
 ```bash
 poetry --version
 ```
-If you need to install pipx & pyenv (for python3.12 usage), refer to section 2.3.6 below
+If you need to install pipx & pyenv (for python3.12 usage), refer to section 2.3.6 below.
+Please note that poetry creates `poetry.lock` file which includes dependency resolution to ensure reproducible builds.
 
 #### 2.3.2 Install dependencies
 ```bash
@@ -143,7 +144,7 @@ poetry run pre-commit uninstall
 cp .env.example .env
 ```
 
-#### 2.3.6 (Optional) python3.12 installation
+#### 2.3.6 python3.12 installation guide (if not already installed)
 
 Install pyenv
 ```bash
