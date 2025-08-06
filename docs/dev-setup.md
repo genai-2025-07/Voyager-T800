@@ -15,7 +15,7 @@ Before starting, ensure your system has:
 - **Network**: Stable internet connection for AI features
 
 ### 1.3 Required Software
-- [Python 3.9+](https://www.python.org/downloads/)
+- [Python 3.12+](https://www.python.org/downloads/)  (You can refer to section 2.3.6 for installation guide)
 - [Git](https://git-scm.com/)
 
 ## 2. Cursor IDE Setup
@@ -91,29 +91,92 @@ Categories=Development;TextEditor;
 
 ### 2.3 Python Environment Setup
 
-#### 2.3.1 Create Virtual Environment
+#### 2.3.1 Install Poetry
 ```bash
-python -m venv venv
+pipx install poetry
+```
+Then confirm
+```bash
+poetry --version
+```
+If you need to install pipx & pyenv (for python3.12 usage), refer to section 2.3.6 below.
+Please note that poetry creates `poetry.lock` file which includes dependency resolution to ensure reproducible builds.
+
+#### 2.3.2 Install dependencies
+```bash
+poetry install --with dev
 ```
 
-#### 2.3.2 Activate Virtual Environment
+#### 2.3.3 Configure environment variables
+```bash
+cp .env.example .env
+```
+
+#### 2.3.4 Linting
+
+ruff is added as linter for current project with settings in ruff.toml file.
+You can run it manually via Makefile command
+```bash
+make ruff
+```
+
+If any file reformating is needed, ruff will handle it. After that add reformated files to git index and run ruff again.
+
+Alternatively, ruff can be used as pre-commit hook
+```bash
+poetry run pre-commit install
+```
+
+If any file reformating is needed, pre-commit hook will handle it and prevent commiting. After that, you should commit again.
+
+Note: sometimes pre-commit crashes merge process when resolving merge conflicts. You can temporarily disable it and enable after resolving conflicts
+
+```bash
+poetry run pre-commit uninstall
+
+# resolve conflicts
+
+poetry run pre-commit uninstall
+```
+ 
+#### 2.3.5 Configure environment variables
+```bash
+cp .env.example .env
+```
+
+#### 2.3.6 python3.12 installation guide (if not already installed)
+
+Install pyenv
 ```bash
 # Mac/Linux
-source venv/bin/activate
+brew install pyenv
 
-# Windows
-.\venv\Scripts\activate
+# For windows you may use pyenv-win
 ```
 
-#### 2.3.3 Install Dependencies (if requirements.txt exists)
+Select python3.12 
 ```bash
-pip install -r requirements.txt
+pyenv install 3.12
+
+# inside project folder
+pyenv local 3.12
 ```
 
-#### 2.3.4 Verify Installation
+Verify
 ```bash
 python --version
-pip list
+```
+
+Install pipx
+```bash
+python3 -m pip install --user pipx
+
+python3 -m pipx ensurepath
+```
+
+Then restart terminal and verify
+```bash
+pipx --version
 ```
 
 ## 3. GitHub Copilot Setup (VS Code)

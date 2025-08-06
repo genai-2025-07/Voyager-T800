@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# MacOS
+.DS_Store
+
+# Unit test / coverage
+.coverage
+.cache/
+pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# mypy / pyright / pylance
+.mypy_cache/
+.pyright/
+
+# Jupyter notebooks
+*.ipynb_checkpoints

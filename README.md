@@ -25,25 +25,6 @@
 
 ---
 
-## Project Structure
-
-```
-
-/app/
-├── main.py             # API entry point
-├── itinerary/          # Core LLM generation logic
-├── image\_analysis/     # Vision tools for extracting meaning from images
-├── retrieval/          # Vector DB setup and search
-├── prompts/            # Prompt templates
-└── frontend/           # Streamlit or React app
-
-/docs/                    # Technical documentation
-/tests/                   # Unit & integration tests
-
-```
-
----
-
 ## Contributing Guidelines
 
 We follow a structured Git workflow to keep development smooth and collaborative.
