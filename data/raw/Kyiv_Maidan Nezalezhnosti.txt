@@ -9,17 +9,17 @@ The square received its current name on 26 August 1991, two days after the Decla
 
 'Maidan' is a Ukrainian word for 'square, open space', with widely used equivalents in the Middle East and South Asia to refer to an open space in or near a town, used as a parade ground or for events such as public meetings. It comes from Persian (; 'town-square' or 'central place of gathering'), itself deriving from Proto-Iranian, ultimately from Proto-Indo-European . Compare Avestan , Sanskrit and Latin . The word also was borrowed into neighboring Turkic languages, as in the Crimean Tatar, Gagauz and Turkish , which are the likely sources of the borrowing into Ukrainian.
 
- is the only square in Kyiv officially designated as a "Maidan" (:wikt:майдан#Ukrainian) in the Ukrainian language; the same applies to Russian. All other Kyivan squares remain designated as a "Ploshcha" (:wikt:площа – the native and more common Ukrainian word for 'square' – as was used during Soviet rule.
+is the only square in Kyiv officially designated as a "Maidan" (:wikt:майдан#Ukrainian) in the Ukrainian language; the same applies to Russian. All other Kyivan squares remain designated as a "Ploshcha" (:wikt:площа – the native and more common Ukrainian word for 'square' – as was used during Soviet rule.
 
 Timeline of the square's names:
-1869: Khreshchatyk Square 
-1876: Duma Square 
-1919: Soviet Square 
-1935: Kalinin Square 
-1941: Duma Square 
-1943: Kalinin Square 
-1977: Square of the October Revolution 
-Since 1991: Independence Square 
+1869: Khreshchatyk Square
+1876: Duma Square
+1919: Soviet Square
+1935: Kalinin Square
+1941: Duma Square
+1943: Kalinin Square
+1977: Square of the October Revolution
+Since 1991: Independence Square
 
 City squares called are also found in Khmelnytskyi and Sumy. Kropyvnytskyi, Kremenchuk and Odesa have "Independence Squares" named (using rather than for "square").
 
@@ -31,7 +31,7 @@ The square itself is a multi-level location. At ground level is the intersection
 ==History==
 
 === Early history and Tsarist Russia===
-Until the 10th century, the future square's site, as well as the rest of Khreshchatyk, was called 'Perevisyshch''. It was located just to the south of the Kyiv City, beyond which were located territories of the Cave Monastery (Kyiv-Pechersky) along the Dnipro River.
+Until the 10th century, the future square's site, as well as the rest of Khreshchatyk, was called 'Perevisyshch'. It was located just to the south of the Kyiv City, beyond which were located territories of the Cave Monastery (Kyiv-Pechersky) along the Dnipro River.
 
 At the lower end of Sofiivska vulytsia (Sofia Street), which led to the High City, stood one of the three main gates of Old Kyiv (Yaroslav's City), the Lyadski Gates; the other two were the Golden Gates and Zhydivski Gates. Those gates are also mentioned in 1151, and around them lived the Polish population of the city, Lacka Sloboda. The Lyadksi Gates were destroyed during the storm of city by the Mongol army of Batu Khan in 1240.
 
@@ -57,7 +57,7 @@ During the Soviet period, the square was used for demonstrations and parades in 
 
 ===Independent Ukraine===
 
-After Ukraine's independence in 1991, the square was given its current name. The competing proposal of 'Liberty Square' (Ploshcha Svobody) was raised at the time as well as in the years to follow, but the current name commemorating the Ukrainian independence is now firmly associated with the square ('see the section below'').
+After Ukraine's independence in 1991, the square was given its current name. The competing proposal of 'Liberty Square' (Ploshcha Svobody) was raised at the time as well as in the years to follow, but the current name commemorating the Ukrainian independence is now firmly associated with the square ('see the section below').
 
 
 In 2001, as the square was the major center of the "Ukraine without Kuchma" mass protest campaign, the new extensive construction of the area was abruptly ordered by the Kyiv mayor of the time, Oleksandr Omelchenko. The square was fenced off for construction and became inaccessible for the protesters and many observers claimed that the main goal of the project ordered by the city mayor was to disrupt the
@@ -106,3 +106,13 @@ Central Post Office
 
 
 ==Gallery==
+
+
+
+==Notes and references==
+
+
+==External links==
+
+
+in 'Wiki-Encyclopedia Kyiv'
