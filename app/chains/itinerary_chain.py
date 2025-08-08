@@ -156,7 +156,9 @@ async def main():
         
         # Response without streaming
         #await full_response(user_input, session_id)
-        print(f"\n\nMemory: {memory.load_memory_variables({'session_id': session_id})['chat_history']}")
+        # Debugging: Print current memory state
+        # Uncomment the line below to see the memory state after each query
+        #print(f"\n\nMemory: {memory.load_memory_variables({'session_id': session_id})['chat_history']}")
 
 if __name__ == "__main__":
     asyncio.run(main())
