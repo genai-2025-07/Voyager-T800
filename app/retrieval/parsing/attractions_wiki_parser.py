@@ -2,13 +2,14 @@ import requests
 import csv
 import time
 import re
-import argparse
-import sys
+import unicodedata
 from pathlib import Path
 from urllib.parse import urlparse
 from dataclasses import dataclass, asdict
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 import mwparserfromhell
+
+from app.utils.file_utils import ensure_directory_exists, save_text_file, save_metadata_csv, read_csv_file
 
 @dataclass
 class AttractionMetadata:
@@ -22,14 +23,17 @@ class AttractionMetadata:
     extraction_date: str
     file_path: str
 
-import re
-import unicodedata
-from typing import Set, List
-
 class LatinTextFilter:
     """Enhanced text filtering to remove non-Latin words with high accuracy"""
     
     def __init__(self):
+        """
+        Initialize the LatinTextFilter with Unicode character sets and filtering rules.
+        
+        Sets up comprehensive Latin Unicode blocks, punctuation, numbers, and symbols
+        that are allowed in the filtered text. This includes Basic Latin, Latin-1 Supplement,
+        and various Latin Extended blocks for thorough coverage of Latin script characters.
+        """
         # Extended Latin Unicode blocks for comprehensive coverage
         self.latin_blocks = [
             (0x0020, 0x007F),   # Basic Latin (ASCII)
@@ -62,7 +66,14 @@ class LatinTextFilter:
     
     def is_latin_word(self, word: str) -> bool:
         """
-        Check if a word contains only Latin characters with high accuracy
+        Check if a word contains only Latin characters with high accuracy.
+        
+        Args:
+            word: The word to check for Latin characters
+            
+        Returns:
+            bool: True if the word contains only Latin characters, punctuation, and numbers;
+                  False if it contains non-Latin characters
         """
         if not word or not word.strip():
             return True  # Empty words are considered valid
@@ -81,21 +92,47 @@ class LatinTextFilter:
         return True
     
     def contains_latin_script(self, text: str) -> bool:
-        """Check if text contains any Latin script characters"""
+        """
+        Check if text contains any Latin script characters.
+        
+        Args:
+            text: The text to check for Latin script characters
+            
+        Returns:
+            bool: True if the text contains at least one Latin script character;
+                  False otherwise
+        """
         for char in text:
-            if any(start <= ord(char) <= end for start, end in self.latin_blocks):
-                return True
+            if char != " ":
+                if any(start <= ord(char) <= end for start, end in self.latin_blocks):
+                    return True
         return False
     
     def get_script_name(self, char: str) -> str:
-        """Get Unicode script name for a character"""
+        """
+        Get Unicode script name for a character.
+        
+        Args:
+            char: The character to get the script name for
+            
+        Returns:
+            str: The Unicode script name for the character, or 'UNKNOWN' if not found
+        """
         try:
             return unicodedata.name(char, 'UNKNOWN').split()[0]
         except:
             return 'UNKNOWN'
     
     def analyze_word_scripts(self, word: str) -> Set[str]:
-        """Analyze which scripts are present in a word"""
+        """
+        Analyze which scripts are present in a word.
+        
+        Args:
+            word: The word to analyze for different scripts
+            
+        Returns:
+            Set[str]: A set of script names found in the word (e.g., 'Latin', 'Cyrillic', 'Greek')
+        """
         scripts = set()
         for char in word:
             if char.isalpha():  # Only check alphabetic characters
@@ -166,13 +203,27 @@ class LatinTextFilter:
                     # Otherwise, skip the word (it's purely non-Latin)
                 # If preserve_mixed is False, skip all non-Latin words
             
-            filtered_lines.append(''.join(filtered_words))
+            # Join filtered words and clean up excessive whitespace
+            line_result = ''.join(filtered_words)
+            # Clean up multiple spaces and normalize whitespace
+            line_result = re.sub(r' +', ' ', line_result)  # Multiple spaces to single
+            line_result = line_result.strip()  # Remove leading/trailing whitespace
+            filtered_lines.append(line_result)
         
         return '\n'.join(filtered_lines)
     
     def clean_text_aggressive(self, text: str) -> str:
         """
-        More aggressive cleaning that removes any character not in Latin scripts
+        More aggressive cleaning that removes any character not in Latin scripts.
+        
+        This method performs character-level filtering, removing any character that
+        is not in the allowed Latin character set, including punctuation and numbers.
+        
+        Args:
+            text: Input text to filter aggressively
+            
+        Returns:
+            str: Filtered text with only Latin characters, punctuation, numbers, and whitespace
         """
         if not text:
             return text
@@ -198,6 +249,15 @@ class LatinTextFilter:
 class AttractionsParser:
     def __init__(self, csv_file: str = "data/attractions_names_list.csv", debug_mode: bool = False, 
                  output_dir: str = "data/raw", metadata_file: str = "data/metadata.csv"):
+        """
+        Initialize the AttractionsParser with configuration for Wikipedia content extraction.
+        
+        Args:
+            csv_file: Path to the CSV file containing attraction data
+            debug_mode: If True, enables debug mode with additional logging and file output
+            output_dir: Directory where processed text files will be saved
+            metadata_file: Path to the CSV file where metadata will be saved
+        """
         self.latin_filter = LatinTextFilter()
         self.csv_file = csv_file
         self.debug_mode = debug_mode
@@ -212,38 +272,218 @@ class AttractionsParser:
             'User-Agent': 'VoyagerT800AttractionsBot/1.0 (https://example.com/contact)'
         })
         
-        # Create output directories
-        self.raw_dir = Path(output_dir)
-        self.debug_dir = Path(output_dir.replace("raw", "debug")) if debug_mode else None
+        # Create output directories using utility functions
+        self.raw_dir = ensure_directory_exists(output_dir)
+        self.debug_dir = ensure_directory_exists(output_dir.replace("raw", "debug")) if debug_mode else None
         self.metadata_file = Path(metadata_file)
-        
-        self.raw_dir.mkdir(parents=True, exist_ok=True)
-        if debug_mode:
-            self.debug_dir.mkdir(parents=True, exist_ok=True)
 
         self.use_see_also = False
         
-    def read_attractions_csv(self) -> List[Dict[str, str]]:
-        """Read attractions from CSV file"""
-        attractions = []
-        try:
-            with open(self.csv_file, 'r', encoding='utf-8') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    attractions.append(row)
-            print(f"Loaded {len(attractions)} attractions from CSV")
-            
-            return attractions
+    def _remove_see_also_section(self, text: str) -> str:
+        """
+        Remove the 'See also' section from the text.
         
-        except FileNotFoundError:
-            print(f"Error: CSV file {self.csv_file} not found")
-            return []
-        except Exception as e:
-            print(f"Error reading CSV file: {e}")
-            return []
+        Args:
+            text: Text that may contain a 'See also' section
+            
+        Returns:
+            str: Text with the 'See also' section removed
+        """
+        # Split into lines and find the see also section
+        lines = text.split('\n')
+        result_lines = []
+        in_see_also = False
+        
+        for line in lines:
+            # Check if this line starts a new section
+            if re.match(r'^\s*==\s*[^=]+\s*==\s*$', line, re.IGNORECASE):
+                if 'see also' in line.lower():
+                    in_see_also = True
+                    continue  # Skip this line
+                else:
+                    in_see_also = False
+            
+            # If we're in see also section, check if this is a list item or empty line
+            if in_see_also:
+                # If it's a list item (starts with *) or empty line, skip it
+                if line.strip().startswith('*') or not line.strip():
+                    continue
+                else:
+                    # If it's not a list item, we've reached the end of the see also section
+                    in_see_also = False
+            
+            result_lines.append(line)
+        
+        return '\n'.join(result_lines)
+    
+    def _remove_gallery_tags(self, text: str) -> str:
+        """
+        Remove gallery tags and their content from the text.
+        
+        Args:
+            text: Text that may contain gallery tags
+            
+        Returns:
+            str: Text with gallery tags removed
+        """
+        return re.sub(r'(?si)<gallery\b[^>]*>.*?</gallery>', '', text)
+    
+    def _remove_language_template_parentheses(self, text: str) -> str:
+        """
+        Remove parentheses containing language templates (langx, lang, Transliteration).
+        
+        Args:
+            text: Text that may contain parentheses with language templates
+            
+        Returns:
+            str: Text with language template parentheses removed
+        """
+        return re.sub(
+            r'\(\s*[^()]*\{\{(?:langx?|Transliteration)[^}]*\}\}[^()]*\)',
+            '',
+            text
+        )
+    
+    def _remove_empty_parentheses(self, text: str) -> str:
+        """
+        Remove parentheses that are empty or contain only separators and whitespace.
+        
+        Args:
+            text: Text that may contain empty parentheses
+            
+        Returns:
+            str: Text with empty parentheses removed
+        """
+        return re.sub(r'\(\s*[,;\'"\s]*\s*\)', '', text)
+    
+    def _remove_template_parentheses(self, text: str) -> str:
+        """
+        Remove parentheses containing template remnants and separators.
+        
+        Args:
+            text: Text that may contain parentheses with template remnants
+            
+        Returns:
+            str: Text with template parentheses removed
+        """
+        return re.sub(
+            r'\(\s*(?:[^()]*\{\{[^}]*\}\}[,\s;\'":]*)+[^()]*\)',
+            '',
+            text
+        )
+    
+    def _cleanup_remaining_parentheses(self, text: str) -> str:
+        """
+        Clean up any remaining empty or near-empty parentheses.
+        
+        Args:
+            text: Text that may contain remaining empty parentheses
+            
+        Returns:
+            str: Text with remaining empty parentheses cleaned up
+        """
+        return re.sub(r'\(\s*(?:[,;\'"\s]|\{\{[^}]*\}\})*\s*\)', '', text)
+    
+    def _cleanup_excessive_quotes(self, text: str) -> str:
+        """
+        Clean up triple parentheses and excessive quotes.
+        
+        Args:
+            text: Text that may contain excessive quotes
+            
+        Returns:
+            str: Text with excessive quotes cleaned up
+        """
+        # First, handle triple quotes
+        text = re.sub(r"'''(.+?)'''", r"'\1'", text)
+        # Then handle double quotes
+        text = re.sub(r"''(.+?)''", r"'\1'", text)
+        # Handle double brackets around quoted content
+        text = re.sub(r"\[\[([^\[\]]+)\]\]", r"[\1]", text)
+        return text
+    
+    def _remove_list_markers(self, text: str) -> str:
+        """
+        Remove all list markers ("*", "**", etc.) at the start of any line.
+        
+        Args:
+            text: Text that may contain list markers
+            
+        Returns:
+            str: Text with list markers removed
+        """
+        return re.sub(
+            r'^[ \t]*\*+[ \t]*',
+            '',
+            text,
+            flags=re.MULTILINE
+        )
+    
+    def _cleanup_whitespace(self, text: str) -> str:
+        """
+        Clean up excessive whitespace while preserving structure.
+        
+        Args:
+            text: Text that may contain excessive whitespace
+            
+        Returns:
+            str: Text with whitespace cleaned up
+        """
+        return re.sub(r'[ \t]+', ' ', text)
+    
+    def _apply_text_cleaning_regex(self, text: str) -> str:
+        """
+        Apply all text cleaning regular expressions in sequence.
+        
+        This method applies a series of regex-based cleaning operations:
+        1. Remove 'See also' section
+        2. Remove gallery tags
+        3. Remove language template parentheses
+        4. Remove empty parentheses
+        5. Remove template parentheses
+        6. Clean up remaining parentheses
+        7. Clean up excessive quotes
+        8. Remove list markers
+        9. Clean up whitespace
+        
+        Args:
+            text: Raw text to be cleaned
+            
+        Returns:
+            str: Text cleaned using all regex patterns
+        """
+        text = self._remove_see_also_section(text)
+        text = self._remove_gallery_tags(text)
+        text = self._remove_language_template_parentheses(text)
+        text = self._remove_empty_parentheses(text)
+        text = self._remove_template_parentheses(text)
+        text = self._cleanup_remaining_parentheses(text)
+        text = self._cleanup_excessive_quotes(text)
+        text = self._remove_list_markers(text)
+        text = self._cleanup_whitespace(text)
+        
+        return text
+        
+    def read_attractions_csv(self) -> List[Dict[str, str]]:
+        """
+        Read attractions data from the configured CSV file.
+        
+        Returns:
+            List[Dict[str, str]]: List of dictionaries containing attraction data
+                                 with keys: 'City', 'Attraction', 'WikiLink'
+        """
+        return read_csv_file(self.csv_file)
     
     def extract_title_from_url(self, url: str) -> str:
-        """Extract Wikipedia page title from URL"""
+        """
+        Extract Wikipedia page title from a Wikipedia URL.
+        
+        Args:
+            url: Wikipedia URL to extract the title from
+            
+        Returns:
+            str: The extracted page title, or empty string if extraction fails
+        """
         try:
             # Parse the URL to get the title
             parsed = urlparse(url)
@@ -256,7 +496,17 @@ class AttractionsParser:
             return ""
     
     def get_page_content(self, title: str) -> Optional[Dict]:
-        """Get full page content from Wikipedia API"""
+        """
+        Get full page content from Wikipedia API.
+        
+        Args:
+            title: Wikipedia page title to fetch content for
+            
+        Returns:
+            Optional[Dict]: Dictionary containing page data with keys:
+                           'title', 'wikitext', 'url', 'timestamp', 'pageid'
+                           or None if the page cannot be fetched
+        """
         params = {
             'action': 'query',
             'format': 'json',
@@ -296,7 +546,21 @@ class AttractionsParser:
             return None
 
     def clean_text(self, wikitext: str) -> str:
-        """Clean and format wikitext using mwparserfromhell, preserving paragraph and section spacing"""
+        """
+        Clean and format wikitext using mwparserfromhell, preserving paragraph and section spacing.
+        
+        This method processes Wikipedia markup to extract clean, readable text by:
+        - Removing templates, comments, and unwanted tags
+        - Converting wikilinks to plain text
+        - Preserving paragraph structure and spacing
+        - Optionally filtering non-Latin characters
+        
+        Args:
+            wikitext: Raw Wikipedia markup text to clean
+            
+        Returns:
+            str: Cleaned and formatted text suitable for processing
+        """
         if not wikitext:
             return ""
         
@@ -408,59 +672,11 @@ class AttractionsParser:
             # Render to text
             raw = str(wikicode).strip()
             
-            # do we need see also?
-            if not self.use_see_also:
-                raw = re.sub(r'(?si)==\s*see also\s*==.*', '', raw)
-
-            # removing gallery tags
-            # Remove <gallery ...>...</gallery> blocks (with attributes)
-            raw = re.sub(r'(?si)<gallery\b[^>]*>.*?</gallery>', '', raw)
-
-            # Remove parentheses containing language templates (langx, lang) - IMPROVED VERSION
-            # This pattern matches parentheses that contain langx or lang templates
-            raw = re.sub(
-                r'\(\s*[^()]*\{\{(?:langx?|Transliteration)[^}]*\}\}[^()]*\)',
-                '',
-                raw
-            )
-            
-            # More comprehensive removal of parentheses with template remnants
-            # Remove parentheses that are now empty or contain only commas, semicolons, quotes, and whitespace
-            raw = re.sub(r'\(\s*[,;\'"\s]*\s*\)', '', raw)
-            
-            # Remove parentheses containing combinations of templates and separators
-            raw = re.sub(
-                r'\(\s*(?:[^()]*\{\{[^}]+\}\}[,\s;\'":]*)+[^()]*\)',
-                '',
-                raw
-            )
-            
-            # Clean up any remaining empty or near-empty parentheses
-            raw = re.sub(r'\(\s*(?:[,;\'"\s]|\{\{[^}]*\}\})*\s*\)', '', raw)
-            
-            # Clean up triple parentheses and excessive quotes
-            raw = re.sub(
-                r"(\[*)(?:'+)(.+?)(?:'+)(\]*)",
-                r"\1'\2'\3",
-                raw
-            )
-
-            # remove all list markers (“*”, “**”, etc.) at the start of any line
-            raw = re.sub(
-                r'^[ \t]*\*+[ \t]*',
-                '',
-                raw,
-                flags=re.MULTILINE
-            )
-
-            # Removes excessive spaces and \n's:
-            # raw = re.sub(r'\s+', ' ', raw)
-
-            # Current approach for readability
-            raw = re.sub(r'[ \t]+', ' ', raw)
+            # Apply regex-based text cleaning
+            raw = self._apply_text_cleaning_regex(raw)
 
             if not self.remove_non_latin or not raw:
-                return cleaned_text
+                return raw
             
             # Apply Latin filtering
             if self.aggressive_filtering:
@@ -481,7 +697,20 @@ class AttractionsParser:
             return ""
 
     def _preserve_structure(self, text: str) -> str:
-        """Preserve paragraph structure with proper spacing between sections and paragraphs"""
+        """
+        Preserve paragraph structure with proper spacing between sections and paragraphs.
+        
+        This method processes text to maintain proper document structure by:
+        - Adding blank lines before and after headers
+        - Preserving paragraph breaks
+        - Cleaning up excessive whitespace while maintaining readability
+        
+        Args:
+            text: Text to process for structure preservation
+            
+        Returns:
+            str: Text with preserved structure and proper spacing
+        """
         if not text:
             return ""
         
@@ -529,28 +758,43 @@ class AttractionsParser:
 
     
     def save_text_file(self, content: str, filename: str, debug_content: str = None) -> str:
-        """Save text content to file"""
+        """
+        Save text content to a file in the configured output directory.
+        
+        Args:
+            content: The text content to save
+            filename: Base filename (without extension) for the output file
+            debug_content: Optional raw content to save in debug mode
+            
+        Returns:
+            str: Path to the saved file, or empty string if saving fails
+        """
         file_path = self.raw_dir / f"{filename}.txt"
         
-        try:
-            with open(file_path, 'w', encoding='utf-8') as file:
-                file.write(content)
-            
-            # In debug mode, also save the raw content
-            if self.debug_mode and debug_content:
-                debug_filename = f"raw_{filename}.txt"
-                debug_path = self.debug_dir / debug_filename
-                with open(debug_path, 'w', encoding='utf-8') as debug_file:
-                    debug_file.write(debug_content)
-                print(f"Debug: Raw content saved to {debug_path}")
-            
-            return str(file_path)
-        except Exception as e:
-            print(f"Error saving file {filename}: {e}")
+        # Save main content
+        if not save_text_file(content, file_path):
             return ""
+        
+        # In debug mode, also save the raw content
+        if self.debug_mode and debug_content:
+            debug_filename = f"raw_{filename}.txt"
+            debug_path = self.debug_dir / debug_filename
+            if save_text_file(debug_content, debug_path):
+                print(f"Debug: Raw content saved to {debug_path}")
+        
+        return str(file_path)
     
     def generate_summary(self, text: str, max_length: int = 200) -> str:
-        """Generate a summary from the text"""
+        """
+        Generate a summary from the text by taking the first paragraph.
+        
+        Args:
+            text: The text to generate a summary from
+            max_length: Maximum length of the summary (default: 200 characters)
+            
+        Returns:
+            str: A summary of the text, truncated to max_length if necessary
+        """
         if not text:
             return ""
         
@@ -566,7 +810,24 @@ class AttractionsParser:
         return text[:max_length].replace('\n', '') + "..." if len(text) > max_length else text
     
     def process_attraction(self, attraction_data: Dict[str, str]) -> Optional[AttractionMetadata]:
-        """Process a single attraction"""
+        """
+        Process a single attraction by fetching and cleaning its Wikipedia content.
+        
+        This method performs the complete processing pipeline for one attraction:
+        1. Extracts the Wikipedia title from the URL
+        2. Fetches the page content from Wikipedia API
+        3. Cleans and formats the text
+        4. Saves the processed text to a file
+        5. Creates metadata for the processed attraction
+        
+        Args:
+            attraction_data: Dictionary containing attraction information with keys:
+                           'City', 'Attraction', 'WikiLink'
+            
+        Returns:
+            Optional[AttractionMetadata]: Metadata object for the processed attraction,
+                                        or None if processing fails
+        """
         city = attraction_data.get('City', '')
         attraction = attraction_data.get('Attraction', '')
         wiki_url = attraction_data.get('WikiLink', '')
@@ -632,28 +893,27 @@ class AttractionsParser:
         return metadata
     
     def save_metadata_csv(self, metadata_list: List[AttractionMetadata]):
-        """Save metadata to CSV file"""
-        if not metadata_list:
-            print("No metadata to save")
-            return
+        """
+        Save metadata to CSV file for all processed attractions.
         
-        try:
-            with open(self.metadata_file, 'w', newline='', encoding='utf-8') as file:
-                fieldnames = ['city', 'source_type', 'url', 'summary', 'title', 
-                              'word_count', 'extraction_date', 'file_path']
-                writer = csv.DictWriter(file, fieldnames=fieldnames)
-                writer.writeheader()
-                
-                for metadata in metadata_list:
-                    writer.writerow(asdict(metadata))
-            
-            print(f"Metadata saved to {self.metadata_file}")
-            
-        except Exception as e:
-            print(f"Error saving metadata: {e}")
+        Args:
+            metadata_list: List of AttractionMetadata objects to save to CSV
+        """
+        fieldnames = ['city', 'source_type', 'url', 'summary', 'title', 
+                      'word_count', 'extraction_date', 'file_path']
+        save_metadata_csv(metadata_list, self.metadata_file, fieldnames)
     
     def run_extraction(self):
-        """Main extraction process"""
+        """
+        Main extraction process that processes all attractions from the CSV file.
+        
+        This method orchestrates the complete extraction workflow:
+        1. Reads attractions from the configured CSV file
+        2. Processes each attraction individually
+        3. Collects metadata for successful extractions
+        4. Saves metadata to CSV file
+        5. Reports extraction statistics
+        """
         mode_str = "DEBUG" if self.debug_mode else "NORMAL"
         print(f"Starting attractions extraction in {mode_str} mode...")
         
@@ -699,26 +959,11 @@ class AttractionsParser:
 
 
 def main():
-    """Main function with command-line argument parsing"""
-    parser = argparse.ArgumentParser(description="Attractions Wiki Parser")
-    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    parser.add_argument('--output-dir', type=str, default='data/raw', 
-                       help='Directory to create raw folder (default: data/raw)')
-    parser.add_argument('--metadata', type=str, default='data/metadata.csv',
-                       help='Path to metadata.csv (default: data/metadata.csv)')
-    parser.add_argument('--csv-file', type=str, default='data/attractions_names_list.csv',
-                       help='Path to attractions CSV file (default: data/attractions_names_list.csv)')
-    
-    args = parser.parse_args()
-    
-    attractions_parser = AttractionsParser(
-        csv_file=args.csv_file,
-        debug_mode=args.debug,
-        output_dir=args.output_dir,
-        metadata_file=args.metadata
-    )
-    attractions_parser.run_extraction()
+    """Main function that delegates to the CLI module"""
+    from app.cli.attractions_cli import main as cli_main
+    return cli_main()
 
 
 if __name__ == "__main__":
-    main() 
+    import sys
+    sys.exit(main()) 
