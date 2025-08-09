@@ -1,0 +1,38 @@
+---
+description: "A summary of the project's tech stack. Use this for context on libraries, frameworks, and APIs."
+---
+
+#### Frontend
+
+- **Streamlit v1.47.1** – [MVP] lightweight UI for prototyping
+- **React** – [Stretch goal] for a more advanced and customizable frontend
+
+#### Backend
+
+- **FastAPI v0.116.1** – [MVP] high‑performance Python API framework
+
+#### LLMs & Orchestration
+
+- **Claude 3.7** – [MVP] core language model for itinerary generation
+- **Claude via AWS Bedrock** – [Stretch goal] additional multimodal LLM capability
+- **LangChain v0.3.27** / **LangChain‑Anthropic v0.3.18** – [MVP] orchestration layer via LangGraph/RAG chains
+
+#### Vision Models
+
+- **CLIP (OpenCLIP)** – [MVP] for image tagging, similarity matching
+- **AWS Rekognition** – alternative for broader image analysis and OCR
+
+#### Vector Database
+
+- **FAISS 1.10.0**  – [MVP] efficient similarity search
+- **Chroma v1.0.15** – alternative with built-in integrations and metadata filters
+
+#### GenAI Stack
+
+- **Prompt injection protection + RAG pipeline** – [MVP] ensures safe and accurate retrieval
+
+#### Dev Tools
+
+- **Cursor IDE** – [MVP] for code editing and AI-assisted development
+- **Docker** – [MVP] for reproducible containerized environments
+- **GitHub Classroom** – [MVP] for collaboration, code reviews, and onboarding

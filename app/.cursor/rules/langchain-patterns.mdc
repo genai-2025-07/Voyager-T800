@@ -1,0 +1,16 @@
+---
+description: "Guiding principles for orchestrating AI logic with LangChain. We build for composition and predictability."
+globs: app/chains/**/*.py, "app/agents/**/*.py"
+---
+
+### **Principle 1: Composition Over Configuration**
+We prefer to build complex AI workflows by composing small, predictable components, rather than creating large, monolithic functions.
+- **Guideline: Use the LangChain Expression Language (LCEL).** LCEL's pipe (`|`) syntax is the primary tool for this. It allows us to chain prompts, models, and output parsers in a way that is readable, streamable, and easily debugged.
+
+### **Principle 2: Embrace State for Complex Agency**
+When a workflow is not a simple linear chain but a graph with cycles and decisions, we need to manage state explicitly.
+- **Guideline: Use LangGraph for Agentic Behavior.** For multi-step interactions where the next step depends on the outcome of previous steps (e.g., an agent deciding which tool to use), LangGraph is the standard. It makes the state transitions explicit and the logic testable.
+
+### **Principle 3: Tools are First-Class Citizens**
+An agent is only as reliable as its tools. The interface between the LLM and its tools must be rigid and well-defined.
+- **Guideline: Define Tools with Structured Schemas.** Every tool provided to an agent **must** have a Pydantic `BaseModel` as its input schema. This allows the LLM to reliably generate the correct JSON arguments for function calls.

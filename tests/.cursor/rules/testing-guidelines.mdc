@@ -1,0 +1,21 @@
+---
+description: "Our principles for testing. We believe tests are a first-class product that ensures reliability and serves as living documentation."
+alwaysApply: true
+---
+
+### **Principle 1: Tests Must Be Fast and Deterministic**
+A test suite is only useful if it's run frequently. A test that sometimes fails without code changes is worse than no test at all because it erodes trust. Our tests must be a reliable, signal-rich foundation for development.
+
+- **Guideline: Isolate Tests from the Outside World.** A unit test **must not** make network calls, touch a database, or access the file system. Its result must depend only on its inputs.
+    - *Implementation:* We achieve this by aggressively mocking all external dependencies (APIs, services, etc.) using `pytest-mock`. This makes tests lightning-fast and guarantees they are deterministic.
+
+### **Principle 2: Tests Are Living Documentation**
+Tests should be so clear that a new developer can understand a function's behavior just by reading its tests. They describe what our code *does* in a way that can never go out of date.
+
+- **Guideline: Structure for Readability.** We use the **Arrange-Act-Assert (AAA)** pattern to give every test a predictable, narrative structure. This makes them easy to read and understand.
+- **Guideline: Abstract Away Noise with Fixtures.** We use `pytest` fixtures to handle complex or repetitive setup (`Arrange`). This keeps the body of the test clean and focused on the specific behavior being tested (`Act` and `Assert`).
+
+### **Principle 3: Test Contracts, Not Implementation**
+We should be able to refactor the internal logic of a function without breaking its tests. The tests should guarantee the function's *behavior* (its "contract") remains the same.
+
+- **Guideline: Focus Assertions on the Outcome.** Assertions should check the return value of a function, the state change of an object, or whether a dependency (a mock) was called with the correct parameters. Avoid asserting the value of private internal variables.

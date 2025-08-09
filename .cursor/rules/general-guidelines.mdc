@@ -1,0 +1,18 @@
+---
+description: "The foundational principles of our engineering culture: professionalism, readability, and maintainability."
+alwaysApply: true
+---
+
+### **Principle 1: Code is Communication**
+Our primary audience is not the computer, but the next developer who will read our code. Clarity is paramount.
+- **Guideline: Follow a Shared Language.** We adhere strictly to PEP 8. This isn't about arbitrary rules; it's about removing cognitive load so anyone on the team can read and understand code instantly. Use `ruff` to automate this.
+- **Guideline: Document Your Intent.** Every public function, class, and module must have a docstring (Google Style). Explain *why* the code exists and what its purpose is, not just *what* it does. Good code documents itself; great code explains its purpose.
+
+### **Principle 2: Design for Observability**
+We cannot fix what we cannot see. A running application should not be a black box.
+- **Guideline: Use Structured Logging, Not Prints.** `print()` is for temporary, local debugging only. The `logging` module is for creating a permanent, structured record of the application's behavior. Log events, decisions, and errors with context. This is non-negotiable for any production-ready code.
+
+### **Principle 3: Be Explicit and Intentional**
+Ambiguity leads to bugs.
+- **Guideline: Naming Matters.** A variable named `data` is meaningless. A variable named `itinerary_request_payload` is clear. Names should be descriptive and unambiguous.
+- **Guideline: Order Creates Clarity.** We sort our imports using `isort` (via `ruff`). This creates a predictable and clean structure at the top of every file, instantly revealing a module's dependencies.

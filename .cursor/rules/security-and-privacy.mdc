@@ -1,0 +1,16 @@
+---
+description: "Our non-negotiable principles for protecting user trust and securing our application."
+alwaysApply: true
+---
+
+### **Core Mandate: User Trust is Our Highest Priority**
+We handle user queries with the utmost respect. We are guests in their travel planning process, and we must act accordingly. This means privacy is our default state.
+
+- **Principle: The Principle of Least Information.** We do not store or log any data that could be considered Personally Identifiable Information (PII). If we don't have it, we can't lose it. This is our first and most important line of defense. All interactions are treated as anonymous and ephemeral.
+
+- **Principle: Secure by Default Configuration.** Our application should be secure even if a developer makes a mistake.
+    - **Guideline: Never Commit Credentials.** All secrets **must** be managed through environment variables loaded via Pydantic's `BaseSettings`. This separates configuration from code, preventing accidental leaks. A hardcoded key is a critical failure.
+
+- **Principle: Defense in Depth at the Boundaries.** Treat all external input as potentially hostile.
+    - **Guideline: Delimit and Sanitize.** User input for LLMs must be clearly delimited (e.g., with XML tags) to prevent prompt injection. We must never blindly trust the format or content of data coming from a user or an LLM.
+    - **Guideline: Validate Everything.** Use Pydantic models to strictly validate the structure, type, and content of all incoming API data.

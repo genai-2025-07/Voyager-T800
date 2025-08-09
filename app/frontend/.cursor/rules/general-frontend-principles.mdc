@@ -1,0 +1,18 @@
+---
+description: "Core principles for all frontend development. This is the foundational guide for building the UI."
+alwaysApply: true
+---
+
+### **Core Philosophy: The Frontend is a Thin Client**
+
+The frontend's sole responsibility is to present the user interface and manage user interaction. It should be considered a "thin client."
+
+- **No Business Logic**: Under no circumstances should the frontend contain business logic. Complex decisions, itinerary generation, data processing, and AI calls **must** happen on the FastAPI backend.
+- **API-Driven**: All dynamic content, data, and AI responses must be fetched from the backend via defined API endpoints. Do not embed direct calls to third-party services (e.g., AWS, OpenAI) in the frontend code.
+- **Stateless Privacy**: The frontend must not store any user-identifiable information. Conversation history can be managed in-session but should not be persisted in a way that links to an individual.
+
+### **Universal Best Practices**
+
+- **Responsiveness**: The UI must be functional and look clean on both desktop and mobile devices. Use responsive design principles (flexbox, grids).
+- **Error Handling**: Implement graceful error handling. If a backend API call fails, display a clear, non-technical message to the user (e.g., "Sorry, we couldn't generate your itinerary right now. Please try again."). Never expose raw error stack traces to the user.
+- **Accessibility (a11y)**: Use semantic HTML elements where possible. Ensure interactive elements have clear labels and are keyboard-navigable.

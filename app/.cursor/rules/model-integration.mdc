@@ -1,0 +1,10 @@
+---
+description: "Principles for integrating with third-party AI models. We build for abstraction and interchangeability."
+globs: app/models/**/*.py, app/services/**/*.py
+---
+
+### **Principle: Abstract the Provider, Not the Capability**
+Our application should depend on the *capability* (e.g., "language generation," "landmark recognition"), not on a specific *provider* (e.g., AWS Bedrock, OpenAI).
+- **Guideline: Encapsulate All Clients in Wrappers.** All interactions with external model APIs **must** go through our own wrapper classes located in `app/models/`. This allows us to swap a model provider (e.g., from Anthropic to OpenAI) by changing one file, not by refactoring the entire application.
+- **Guideline: Standardize Interfaces.** Wrappers for similar capabilities should share a common interface. For example, all chat models should have a `.stream(messages)` method, regardless of the backend provider.
+- **Guideline: Centralize Configuration.** Model IDs, API endpoints, and other parameters must be loaded from our central configuration system, not hardcoded in the wrapper.
