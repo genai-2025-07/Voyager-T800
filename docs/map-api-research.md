@@ -18,7 +18,7 @@ The reasoning behind choosing Google Maps first:
 - Consistent formatting across different types of locations.
 - Relatively generous **free tier** for the current needs.
 
-If the free quota proves insufficient, or if interactive mapping needs evolve, we will consider **Mapbox** as an alternative or complementary solution, especially for rendering and interactivity.
+If the free quota proves insufficient, or if interactive mapping needs evolve, we will consider **Mapbox** as an alternative or complementary solution, especially for rendering and interactivity. **Specific criteria for switching to Mapbox**: If we consistently exceed 9,000 requests/month (90% of Google's free tier) or require interactive features unavailable in Google Maps (such as custom map styling, offline capabilities, or advanced 3D rendering).
 
 
 ## API Research Summary
@@ -48,6 +48,8 @@ If the free quota proves insufficient, or if interactive mapping needs evolve, w
 
 \*MAU = Monthly Active Users
 
+**Note**: Some APIs may require billing enabled for higher quotas. After the free tier, pricing is typically per-request with volume discounts available.
+
 ***
 
 ## 2. Here Maps
@@ -59,6 +61,8 @@ If the free quota proves insufficient, or if interactive mapping needs evolve, w
 | **Discover / Search**           | Category & keyword search for places                                                    | 5 000 requests         |
 | **Matrix Routing**              | Time/distance matrices between origins & destinations                                   | 2 500 requests         |
 | **Routing (Car/Bike/Walk)**     | Directions for multiple modes                                                          | 30 000 requests        |
+
+**Note**: All quotas are per API key/project. Multiple API keys can be created for different use cases.
 
 ***
 
@@ -75,6 +79,8 @@ If the free quota proves insufficient, or if interactive mapping needs evolve, w
 | **Places API — Place Details**   | Detailed info (addresses, opening hours, etc.)      | 10 000 requests     |
 |                                  |                                                     |                     |
 
+**Note**: A credit card is required to activate the free tier, even for limited use. Billing is automatically enabled but charges only apply after exceeding free quotas.
+
 ***
 
 ## 4. OpenStreetMap
@@ -87,10 +93,22 @@ If the free quota proves insufficient, or if interactive mapping needs evolve, w
     - **Overpass API**: Query raw OSM data (nodes, ways, relations).
         - ~10,000 requests/day, ~1GB download/day (guidelines); multiple slots per user with queue system.
     - **Nominatim**: Geocoding/search engine.
-        - **Maximum 1 request per second**; bulk geocoding discouraged.
+        - **Maximum 1 request per second**; Bulk geocoding is discouraged; for production or high-volume use, consider self-hosting Nominatim..
         - Self-host for production/unlimited.
 - **POI / Nearby Search**:
     - Use Overpass to find amenities (e.g., `amenity=cafe`) within a radius of coordinates.
+    - **Example Overpass query** for finding cafés within 500m of coordinates:
+      ```
+      [out:json][timeout:25];
+      (
+        node["amenity"="cafe"](around:500,50.4501,30.5234);
+        way["amenity"="cafe"](around:500,50.4501,30.5234);
+        relation["amenity"="cafe"](around:500,50.4501,30.5234);
+      );
+      out body;
+      >;
+      out skel qt;
+      ```
 
 ***
 
@@ -106,10 +124,10 @@ Built on OSM data—offers routing, isochrones, matrix, geocoding, etc., under f
 | **Geocoding**  | 5 000 requests      |
 | **Pois**       | 2500 requests       |
 
-
+**Note**: Registration required for API keys. Free tier intended for non-commercial use; commercial applications may require paid plans. Rate limiting applies to prevent abuse.
 
 ***
 
 ## 6. Leaflet
 
-- **What it is**: An MIT-licensed JavaScript library for interactive maps. Isn't the that is API needed for current tasks.
+- **What it is**: Leaflet is an MIT-licensed JavaScript library for interactive maps. It does not provide map data or APIs; it’s primarily for rendering and user interaction.
