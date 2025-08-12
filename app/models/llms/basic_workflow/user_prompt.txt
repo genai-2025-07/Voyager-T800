@@ -1,7 +1,5 @@
 Please create a detailed {duration} itinerary for a trip to {destination}.
 
-+++++++++++++++++++++++++
-
 Traveler Profile:
 - Interests: {interests}
 - Budget: {budget}
