@@ -19,12 +19,41 @@ llm = ChatGroq(
     streaming=True
 )
 
-# Initialize custom memory
-memory = AsyncConversationSummaryMemory(
-    llm=llm,
-    memory_key="chat_history",
-    max_token_limit=500
-)
+# Dictionary to store memory instances for different sessions
+session_memories = {}
+
+def get_session_memory(session_id):
+    """Get or create memory instance for a specific session"""
+    if session_id not in session_memories:
+        session_memories[session_id] = AsyncConversationSummaryMemory(
+            llm=llm,
+            memory_key="chat_history",
+            max_token_limit=500
+        )
+        # Set the summary prompt for the new memory instance
+        if 'summary_template' in globals():
+            session_memories[session_id].prompt = PromptTemplate(
+                input_variables=["summary", "new_lines"],
+                template=summary_template
+            )
+    return session_memories[session_id]
+
+def clear_session_memory(session_id):
+    """Clear memory for a specific session"""
+    if session_id in session_memories:
+        del session_memories[session_id]
+
+def get_all_session_ids():
+    """Get list of all active session IDs"""
+    return list(session_memories.keys())
+
+def setup_memory_prompts():
+    """Set up the summary prompt for all existing memory instances"""
+    for session_id, memory_instance in session_memories.items():
+        memory_instance.prompt = PromptTemplate(
+            input_variables=["summary", "new_lines"],
+            template=summary_template
+        )
 
 # Prompt template for generating travel itineraries
 template = """You are an intelligent travel assistant designed to create detailed and structured travel itineraries. 
@@ -85,10 +114,18 @@ New lines of conversation:
 
 New summary: """
 
-memory.prompt = PromptTemplate(
-    input_variables=["summary", "new_lines"],
-    template=summary_template
-)
+# Initialize memory prompts for all sessions
+def initialize_all_memory_prompts():
+    """Initialize memory prompts for all existing and future sessions"""
+    global session_memories
+    for session_id, memory_instance in session_memories.items():
+        memory_instance.prompt = PromptTemplate(
+            input_variables=["summary", "new_lines"],
+            template=summary_template
+        )
+
+# Set up memory prompts for any existing sessions
+initialize_all_memory_prompts()
 
 # Chain
 chain = prompt | llm
@@ -96,9 +133,8 @@ chain = prompt | llm
 # Wrapper for message history
 runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
-    # Always return the same memory object for session history
-    # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history=lambda session_id: memory,
+    # Return different memory instances based on session_id
+    get_session_history=get_session_memory,
     input_messages_key="user_input",
     history_messages_key="chat_history"
 )
