@@ -1,14 +1,17 @@
-from memory.async_summary import AsyncConversationSummaryMemory
+from langchain.memory import ConversationSummaryMemory
+from langchain_core.runnables import RunnablePassthrough
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
-import asyncio
 import os
+import time
+from app.utils.read_prompt_from_file import load_prompt_from_file
+from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from dotenv import load_dotenv
+
 load_dotenv()  # Load environment variables from .env file
 
-# Enter your Groq API key here or set it in your environment variables
-#groq_key = os.environ["GROQ_API_KEY"] = "your-groq-api-key"
+# Set your Groq API key in your environment variables
 groq_key = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq LLM
@@ -19,115 +22,65 @@ llm = ChatGroq(
     streaming=True
 )
 
-# Initialize custom memory
-memory = AsyncConversationSummaryMemory(
-    llm=llm,
-    memory_key="chat_history",
-    max_token_limit=500
-)
-
-# Prompt template for generating travel itineraries
-template = """You are an intelligent travel assistant designed to create detailed and structured travel itineraries. 
-Your goal is to provide personalized, concise, and informative recommendations based on the user's query and conversation history. 
-When generating an itinerary, structure it by days, with activities divided into Morning, Afternoon, and Evening. 
-Include specific locations, activity types (e.g., cultural, gastronomic, outdoor), and practical details like transport options and estimated time for each activity. 
-If the user specifies a budget, tailor recommendations to it, offering alternatives for different budget levels if relevant. 
-Ensure responses are clear, structured as lists, and prioritize user preferences from the conversation history.
-
-Previous conversation: {chat_history}
-
-User query: {user_input}
-
-Response: """
+try:
+    itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
+    summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
+except Exception as e:
+    print(f"ERROR loading prompts: {e}")
+    exit(1)
 
 prompt = PromptTemplate(
     input_variables=["chat_history", "user_input"],
-    template=template
+    template=itinerary_template
 )
 
-# Prompt template for summary of the conversation
-summary_template = """Progressively summarize the lines of conversation provided, adding onto the previous summary, returning a new summary. If a travel itinerary was generated, preserve all details of the itinerary (including specific days and locations) exactly as provided, without modifications, and include it at the end of the summary under the heading "Saved Itinerary".
-
-EXAMPLE
-Current summary:
-The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
-
-New lines of conversation:
-Human: Create a 2-day itinerary for Rome.
-AI: Day 1:
-- Morning: Visit Colosseum
-- Afternoon: Explore Roman Forum
-- Evening: Dinner at Trastevere
-Day 2:
-- Morning: Tour Vatican Museums
-- Afternoon: St. Peter’s Basilica
-- Evening: Walk along Tiber River
-
-New summary:
-The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
-
-Saved Itinerary:
-Day 1:
-- Morning: Visit Colosseum
-- Afternoon: Explore Roman Forum
-- Evening: Dinner at Trastevere
-Day 2:
-- Morning: Tour Vatican Museums
-- Afternoon: St. Peter’s Basilica
-- Evening: Walk along Tiber River
-END OF EXAMPLE
-
-Current summary:
-{summary}
-
-New lines of conversation:
-{new_lines}
-
-New summary: """
+memory = ConversationSummaryMemory(llm=llm)
 
 memory.prompt = PromptTemplate(
     input_variables=["summary", "new_lines"],
     template=summary_template
 )
 
-# Chain
-chain = prompt | llm
+# Chain where we will pass the last message from the chat history
+chain = RunnablePassthrough.assign(
+    chat_history=lambda x: x["chat_history"][0].content if x["chat_history"] else ""
+) | prompt | llm
 
 # Wrapper for message history
 runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
     # Always return the same memory object for session history
     # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history=lambda session_id: memory,
+    get_session_history=lambda session_id: SummaryChatMessageHistory(memory),
     input_messages_key="user_input",
     history_messages_key="chat_history"
 )
 
-async def stream_response(user_input, session_id="default_session"):
+def stream_response(user_input, session_id="default_session"):
     """
-    Function to stream the response from the assistant
+    Function to stream the response from the assistant (synchronous)
     """
     response = ""
     try:
-        async for chunk in runnable_with_history.astream(
+        for chunk in runnable_with_history.stream(
             {"user_input": user_input},
             config={"configurable": {"session_id": session_id}}
         ):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
             response += content
             print(content, end='', flush=True)
-            await asyncio.sleep(0.1)
+            # time.sleep(0.1)  # Simulate a delay for streaming effect
     except Exception as e:
         print(f"\nERROR: {e}")
     return response
 
-async def full_response(user_input, session_id="default_session"):
+def full_response(user_input, session_id="default_session"):
     """
-    Function to get the full response from the assistant without streaming
+    Function to get the full response from the assistant without streaming (synchronous)
     """
     response = ""
     try:
-        result = await runnable_with_history.ainvoke(
+        result = runnable_with_history.invoke(
             {"user_input": user_input},
             config={"configurable": {"session_id": session_id}}
         )
@@ -137,7 +90,7 @@ async def full_response(user_input, session_id="default_session"):
         print(f"\nERROR: {e}")
     return response
 
-async def main():
+def main():
     """
     Main function to run the assistant
     """
@@ -152,13 +105,14 @@ async def main():
         print("\n\nAnswer: ", end='')
 
         # Streaming response
-        await stream_response(user_input, session_id)
+        stream_response(user_input, session_id)
         
         # Response without streaming
-        #await full_response(user_input, session_id)
+        #full_response(user_input, session_id)
+
         # Debugging: Print current memory state
         # Uncomment the line below to see the memory state after each query
-        #print(f"\n\nMemory: {memory.load_memory_variables({'session_id': session_id})['chat_history']}")
+        print(f"\n\nMemory: {memory.buffer}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
