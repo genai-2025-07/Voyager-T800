@@ -1,0 +1,28 @@
+{
+  "default_preferences": {
+    "destination": "Ukraine",
+    "duration": "3 days",
+    "interests": "General sightseeing",
+    "budget": "Moderate",
+    "travel_style": "Cultural"
+  },
+  "interests_patterns": {
+    "history": "History and cultural heritage",
+    "food": "Food and local cuisine",
+    "cuisine": "Food and local cuisine",
+    "museums": "Museums and art",
+    "outdoor": "Outdoor activities and nature",
+    "nature": "Outdoor activities and nature"
+  },
+  "budget_patterns": {
+    "budget": "Budget-friendly",
+    "cheap": "Budget-friendly",
+    "luxury": "Luxury",
+    "high-end": "Luxury"
+  },
+  "travel_style_patterns": {
+    "family": "Family-friendly",
+    "adventure": "Adventure",
+    "cultural": "Cultural"
+  }
+}

@@ -1,0 +1,22 @@
+2025-08-13 00:59:21,556 - INFO - Starting Voyager T800 application
+2025-08-13 00:59:35,110 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 01:01:23,062 - ERROR - Destinations file not found: destinations.json
+2025-08-13 01:02:00,554 - INFO - Starting Voyager T800 application
+2025-08-13 01:02:00,664 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 01:06:29,929 - INFO - Starting Voyager T800 application
+2025-08-13 01:06:30,008 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 01:07:20,023 - INFO - Generating itinerary for Kyiv and Lviv (5 days)
+2025-08-13 01:07:20,024 - INFO - Starting itinerary generation
+2025-08-13 01:08:01,925 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 01:08:02,002 - INFO - Itinerary generated successfully in 41.98s using 1886 tokens
+2025-08-13 01:10:32,376 - INFO - 💾 Added to session history (total: 1)
+2025-08-13 01:14:52,316 - INFO - Generating itinerary for Lviv, Odesa, and Carpathian Mountains (6 days)
+2025-08-13 01:14:52,317 - INFO - Starting itinerary generation
+2025-08-13 01:15:37,703 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 01:15:37,707 - INFO - Itinerary generated successfully in 45.39s using 1881 tokens
+2025-08-13 01:15:46,042 - INFO - 💾 Added to session history (total: 2)
+2025-08-13 01:18:55,034 - INFO - Generating itinerary for Lviv, Odesa, and Carpathian Mountains (6 days)
+2025-08-13 01:18:55,034 - INFO - Starting itinerary generation
+2025-08-13 01:19:32,612 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 01:19:32,618 - INFO - Itinerary generated successfully in 37.58s using 1880 tokens
+2025-08-13 01:19:32,619 - INFO - 💾 Added to session history (total: 3)
