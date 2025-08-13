@@ -106,6 +106,8 @@ Format this as a professional Markdown travel document suitable for executive re
 - **Cultural Awareness**: Respect and incorporate local cultural knowledge
 - **Practical Focus**: Ensure all recommendations are actionable and realistic
 
+End your response with a personalized tip that reflects the unique character of {city} and how it aligns with the traveler's {preferences}.
+
 ## Example Output Structure
 
 ```markdown
@@ -183,5 +185,3 @@ Format this as a professional Markdown travel document suitable for executive re
 
 > **Personalized Tip:** Kyiv's blend of ancient spirituality and modern democracy creates a unique cultural tapestry. The city's resilience and warmth reflect the Ukrainian spirit - embrace both the historic sites and contemporary culture for the most authentic experience.
 ```
-
-End your response with a personalized tip that reflects the unique character of {city} and how it aligns with the traveler's {preferences}.
