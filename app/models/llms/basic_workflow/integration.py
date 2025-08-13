@@ -225,9 +225,7 @@ class ItineraryGenerator:
         
         elif len(found_destinations) == 1:
             return found_destinations[0]
-        
         else:
-
             default_dest = self.preferences_config["default_preferences"]["destination"]
             logger.info(f"No destination pattern found, using default: {default_dest}")
             return default_dest

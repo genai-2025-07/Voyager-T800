@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import os
 from typing import Optional
 
 from app.config.logging_config import get_logger
 from .integration import ItineraryGenerator, save_to_session_history, save_conversation_to_file
+from app.services.itinerary_storage import ItineraryStorage
 
 logger = get_logger("voyager_t800.cli")
 
@@ -14,6 +16,7 @@ class VoyagerCLI:
         self.generator = ItineraryGenerator()
         self.session_history = []
         self.args = args
+        self.storage = ItineraryStorage()
     
     def _save_and_exit(self):
         if self.session_history:
@@ -62,6 +65,22 @@ class VoyagerCLI:
                     print("❌ Conversation history will not be saved.")
                     continue
                 
+                if user_input.lower() == 'export':
+                    self._export_last_itinerary()
+                    continue
+                
+                if user_input.lower() == 'export-all':
+                    self._export_all_itineraries()
+                    continue
+                
+                if user_input.lower() == 'list-json':
+                    self._list_json_itineraries()
+                    continue
+                
+                if user_input.lower() == 'search-json':
+                    self._search_json_by_user_id()
+                    continue
+                
                 if not user_input:
                     print("❌ Please enter a valid travel request.")
                     continue
@@ -77,6 +96,10 @@ class VoyagerCLI:
         print("=" * 50)
         print("📚 history - Show current session history")
         print("💾 save - Save conversation to file")
+        print("📄 export - Export last itinerary as JSON")
+        print("📋 export-all - Export all itineraries in history as JSON")
+        print("📋 list-json - List all saved JSON itineraries")
+        print("🔍 search-json - Search JSON itineraries by user ID")
         print("❓ help - Show this help message")
         print("🚪 quit/exit/q - Exit the application")
         print("=" * 50)
@@ -125,6 +148,153 @@ class VoyagerCLI:
         else:
             print("📭 No itineraries to save in current session.")
             return
+    
+    def _export_last_itinerary(self):
+        if not self.session_history:
+            print("📭 No itineraries to export in current session.")
+            return
+        
+        try:
+            last_entry = self.session_history[-1]
+            
+            itinerary_data = self.storage.create_itinerary_json(
+                user_input=last_entry['user_input'],
+                itinerary_text=last_entry['itinerary'],
+                preferences=last_entry['preferences']
+            )
+            
+            filepath = self.storage.save_itinerary(itinerary_data)
+            
+            print(f"📄 Itinerary exported to JSON: {filepath}")
+            print(f"📋 Session ID: {itinerary_data['user_id']}")
+            
+        except Exception as e:
+            print(f"❌ Failed to export itinerary: {str(e)}")
+            logger.error(f"Failed to export itinerary: {str(e)}")
+    
+    def _export_all_itineraries(self):
+        if not self.session_history:
+            print("📭 No itineraries to export in current session.")
+            return
+        try:
+            exported_count = 0
+            print(f"\n📄 Exporting {len(self.session_history)} itineraries as JSON...")
+            
+            for i, entry in enumerate(self.session_history, 1):
+                try:
+                    itinerary_data = self.storage.create_itinerary_json(
+                        user_input=entry['user_input'],
+                        itinerary_text=entry['itinerary'],
+                        preferences=entry['preferences'],
+                        session_id=f"session_{i:03d}"
+                    )
+                    
+                    filename = f"itinerary_{i:03d}_{itinerary_data['user_id']}.json"
+                    filepath = self.storage.save_itinerary(itinerary_data, filename)
+                    
+                    print(f"  ✅ Exported itinerary #{i}: {os.path.basename(filepath)}")
+                    exported_count += 1
+                    
+                except Exception as e:
+                    print(f"  ❌ Failed to export itinerary #{i}: {str(e)}")
+                    logger.error(f"Failed to export itinerary #{i}: {str(e)}")
+
+                # Because of the LLM approach, we may fail to preserve history
+                print(f"📊 Export Summary:")
+                print(f"Total itineraries: {len(self.session_history)}")
+                print(f"Successfully exported: {exported_count}")
+                print(f"Failed: {len(self.session_history) - exported_count}")
+            
+            if exported_count > 0:
+                print(f"    📁 Files saved in: {self.storage.storage_dir}")
+            
+        except Exception as e:
+            print(f"❌ Failed to export itineraries: {str(e)}")
+            logger.error(f"Failed to export all itineraries: {str(e)}")
+    
+    def _list_json_itineraries(self):
+        try:
+            files = self.storage.list_itineraries()
+            
+            if not files:
+                print("📭 No saved JSON itineraries found.")
+                return
+            
+            print(f"\n📋 Saved JSON Itineraries ({len(files)} files):")
+            print("=" * 60)
+            
+            for i, filepath in enumerate(files, 1):
+                filename = os.path.basename(filepath)
+                print(f"{i}. {filename}")
+            
+            print("\n💡 Type a number to load that itinerary, or any letter to exit")
+            user_choice = input("\n🔍 Your choice: ").strip()
+            
+            if user_choice.isdigit():
+                try:
+                    index = int(user_choice) - 1
+                    if 0 <= index < len(files):
+                        self._load_json_itinerary(files[index])
+                    else:
+                        print(f"❌ Invalid number. Please enter a number between 1 and {len(files)}.")
+                except ValueError:
+                    print("❌ Please enter a valid number.")
+                    
+        except Exception as e:
+            print(f"❌ Failed to list itineraries: {str(e)}")
+            logger.error(f"Failed to list itineraries: {str(e)}")
+    
+    def _load_json_itinerary(self, filepath: str):
+        try:
+            itinerary_data = self.storage.load_itinerary(filepath)
+            
+            print(f"\n📋 Loaded Itinerary from JSON")
+            print("=" * 60)
+            print(f"Session ID: {itinerary_data.get('user_id', 'Unknown')}")
+            print(f"Timestamp: {itinerary_data.get('timestamp', 'Unknown')}")
+            print(f"Duration: {itinerary_data.get('trip_duration', 'Unknown')}")
+            print(f"Destinations: {', '.join(itinerary_data.get('destinations', []))}")
+            print(f"Budget: {itinerary_data.get('budget', 'Unknown')}")
+            print(f"Travel Style: {itinerary_data.get('travel_style', 'Unknown')}")
+            print(f"Preferences: {', '.join(itinerary_data.get('preferences', []))}")
+            print("=" * 60)
+            
+            days = itinerary_data.get('days', [])
+            if days:
+                print("\n📅 Day-by-Day Structure:")
+                for day in days:
+                    print(f"\nDay {day.get('day', '?')} - {day.get('city', 'Unknown')}")
+                    activities = day.get('activities', [])
+                    for activity in activities:
+                        print(f"  • {activity}")
+            
+            print("=" * 60)
+            
+        except Exception as e:
+            print(f"❌ Failed to load itinerary: {str(e)}")
+            logger.error(f"Failed to load itinerary {filepath}: {str(e)}")
+    
+    def _search_json_by_user_id(self):
+        try:
+            user_id = input("\n🔍 Enter user ID to search for (e.g., session_001): ").strip()
+            
+            if not user_id: 
+                print("❌ Please enter a valid user ID.")
+                return
+            
+            filepath = self.storage.find_itinerary_by_session(user_id)
+            
+            if filepath:
+                print(f"✅ Found itinerary for user ID: {user_id}")
+                print(f"📁 File: {os.path.basename(filepath)}")
+                
+                self._load_json_itinerary(filepath)
+            else:
+                print(f"📭 No itinerary found for user ID: {user_id}")
+                
+        except Exception as e:
+            print(f"❌ Failed to search for itinerary: {str(e)}")
+            logger.error(f"Failed to search for itinerary: {str(e)}")
     
     def _process_request(self, user_input: str):
         try:
@@ -203,4 +373,3 @@ def start_cli():
         print(f"❌ Application error: {str(e)}")
         logger.error(f"Application error: {str(e)}")
         sys.exit(1)
-J

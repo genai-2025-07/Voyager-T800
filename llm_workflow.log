@@ -20,3 +20,77 @@
 2025-08-13 01:19:32,612 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 2025-08-13 01:19:32,618 - INFO - Itinerary generated successfully in 37.58s using 1880 tokens
 2025-08-13 01:19:32,619 - INFO - 💾 Added to session history (total: 3)
+2025-08-13 04:18:29,410 - INFO - Starting Voyager T800 application
+2025-08-13 04:18:35,768 - ERROR - Configuration file not found: destinations_mapping.json
+2025-08-13 04:19:39,543 - INFO - Starting Voyager T800 application
+2025-08-13 04:19:46,046 - ERROR - Configuration file not found: destinations_mapping.json
+2025-08-13 04:19:46,047 - ERROR - Application error: Configuration file not found: destinations_mapping.json
+2025-08-13 04:19:59,611 - INFO - Starting Voyager T800 application
+2025-08-13 04:20:54,965 - ERROR - Configuration file not found: destinations_mapping.json
+2025-08-13 04:20:54,966 - ERROR - Application error: Configuration file not found: destinations_mapping.json
+2025-08-13 04:22:04,577 - INFO - Starting Voyager T800 application
+2025-08-13 04:22:09,734 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:22:09,742 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:22:09,742 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:22:52,774 - INFO - Generating itinerary for , and Kyiv (8 days)
+2025-08-13 04:22:52,775 - INFO - Starting itinerary generation
+2025-08-13 04:23:29,456 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 04:23:29,504 - INFO - Itinerary generated successfully in 36.73s using 1676 tokens
+2025-08-13 04:23:29,505 - INFO - 💾 Added to session history (total: 1)
+2025-08-13 04:25:25,568 - INFO - Using LLM to parse itinerary structure
+2025-08-13 04:25:33,853 - ERROR - LLM parsing failed: '"day"'
+2025-08-13 04:28:39,677 - INFO - Starting Voyager T800 application
+2025-08-13 04:28:39,741 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:28:39,749 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:28:39,749 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:30:52,610 - INFO - Starting Voyager T800 application
+2025-08-13 04:30:52,673 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:30:52,681 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:30:52,681 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:31:22,854 - INFO - Starting Voyager T800 application
+2025-08-13 04:31:22,918 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:31:22,925 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:31:22,926 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:33:39,930 - INFO - Starting Voyager T800 application
+2025-08-13 04:33:40,003 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:33:40,011 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:33:40,011 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:35:36,002 - INFO - Starting Voyager T800 application
+2025-08-13 04:35:36,081 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:35:36,089 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:35:36,089 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:36:00,226 - INFO - Starting Voyager T800 application
+2025-08-13 04:36:00,291 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:36:00,299 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:36:00,299 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:36:50,929 - INFO - Generating itinerary for Poltava and Cossack Lands (5 days)
+2025-08-13 04:36:50,929 - INFO - Starting itinerary generation
+2025-08-13 04:37:24,554 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 04:37:24,598 - INFO - Itinerary generated successfully in 33.67s using 1733 tokens
+2025-08-13 04:37:31,322 - INFO - 💾 Added to session history (total: 1)
+2025-08-13 04:38:26,887 - INFO - Using LLM to parse itinerary structure
+2025-08-13 04:39:27,821 - INFO - Using LLM to parse itinerary structure
+2025-08-13 04:39:51,701 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 04:40:55,553 - INFO - Itinerary parsed successfully using 2095 tokens
+2025-08-13 04:41:24,688 - INFO - Successfully parsed 5 days from itinerary using JSON
+2025-08-13 04:41:40,461 - INFO - Successfully parsed 5 days from itinerary
+2025-08-13 04:41:52,210 - INFO - Created itinerary JSON for session session_d8aeb28d
+2025-08-13 04:42:13,808 - ERROR - Failed to save itinerary to app/models/llms/basic_workflow/conversation_history/conversation_history_json/itinerary_session_d8aeb28d_20250813_044159.json: Object of type Budget is not JSON serializable
+2025-08-13 04:45:19,786 - ERROR - Failed to export itinerary: Failed to save itinerary: Object of type Budget is not JSON serializable
+2025-08-13 04:47:32,414 - INFO - Starting Voyager T800 application
+2025-08-13 04:47:32,479 - INFO - ItineraryGenerator initialized successfully with model=gpt-4-turbo-preview, temperature=0.3
+2025-08-13 04:47:32,487 - INFO - LLMParser initialized with model=gpt-4-turbo-preview
+2025-08-13 04:47:32,487 - INFO - ItineraryStorage initialized with storage directory: app/models/llms/basic_workflow/conversation_history/conversation_history_json
+2025-08-13 04:47:42,301 - INFO - Generating itinerary for Poltava and Cossack Lands (5 days)
+2025-08-13 04:47:42,301 - INFO - Starting itinerary generation
+2025-08-13 04:48:23,516 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 04:48:23,558 - INFO - Itinerary generated successfully in 41.26s using 1722 tokens
+2025-08-13 04:48:23,559 - INFO - 💾 Added to session history (total: 1)
+2025-08-13 04:48:47,106 - INFO - Using LLM to parse itinerary structure
+2025-08-13 04:48:47,106 - INFO - Using LLM to parse itinerary structure
+2025-08-13 04:48:59,654 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-13 04:48:59,659 - INFO - Itinerary parsed successfully using 2026 tokens
+2025-08-13 04:48:59,659 - INFO - Successfully parsed 5 days from itinerary using JSON
+2025-08-13 04:48:59,659 - INFO - Successfully parsed 5 days from itinerary
+2025-08-13 04:48:59,659 - INFO - Created itinerary JSON for session session_20172de9
+2025-08-13 04:49:18,019 - INFO - Itinerary saved to app/models/llms/basic_workflow/conversation_history/conversation_history_json/itinerary_session_20172de9_20250813_044907.json
