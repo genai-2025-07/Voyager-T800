@@ -8,17 +8,31 @@ import time
 from app.utils.read_prompt_from_file import load_prompt_from_file
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from dotenv import load_dotenv
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 load_dotenv()  # Load environment variables from .env file
 
 # Set your Groq API key in your environment variables
-groq_key = os.getenv("GROQ_API_KEY")
+try:
+    groq_key = os.getenv("GROQ_API_KEY")
+except Exception as e:
+    logging.error(f"ERROR exporting Groq API key: {e}")
 
 # Initialize Groq LLM
+# Parameterize model name and temperature via environment variables for flexibility
+model_name = os.getenv("GROQ_MODEL_NAME", "llama3-8b-8192")
+temperature = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
+
 llm = ChatGroq(
     groq_api_key=groq_key,
-    model="llama3-8b-8192",
-    temperature=0.7,
+    model=model_name,
+    temperature=temperature,
     streaming=True
 )
 
@@ -26,24 +40,48 @@ try:
     itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
     summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
-    print(f"ERROR loading prompts: {e}")
-    exit(1)
+    logging.error(f"ERROR loading prompts: {e}")
 
 prompt = PromptTemplate(
     input_variables=["chat_history", "user_input"],
     template=itinerary_template
 )
 
-memory = ConversationSummaryMemory(llm=llm)
-
-memory.prompt = PromptTemplate(
+memory_prompt = PromptTemplate(
     input_variables=["summary", "new_lines"],
     template=summary_template
 )
 
+memory = ConversationSummaryMemory(
+    llm=llm,
+    prompt=memory_prompt,
+    max_token_limit=1000
+)
+
 # Chain where we will pass the last message from the chat history
+def extract_chat_history_content(x):
+    """
+    Safely extract the content of the last message from chat_history.
+    Handles various possible input structures and errors.
+    """
+    try:
+        chat_history = x.get("chat_history", [])
+        if not isinstance(chat_history, list) or not chat_history:
+            return ""
+        last_msg = chat_history[-1]
+        # Handle dict or object with 'content'
+        if isinstance(last_msg, dict):
+            return last_msg.get("content", "")
+        elif hasattr(last_msg, "content"):
+            return getattr(last_msg, "content", "")
+        else:
+            return str(last_msg)
+    except Exception as e:
+        logging.warning(f"WARNING: Failed to extract chat_history content: {e}")
+        return ""
+
 chain = RunnablePassthrough.assign(
-    chat_history=lambda x: x["chat_history"][0].content if x["chat_history"] else ""
+    chat_history=extract_chat_history_content
 ) | prompt | llm
 
 # Wrapper for message history
@@ -60,19 +98,17 @@ def stream_response(user_input, session_id="default_session"):
     """
     Function to stream the response from the assistant (synchronous)
     """
-    response = ""
     try:
         for chunk in runnable_with_history.stream(
             {"user_input": user_input},
             config={"configurable": {"session_id": session_id}}
         ):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-            response += content
+            
             print(content, end='', flush=True)
-            # time.sleep(0.1)  # Simulate a delay for streaming effect
+            #time.sleep(0.1)  # Simulate a delay for streaming effect
     except Exception as e:
-        print(f"\nERROR: {e}")
-    return response
+        logging.error(f"ERROR: {e}")
 
 def full_response(user_input, session_id="default_session"):
     """
@@ -85,10 +121,9 @@ def full_response(user_input, session_id="default_session"):
             config={"configurable": {"session_id": session_id}}
         )
         response = result.content if hasattr(result, 'content') else str(result)
-        print(response)
+        print(response, end='', flush=True)
     except Exception as e:
-        print(f"\nERROR: {e}")
-    return response
+        logging.error(f"ERROR: {e}")
 
 def main():
     """
@@ -97,22 +132,25 @@ def main():
     print("\n\nHey! I am your travel assistant. How can I help?")
     
     session_id = "default_session"
-    while True:
-        user_input = input("\nQuery ('q' to quit): ")
-        if user_input.lower() == 'q':
-            break
-            
-        print("\n\nAnswer: ", end='')
+    try:
+        while True:
+            user_input = input("\nQuery ('q' to quit): ")
+            if user_input.lower() == 'q':
+                break
 
-        # Streaming response
-        stream_response(user_input, session_id)
-        
-        # Response without streaming
-        #full_response(user_input, session_id)
+            print("\n\nAnswer: ", end='')
 
-        # Debugging: Print current memory state
-        # Uncomment the line below to see the memory state after each query
-        print(f"\n\nMemory: {memory.buffer}")
+            # Streaming response
+            stream_response(user_input, session_id)
+
+            # Response without streaming
+            #full_response(user_input, session_id)
+
+            # Debugging: Print current memory state
+            # Uncomment the line below to see the memory state after each query
+            #print(f"\n\nMemory: {memory.buffer}")
+    except KeyboardInterrupt:
+        logging.info("User interrupted the session.")
 
 if __name__ == "__main__":
     main()
