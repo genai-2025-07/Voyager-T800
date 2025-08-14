@@ -286,12 +286,3 @@ class GoogleMapService:
             sublocality_level_1=extracted.get("sublocality_level_1", ""),
             formatted_address=place.get("result", {}).get("formatted_address", "")
         )
-
-
-if __name__ == "__main__":
-    service = GoogleMapService()
-    try:
-        processed_data = service.process_from_json("place_data.json")
-        service.save_processed_data(processed_data, "processed_place_data.json")
-    except FileNotFoundError:
-        print("⚠️  place_data.json not found. Run collect_attractions_metadata.py first.")
