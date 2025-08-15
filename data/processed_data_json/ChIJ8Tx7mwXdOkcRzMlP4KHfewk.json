@@ -1,0 +1,93 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Muzeina Square, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "",
+  "place_id": "ChIJ8Tx7mwXdOkcRzMlP4KHfewk",
+  "url": "https://maps.google.com/?cid=683385654822816204",
+  "coordinates": {
+    "lat": 49.8427498,
+    "lng": 24.0338232
+  },
+  "rating": 5,
+  "reviews": [
+    {
+      "author_name": "Poseidónas Greek",
+      "author_url": "https://www.google.com/maps/contrib/109161230067655106096/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWaQP0myN788lbrd3AnH4tRptiPUKtyKBx8NOkUr2GMKIQJUOdg=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "The architecture of the building is beautiful.  Impressive is this construction of the former Dominican Cathedral.\nThis is one of the visiting cards of the cultural capital of Ukraine.\nExternal and internal design is collected in a unique ensemble.\n\nThe church is built in the late Baroque style on the Western European model.  Stone, in plan it depicts an elongated cross with an oval central part and two bell towers on the sides.  The church is glorified by a huge elliptical dome.  Massive double columns support galleries and lodges decorated with wooden statues by Lviv sculptors of the second half of the 18th century.  Above the galleries are drum columns supporting the dome.  Under the bath of the church is a quotation in Latin from the First Epistle to Timothy: \"Soli Deo honor et gloria\" (\"Honor and praise to the One God\"). I recommend to visit.",
+      "time": 1628763069,
+      "translated": false
+    },
+    {
+      "author_name": "l",
+      "author_url": "https://www.google.com/maps/contrib/104460830992965645538/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVz9ULbVVlumzCOEL9UcUTkhhMkve8SXB18G3HFKdJ2UjTT_hm9=s128-c0x00000000-cc-rp-mo-ba3",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "This is an amazing church, you can feel the power of God. When you walk in, your eyes have to process the splendor. In combination with the silence it gives you goosebumps…",
+      "time": 1692911099,
+      "translated": false
+    },
+    {
+      "author_name": "Vlad Bilousenko",
+      "author_url": "https://www.google.com/maps/contrib/115590006226790839455/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWCYIVSE6aKjJEq7k0RNOXbdlzgJnxR8Z6mRJZ1CRgwZk1o6ABC=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "11 months ago",
+      "text": "Wonderful place\nI love this view even more than central square",
+      "time": 1724822839,
+      "translated": false
+    },
+    {
+      "author_name": "Anastasia Sm",
+      "author_url": "https://www.google.com/maps/contrib/107024490058835137481/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWnGcZUfQqgpTwb8iO-dFQKg-LbT1vSRFua-0IuTj02GHRRt-84=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "A majestic church with a high ceiling, columns and many different details.",
+      "time": 1715623919,
+      "translated": false
+    },
+    {
+      "author_name": "ilyas gürbüz",
+      "author_url": "https://www.google.com/maps/contrib/104942119363675051147/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUInAtvMjemZ55lG5VYG3145JU4PTx8j3t_-ZgiHX7KO8CwwlkQ=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "Such a amazing place. Not even close to the others. Very unique and magnificent church.",
+      "time": 1627220531,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "church",
+    "establishment",
+    "place_of_worship",
+    "point_of_interest"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

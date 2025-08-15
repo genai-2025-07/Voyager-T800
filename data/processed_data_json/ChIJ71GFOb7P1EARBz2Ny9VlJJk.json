@@ -1,0 +1,141 @@
+{
+  "postal_code": "02660",
+  "administrative_area_level_1": "Kyiv city",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Dniprovs'kyi District",
+  "address": "причал, Hydropark, Kyiv, Ukraine, 02660",
+  "phone_number": "+380 44 222 5559",
+  "place_id": "ChIJ71GFOb7P1EARBz2Ny9VlJJk",
+  "url": "https://maps.google.com/?cid=11035056955882028295",
+  "coordinates": {
+    "lat": 50.4471125,
+    "lng": 30.5719616
+  },
+  "rating": 4.5,
+  "reviews": [
+    {
+      "author_name": "Ashu Sharma",
+      "author_url": "https://www.google.com/maps/contrib/117182852362562859605/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWSv3MHYohPTe8l28FYHcDguHzm1OavBZE9sdgyA9U4GiAPK4-nCw=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Good",
+      "time": 1541233180,
+      "translated": false
+    },
+    {
+      "author_name": "I G",
+      "author_url": "https://www.google.com/maps/contrib/110706063258853116425/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWi8N4PGbZy2NvAfrIxWifGG2Ber6gpizd3Gs4TTwfJ2akVgFQU=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "8 years ago",
+      "text": "You can take a tour and ride on the river on the boat.",
+      "time": 1496478262,
+      "translated": false
+    },
+    {
+      "author_name": "Iban Atucha",
+      "author_url": "https://www.google.com/maps/contrib/105666445810042095610/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIvtTZhU6j9vlbuL2BTi6tPtIY-_TxQsmvNFAvzRXlf5SlbhQ=s128-c0x00000000-cc-rp-mo-ba3",
+      "rating": 4,
+      "relative_time_description": "8 years ago",
+      "text": "Nice",
+      "time": 1472467737,
+      "translated": false
+    },
+    {
+      "author_name": "Максим Петров",
+      "author_url": "https://www.google.com/maps/contrib/116912718969356774080/reviews",
+      "language": "en-US",
+      "original_language": "ru",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWcWdsc47ibaZ8_iEqzeif6311X3e4FLwN-vUjcOEm_Oc4UOkHUjQ=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "7 years ago",
+      "text": "A park area in the city center with infrastructure for active and passive recreation.\nIn summer - a paradise for vacationers)",
+      "time": 1531121095,
+      "translated": true
+    },
+    {
+      "author_name": "Max Kurlov",
+      "author_url": "https://www.google.com/maps/contrib/116243280972859015369/reviews",
+      "language": "en-US",
+      "original_language": "ru",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUYpIqtwuQ9w1ghLAFPcBvb1-9jBN2xLmkul2h3PSnSDYb2n6s=s128-c0x00000000-cc-rp-mo-ba3",
+      "rating": 5,
+      "relative_time_description": "10 years ago",
+      "text": "I have known this company for a long time; it has proven itself well in the rental of ships. Last year we gathered in a large group, but couldn’t decide where best to spend the weekend. Alex (our employee) came to our aid and recommended this company.\nAs a result, we took Olesta for three days, had a good rest, everyone was extremely satisfied and now we use the services of this company every year.\nI recently learned that this company not only rents out ships and boats, but also organizes wonderful excursions. And just yesterday, a very good friend and I went on a 4-hour trip to the Kiev Sea together. The impression of what we saw was simply indescribable. We sat on the lower deck, where it was quiet, calm and very beautiful. All the way I could not stop admiring Kiev, the bridges, Vyshgorod... But the most interesting thing awaited us further, namely the locking process, which we were delighted with. Returning back to the pier (Dnepr metro station), we observed Kyiv in the evening, which is especially beautiful.. In general, I advise everyone to try everything themselves, and already share their impressions!",
+      "time": 1439833844,
+      "translated": true
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.506678+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ]
+    }
+  }
+}

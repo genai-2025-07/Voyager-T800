@@ -1,0 +1,92 @@
+{
+  "postal_code": "01030",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Shevchenkivs'kyi district",
+  "address": "Volodymyrska St, 50, Kyiv, Ukraine, 01030",
+  "phone_number": "+380 44 234 7165",
+  "place_id": "ChIJs1EjPljO1EARdhwwhayQZVo",
+  "url": "https://maps.google.com/?cid=6513771506704587894",
+  "coordinates": {
+    "lat": 50.4467066,
+    "lng": 30.5123695
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "William Anderson",
+      "author_url": "https://www.google.com/maps/contrib/114154030596528188492/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUu56nToxikHr7MUN71vDc4eTuIy1AzqAL1R66dqRCVgZhqHwONzw=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "5 years ago",
+      "text": "It was Outstanding!!! Truly a first class experience for me attending my first ballet performance! The performers did just fantastic and all had super amazing skills! Same with the very talented orchestra and their conductor! Blew and my wife and I away!!! The historic theater is really something to see and experience! The box seating area on our balcony was kind of tight sitting 2X2 four rows deep. By the end of the 3 hour program, I was ready to go!",
+      "time": 1574032319,
+      "translated": false
+    },
+    {
+      "author_name": "Fat Bucket",
+      "author_url": "https://www.google.com/maps/contrib/105258116308604513408/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWNsrowL86v-ycy2EQWyPhuyZbx8Dfif6ctdItxowrpGZm0xyz-=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "2 weeks ago",
+      "text": "One of my favourite places in Kyiv. I have been travelling just to see the performance from London! Unforgettable people and ballet! See you soon again!",
+      "time": 1753551962,
+      "translated": false
+    },
+    {
+      "author_name": "Arman Khachatryan",
+      "author_url": "https://www.google.com/maps/contrib/105464204001903165121/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVgKxxfb7J16309M0Ctn0AtB5LaIuj2MfSQ-klcChR9mYlZt8Shxg=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "Gold leaf in the auditorium was reapplied using 19th-century techniques during restoration. The crystal chandeliers' weight required special reinforcement of the ceiling beams. Backstage, markings on the floor show where sets have been positioned for decades.",
+      "time": 1749476634,
+      "translated": false
+    },
+    {
+      "author_name": "Sanjeeva Nayaka",
+      "author_url": "https://www.google.com/maps/contrib/112336417576651076317/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVxPSmjB52b02BaWbBrnHIYUZ7WUHr6FGb0jjFBpYX7l8gCVI1g=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Superb opera house located in the heart of the city. I saw 2 shows here. Beautiful performances. Deane lake bake was the best. Elegantly decorated inside the hall, nice stage and soothing music. Prices for seats are different. People love opera and bale, just they are crazy for it.",
+      "time": 1548950441,
+      "translated": false
+    },
+    {
+      "author_name": "Ivan Kuprijanov",
+      "author_url": "https://www.google.com/maps/contrib/109726685163047881077/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWYnetyfKyKiYkSY_ZZ3t8lANAS9lL3Q_4FEwr9azAIuaXZn0E=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "2 years ago",
+      "text": "Great and memorable experience in the superior surrounding. Awesome atmosphere, excellent staging and musical accompaniment. The story about Dr Faust was quite impressive,-)",
+      "time": 1689795557,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

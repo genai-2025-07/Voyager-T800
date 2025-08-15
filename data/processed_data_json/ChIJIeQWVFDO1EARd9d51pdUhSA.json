@@ -1,0 +1,29 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "",
+  "address": "Maidan Nezalezhnosti, Kyiv, Ukraine, 02000",
+  "phone_number": "",
+  "place_id": "ChIJIeQWVFDO1EARd9d51pdUhSA",
+  "url": "https://maps.google.com/?cid=2343372192231315319",
+  "coordinates": {
+    "lat": 50.4509032,
+    "lng": 30.5234677
+  },
+  "rating": 0.0,
+  "reviews": [],
+  "price_level": 0,
+  "tags": [
+    "route"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

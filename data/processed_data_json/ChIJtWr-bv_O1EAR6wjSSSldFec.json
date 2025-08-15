@@ -1,0 +1,93 @@
+{
+  "postal_code": "01004",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Pechers'kyi district",
+  "address": "вул. Велика Васильківська, Baseina St, 1, 3-2, Kyiv, Ukraine, 01004",
+  "phone_number": "+380 67 243 1877",
+  "place_id": "ChIJtWr-bv_O1EAR6wjSSSldFec",
+  "url": "https://maps.google.com/?cid=16651317629185820907",
+  "coordinates": {
+    "lat": 50.4417793,
+    "lng": 30.5211407
+  },
+  "rating": 4.5,
+  "reviews": [
+    {
+      "author_name": "Iryna Vlizko",
+      "author_url": "https://www.google.com/maps/contrib/104961187580116461216/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVVYKgIpL3000ZRcOyQirS0fTpwhAUIiqNIr7cH6C8ylIf2-tE=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "4 months ago",
+      "text": "One of my favorite places in Kyiv. I visit this gallery every time I'm in the city. It's free to enter, and you can get an audio guide if you'd like. The gallery has three floors with many rooms, each featuring different exhibitions.",
+      "time": 1744664147,
+      "translated": false
+    },
+    {
+      "author_name": "Lina W",
+      "author_url": "https://www.google.com/maps/contrib/101471785066818747605/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjV1Meu7k1Xr-SwHg9eNsM-v0byR-lWrmFX4l9V5jbTYxFT0KvNDvw=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "Cold and rainy day today. So we've decided to do something cultural 👌\nPinchukArtCentre presents an exhibition of 20 nominees for the PinchukArtCentre Prize 2025.\nAnd, of course, we made our choices in voting for nominees 👍",
+      "time": 1747486238,
+      "translated": false
+    },
+    {
+      "author_name": "Vlada Kylynnyk",
+      "author_url": "https://www.google.com/maps/contrib/110396088794589598941/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocLZ21s1JjEY5N1PnLrdVxnoEfmdrbA6dbVFF4WYlMhYVFwjFg=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "You can find many pieces of temporary art by local artists. The entrance is free, and there is no waiting line.",
+      "time": 1748036985,
+      "translated": false
+    },
+    {
+      "author_name": "Arman Khachatryan",
+      "author_url": "https://www.google.com/maps/contrib/105464204001903165121/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVgKxxfb7J16309M0Ctn0AtB5LaIuj2MfSQ-klcChR9mYlZt8Shxg=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "This contemporary gallery's polished concrete floors reflect changing installations in unexpected ways. The top-floor cafe's windows frame perfect views of nearby church domes. Security staff rotate artworks with surgical precision during closed hours.",
+      "time": 1749476678,
+      "translated": false
+    },
+    {
+      "author_name": "Max Nebesny",
+      "author_url": "https://www.google.com/maps/contrib/111174083913074826352/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVxaZeExXNKDuzE_VdxXdxUgkhgf-_Zia4wiguboK75CeLUhEzvig=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "4 years ago",
+      "text": "Generally, a nice place to visit. However, there are some pieces that pretend to be art especially among nude photos. A lot of pictures there pretend to be conceptual, but are not art, sorry. There are a couple of worthy ones too.\nAt the same time there are a bunch of good ink drawings upstairs + sculptures built with neon bulbs and iron bars which we a e used to see on the first floor of any Soviet apartment building.",
+      "time": 1627225174,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "art_gallery",
+    "establishment",
+    "museum",
+    "point_of_interest"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

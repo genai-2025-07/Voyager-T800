@@ -1,0 +1,26 @@
+{
+  "timezone": {
+    "default": "Europe/Kyiv"
+  },
+  "opening_hours": {
+    "defaults": {
+      "weekdays": {
+        "start": "12:00",
+        "end": "21:00"
+      },
+      "weekends": {
+        "start": "10:00",
+        "end": "21:00"
+      }
+    }
+  },
+  "coordinates": {
+    "default": {
+      "lat": 0.0,
+      "lng": 0.0
+    }
+  },
+  "attraction_csv_path": "data/attractions_names_list.csv",
+  "output_csv_path": "data/attractions_metadata.csv",
+  "output_json_path": "data/processed_data_json"
+}

@@ -1,0 +1,90 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "",
+  "address": "Khreschatyk St, Kyiv, Ukraine, 02000",
+  "phone_number": "",
+  "place_id": "ChIJO21FslbO1EARR-lXGxeuYtA",
+  "url": "https://maps.google.com/?cid=15015755521872881991",
+  "coordinates": {
+    "lat": 50.447732,
+    "lng": 30.5221471
+  },
+  "rating": 4.7,
+  "reviews": [
+    {
+      "author_name": "M",
+      "author_url": "https://www.google.com/maps/contrib/108530438238430494122/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWLTC3u5PJsXyWEKTkK5wdh3T5Tr9w-s8_vmlFSnUXpFMn1HO1e=s128-c0x00000000-cc-rp-mo-ba2",
+      "rating": 5,
+      "relative_time_description": "3 months ago",
+      "text": "Love this city ❤️ a lot of beautiful places and people ☺️❤️",
+      "time": 1745570918,
+      "translated": false
+    },
+    {
+      "author_name": "Ali",
+      "author_url": "https://www.google.com/maps/contrib/101123082009670533297/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVTM0i5Pj1F7MQVVeo1nVPdMZoA0tT_3IJCKbnu6L3AmxC1TK2AgQ=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 4,
+      "relative_time_description": "4 years ago",
+      "text": "The Main Street in Kyiv, many events and shows going on there. It’s very nice to go and back and get some food or coffee over there.",
+      "time": 1624329659,
+      "translated": false
+    },
+    {
+      "author_name": "Rufescent Rufescent",
+      "author_url": "https://www.google.com/maps/contrib/102634647378135090994/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXa13vTF_l2ADY-btYq4qAmMoXc1CI3eWRGOb_VHs7NXVVdsnUm=s128-c0x00000000-cc-rp-mo-ba3",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "Such a cute ,lovely  place, I love it. Lots of  cafes ,restaurants, beautiful  architecture",
+      "time": 1629049603,
+      "translated": false
+    },
+    {
+      "author_name": "Mousa Mousa",
+      "author_url": "https://www.google.com/maps/contrib/115772652689444657499/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocLjg-zn26G7i7IRFQcbjdPZigENEAfP7zeFz1dne5Ljj7_2EA=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 3,
+      "relative_time_description": "3 years ago",
+      "text": "It’s the main street in kyiv, you can find a lot of bars, cafes, restaurants from different cultures, and also it’s the first destination for the tourists that’s a lot of languages here",
+      "time": 1635261984,
+      "translated": false
+    },
+    {
+      "author_name": "Anas Khan",
+      "author_url": "https://www.google.com/maps/contrib/102771490924575264104/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVmFZBBleM3NwuDi2Hej56g6Enwg2EgaHCx-ZHP1lX4R4CLnATe=s128-c0x00000000-cc-rp-mo-ba2",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "Good place to visit",
+      "time": 1626264843,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "route"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}
