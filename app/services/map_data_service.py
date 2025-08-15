@@ -559,10 +559,3 @@ class GoogleMapService:
             
         except Exception as e:
             raise ValueError(f"Error processing CSV: {e}")
-
-if __name__ == "__main__":
-    service = GoogleMapService()
-    with open(service.config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    attraction_csv_path = config.get("attraction_csv_path")
-    service.process_all_places_csv(attraction_csv_path)
