@@ -23,6 +23,20 @@ This document records architectural and implementation decisions for the semanti
 - Implements **retry logic** with exponential backoff using the `tenacity` library if available.
 - Gracefully falls back to a simple retry mechanism if `tenacity` is not installed.
 
+We chose `"text-embedding-3-small"` because:
+- it produces high-quality embeddings suitable for similarity search, clustering, and retrieval;
+- embedding vectors have 1,536 dimensions, balancing accuracy with reduced storage and memory requirements;
+- significantly lower token cost compared to larger models;
+- faster inference times;
+- performs well across varied travel-related content (destination descriptions, itinerary details, reviews) without fine-tuning.
+
+
+Move to the large model if:
+- maximum semantic accuracy is needed (e.g., nuanced legal/medical content).
+- Your dataset is small enough that cost and storage are not concerns.
+- retrieval precision is more critical than speed (e.g., expert search systems).
+
+
 ---
 
 ## 3. Text Cleaning & Tokenization
@@ -40,12 +54,24 @@ This document records architectural and implementation decisions for the semanti
 
 ## 4. Chunking Strategy
 
-- Uses a **sliding window** approach to generate overlapping token chunks.
-- Configurable parameters:
-  - Maximum tokens per chunk (default 450).
-  - Overlap ratio (default 20%) to maintain context between chunks.
-- Overlap is capped to at most `max_tokens - 1` tokens to avoid empty chunks.
-- Chunking is done on token IDs, preserving semantic token boundaries when possible.
+Supports two methods for splitting text into chunks before embedding:
+
+1. **Sliding Window (default)**
+
+- Splits text based on a maximum token size (default 450 tokens).
+  - value 450 is chosen to balance semantic completeness with API efficiency. Also it Helps avoid cutting off sentences too often while still producing manageable chunks for search indexing. 
+- Uses overlapping windows (default 20%) to preserve context across chunks.
+  - enough to preserve continuity for ideas that span chunk boundaries without excessive duplication and it is a common practice in semantic search pipelines (typical range: 10–25%).
+- Works well for free-flowing text without clear structural markers.
+- Overlap is capped to at most max_tokens - 1 tokens to avoid empty chunks.
+
+2. **Paragraph-based (structure-aware)**
+- Detects paragraph or section boundaries (e.g., ==Heading== markers).
+- Small paragraphs are merged with adjacent ones to meet the minimum token threshold.
+- Large paragraphs are further split using a sliding window.
+- Designed for structured documents (e.g., Wikipedia-style travel articles) where section boundaries should be respected.
+
+Both methods preserve semantic token boundaries when possible and ensure no chunk exceeds the max_tokens limit.
 
 ---
 
@@ -122,13 +148,84 @@ This document records architectural and implementation decisions for the semanti
 - Command-line arguments allow configuring:
   - Input directory (`--input-dir`).
   - Output directory (`--output-dir`).
-  - Embedding provider (currently only `"openai"` supported).
-  - Model name.
-  - Maximum tokens per chunk.
-  - Chunk overlap ratio.
-  - Batch size.
-- Default parameters provide sensible defaults for typical usage.
+  - Metadata CSV file path (`--metadata-csv-path`).
+  - Embedding provider (currently only `"openai"` supported) (`--provider`).
+  - Model name (`--model`).
+  - Maximum tokens per chunk (`--max-tokens`).
+  - Chunk overlap ratio (`--overlap`).
+  - Batch size (`--batch-size`).
+  - Retry attempts (`--retry-attempts`).
+  - Minimum retry wait in seconds (`--retry-min-wait`).
+  - Maximum retry wait in seconds (`--retry-max-wait`).
+  - Polite delay between batch API calls in seconds (`--polite-delay`).
 
+### 10.1 CLI Usage Examples
+
+Below are example commands for running the embedding pipeline from the command line.
+Defaults can be overridden using CLI arguments or environment variables (see section 11 for .env usage).
+
+**Basic Example**
+
+Generate embeddings from the default input directory (`data/raw`) and save to the default output directory (`data/embeddings`):
+```
+python -m app.retrieval.embedding.generate_embedding
+```
+**Specifying Input and Output Directories:**
+
+```
+python -m app.retrieval.embedding.generate_embeddings \
+    --input-dir ./my_input_texts \
+    --output-dir ./my_embeddings
+```
+
+**Setting Metadata CSV Path:**
+```
+python -m app.retrieval.embedding.generate_embeddings \
+    --metadata-csv-path ./data/metadata.csv
+```
+**Adjusting Performance Parameters**
+
+Example with custom batch size, overlap, and polite delay (in seconds):
+```
+python -m app.retrieval.embedding.generate_embeddings \
+    --batch-size 32 \
+    --overlap 0.15 \
+    --polite-delay 0.2
+```
+
+**Using Paragraph-based Chunking:**
+```
+python -m app.retrieval.embedding.generate_embeddings \
+    --output-dir data/embeddings \
+    --chunking-method paragraph
+```
+
+**Using Environment Variables**
+
+You can set parameters via a .env file or directly in your shell:
+```
+export OPENAI_API_KEY="sk-..."
+export DEFAULT_BATCH_SIZE=32
+export METADATA_CSV_PATH="./custom_metadata.csv"
+python -m app.embedding.generate_embeddings
+```
+### Full Option List
+
+| Argument              | Default                  | Description                                              |
+| --------------------- | ------------------------ | -------------------------------------------------------- |
+| `--input-dir`         | `data/raw`               | Directory containing input text/JSON files               |
+| `--output-dir`        | `data/embeddings`        | Directory to save embedding JSON files                   |
+| `--metadata-csv-path` | `metadata.csv`           | Path to metadata CSV file                                |
+| `--provider`          | `openai`                 | Embedding provider (currently only `"openai"` supported) |
+| `--model`             | `text-embedding-3-small` | Embedding model name                                     |
+| `--max-tokens`        | `450`                    | Maximum tokens per chunk                                 |
+| `--overlap`           | `0.2`                    | Overlap ratio between chunks                             |
+| `--batch-size`        | `64`                     | Number of chunks per API call                            |
+| `--polite-delay`      | `0.1`                    | Delay between API calls (seconds)                        |
+| `--retry-attempts`    | `5`                      | Max retry attempts per batch                             |
+| `--retry-min-wait`    | `1`                      | Minimum wait between retries (seconds)                   |
+| `--retry-max-wait`    | `30`                     | Maximum wait between retries (seconds)                   |
+| `--chunking-method`    | `slide`                     | Chunking method (currently only `"slide"` and `"paragraph"` supported)                   |
 ---
 
 ## 11. Dependency Management & Environment
