@@ -54,7 +54,7 @@ class LatinTextFilter:
         ]
 
         # Common punctuation and symbols to preserve
-        self.allowed_punctuation = set('.,;:!?()[]{}"\'-–—""…•·')
+        self.allowed_punctuation = set('.,;:!?()[]{}"\'-–—""…•·')  # noqa
 
         # Numbers and basic symbols
         self.allowed_numbers_symbols = set('0123456789$€£¥%&@#*+=<>/')
@@ -86,7 +86,7 @@ class LatinTextFilter:
             return True  # Empty words are considered valid
 
         # Remove common punctuation from word boundaries for checking
-        clean_word = word.strip('.,;:!?()[]{}"\'-–—""…')
+        clean_word = word.strip('.,;:!?()[]{}"\'-–—""…')  # noqa
 
         if not clean_word:
             return True  # Word was only punctuation
