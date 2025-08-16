@@ -36,7 +36,7 @@ from app.utils.file_utils import discover_input_files
 
 load_dotenv()
 setup_logger()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('app.cli.embeddings_cli')
 
 
 def create_argument_parser() -> argparse.ArgumentParser:

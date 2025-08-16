@@ -17,7 +17,7 @@ from app.retrieval.parsing.attractions_wiki_parser import AttractionsParser
 
 load_dotenv()
 setup_logger()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('app.cli.attractions_cli')
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
