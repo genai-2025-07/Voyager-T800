@@ -3,8 +3,11 @@ File utility functions for handling directory creation and file I/O operations.
 """
 
 import csv
+import json
+import os
+
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Iterator, List, Dict, Any
 from dataclasses import asdict
 
 
@@ -21,6 +24,24 @@ def ensure_directory_exists(directory_path: str) -> Path:
     path = Path(directory_path)
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+def discover_input_files(input_dir: Path, supported_extensions: set) -> Iterator[Path]:
+    """
+    Recursively scan the input directory for files with supported extensions.
+    
+    Args:
+        input_dir (Path): The root directory to search for files.
+        supported_extensions (set): A set of allowed file extensions (e.g., {".txt", ".json"}).
+
+    Yields:
+        Path objects for each file matching the supported extensions,
+        discovered in a depth-first traversal of the directory tree.
+    """
+    for root, _, files in os.walk(input_dir):
+        for f in files:
+            p = Path(root) / f
+            if p.suffix.lower() in supported_extensions:
+                yield p
 
 
 def save_text_file(content: str, file_path: Path, encoding: str = 'utf-8') -> bool:
@@ -42,6 +63,51 @@ def save_text_file(content: str, file_path: Path, encoding: str = 'utf-8') -> bo
     except Exception as e:
         print(f"Error saving file {file_path}: {e}")
         return False
+
+
+def read_file_content(path: Path) -> str:
+    """
+    Read and return the textual content of a file, with format-specific parsing.
+    
+    Supported file formats: .txt, .json
+    
+    Args:
+        path (Path): Path to the file to read.
+
+    Returns:
+        str: Extracted text content, or an empty string if reading fails.
+
+    Notes:
+        - For JSON files, parsing errors are caught and logged without raising exceptions.
+        - Non-supported extensions are read as plain text.
+    """
+    suffix = path.suffix.lower()
+    
+    text = ""
+    # Try utf-8 first, then latin-1 fallback
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            text = path.read_text(encoding=encoding, errors="ignore")
+            break
+        except Exception as e:
+            print(f"[Warning] Could not read {path} with {encoding}: {e}")
+    
+    if suffix == ".json":
+        try:
+            data = json.loads(text)
+            # Prefer JSON top-level "text" field
+            if isinstance(data, dict) and "text" in data and isinstance(data["text"], str):
+                return data["text"]
+            # Otherwise, stringify entire JSON
+            return json.dumps(data, ensure_ascii=False)
+        except UnicodeDecodeError as ude:
+            print(f"[Error] UnicodeDecodeError while parsing JSON {path}: {ude}")
+        except json.JSONDecodeError as je:
+            print(f"[Error] JSONDecodeError while parsing {path}: {je}")
+        except Exception as e:
+            print(f"[Error] Unexpected error parsing JSON {path}: {e}")
+    
+    return text
 
 
 def save_metadata_csv(metadata_list: List[Any], output_path: Path, fieldnames: List[str] = None) -> bool:
