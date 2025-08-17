@@ -1,0 +1,32 @@
+api:
+  google_maps_api_key: "${GOOGLE_MAPS_API_KEY}"
+
+timezone:
+  default: "Europe/Kyiv"
+
+opening_hours:
+  defaults:
+    weekdays:
+      start: "12:00"
+      end: "21:00"
+    weekends:
+      start: "10:00"
+      end: "21:00"
+
+coordinates:
+  default:
+    lat: 0.0
+    lng: 0.0
+
+address:
+  target_address_types:
+    - "postal_code"
+    - "administrative_area_level_1"
+    - "administrative_area_level_2"
+    - "sublocality_level_1"
+
+attraction_csv_path: "data/attractions_names_list.csv"
+output_csv_path: "data/attractions_metadata.csv"
+output_json_path: "data/processed_data_json"
+place_details_base_url: "https://maps.googleapis.com/maps/api/place/details/json"
+find_place_base_url: "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
