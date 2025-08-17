@@ -75,14 +75,49 @@ request_id_ctx_var: ContextVar[str | None] = ContextVar('request_id', default=No
 
 
 class ServiceFilter(logging.Filter):
+    """
+    Logging filter that injects contextual metadata into each log record.
+
+    Adds:
+    - `service`: The service name from the environment (defaults to 'fastapi-service').
+    - `request_id`: A unique ID for each request, pulled from a context variable.
+    """
+
     def filter(self, record: logging.LogRecord) -> bool:
+        """
+        Modify the log record to include `service` and `request_id` fields.
+
+        Args:
+            record (logging.LogRecord): The log record to modify.
+
+        Returns:
+            bool: Always returns True to keep the record in the log stream.
+        """
         record.service = os.getenv('SERVICE_NAME', 'fastapi-service')
         record.request_id = request_id_ctx_var.get() or '-'
         return True
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
+    """
+    FastAPI middleware that generates a unique request ID for each incoming request.
+
+    The request ID is stored in both:
+    - the `request_id_ctx_var` context variable (for logging),
+    - the `request.state.request_id` attribute (for app-level access).
+    """
+
     async def dispatch(self, request: Request, call_next):
+        """
+        Middleware logic that sets the request ID and passes control to the next handler.
+
+        Args:
+            request (Request): The incoming FastAPI request.
+            call_next (Callable): The next middleware or route handler in the chain.
+
+        Returns:
+            Response: The HTTP response from the downstream handler.
+        """
         req_id = str(uuid.uuid4())
         request_id_ctx_var.set(req_id)
         request.state.request_id = req_id
@@ -90,7 +125,30 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def get_request_id(default: str = '-') -> str:
+    """
+    Retrieve the current request ID from the context variable.
+
+    Args:
+        default (str): The fallback value to return if no request ID is set.
+
+    Returns:
+        str: The current request ID or the default value.
+    """
+    return request_id_ctx_var.get() or default
+
+
 def setup_logger():
+    """
+    Initializes the application logger using a YAML configuration file.
+
+    - Loads the logging configuration from a file specified by the LOGGING_CONFIG_FILE environment variable.
+    - Falls back to `logger.yaml` in the current directory if not specified.
+    - Optionally overrides the root logger level using the LOG_LEVEL environment variable.
+
+    Raises:
+        FileNotFoundError: If the logging configuration file is not found.
+    """
     base_dir = os.path.dirname(__file__)
     config_path = os.path.join(base_dir, os.getenv('LOGGING_CONFIG_FILE', 'logger.yaml'))
 
