@@ -74,6 +74,35 @@ Each branch or contribution should align with the current module or sprint. See 
 
 ---
 
+## Environment Configuration
+
+The application uses two environment files for configuration:
+
+- `.env` – for production application configs (DB credentials, app settings, etc.)
+- `.env.dev` – for local development configs (DB credentials, app settings, etc.)
+
+**Do NOT put AWS credentials in these files!**
+
+### AWS Credentials
+
+AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) must be exported in your shell _before_ running Docker Compose. They are not stored in any .env file for security reasons.
+
+Example:
+```sh
+export AWS_ACCESS_KEY_ID=your-access-key-id
+export AWS_SECRET_ACCESS_KEY=your-secret-access-key
+export AWS_REGION=eu-central-1
+```
+
+Then start the stack:
+```sh
+docker-compose --profile dev up --build
+```
+
+The `docker-compose.yml` is configured to pass these variables from your shell into the container. If any of these variables are missing, the application will fail fast at startup.
+
+---
+
 ## Code of Conduct
 
 Please respect your team members. This is a learning space — ask questions, document your decisions, and be constructive in code reviews.

@@ -1,0 +1,102 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    container_name: api-prod
+    ports:
+      - "8000:8000"   # expose API
+    env_file:
+      - .env  # Application config (no AWS keys)
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_REGION
+      # AWS credentials are passed from the host shell, not from .env
+    depends_on:
+      - db
+      - redis
+      - vector-db
+    networks:
+      - app-network
+    profiles: ["prod"]
+  
+  api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: api-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app        # hot reload
+      - poetry_cache:/root/.cache/pypoetry
+    env_file:
+      - .env # Dev config (no AWS keys)
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_REGION
+      # AWS credentials are passed from the host shell, not from .env.dev
+    depends_on:
+      - db
+      - redis
+      - vector-db
+    networks:
+      - app-network
+    profiles: ["dev"]
+  
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network 
+    # Not exposing to host
+  
+  redis:
+    image: redis:7
+    container_name: redis-cache
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    # not exposed to host
+  
+  vector-db:
+    image: semitechnologies/weaviate:1.32.3
+    container_name: weaviate
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      QUERY_DEFAULTS_LIMIT: ${QUERY_DEFAULTS_LIMIT:-25}
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: ${AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED:-true}
+      PERSISTENCE_DATA_PATH: ${PERSISTENCE_DATA_PATH:-/var/lib/weaviate}
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    ports:
+      - "8080:8080"  # external API for dev/testing
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+  redis_data:
+  weaviate_data:
+  poetry_cache:
+
+networks:
+  app-network:
+    driver: bridge
