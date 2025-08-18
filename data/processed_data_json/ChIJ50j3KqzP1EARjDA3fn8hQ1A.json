@@ -1,0 +1,30 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Pechers'kyi district",
+  "address": "Mariinsky Park, vulytsya Mykhaila Нrushevs'kogo, Kyiv, Ukraine, 02000",
+  "phone_number": "",
+  "place_id": "ChIJ50j3KqzP1EARjDA3fn8hQ1A",
+  "url": "https://maps.google.com/?cid=5783503177935958156",
+  "coordinates": {
+    "lat": 50.44609999999999,
+    "lng": 30.5401389
+  },
+  "rating": 0.0,
+  "reviews": [],
+  "price_level": 0,
+  "tags": [
+    "premise",
+    "street_address"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

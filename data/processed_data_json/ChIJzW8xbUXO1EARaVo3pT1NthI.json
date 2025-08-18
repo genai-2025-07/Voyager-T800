@@ -1,0 +1,143 @@
+{
+  "postal_code": "01601",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Shevchenkivs'kyi district",
+  "address": "Triokhsviatytelska St, 8, Kyiv, Ukraine, 01601",
+  "phone_number": "+380 44 228 8720",
+  "place_id": "ChIJzW8xbUXO1EARaVo3pT1NthI",
+  "url": "https://maps.google.com/?cid=1348350065604254313",
+  "coordinates": {
+    "lat": 50.4558456,
+    "lng": 30.5230134
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Janko Belin",
+      "author_url": "https://www.google.com/maps/contrib/108871907639068875957/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXxZbQVX2yFYLHRq6Cb9g4cWt6AitH0iwiWPC-mrXqd7gTxQdRQJw=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "3 months ago",
+      "text": "Very interesting for a foreigner. The complex of St. Michael with the monastery is open to the public and you can attend the liturgy.",
+      "time": 1747033576,
+      "translated": false
+    },
+    {
+      "author_name": "JOE THOMAS",
+      "author_url": "https://www.google.com/maps/contrib/103151085433708224420/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUSx4-ql9l10WUenpdDqwjJT2FQdL23A7xR9M6Doa5A8Cupy7Xz=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "11 months ago",
+      "text": "My favorite building in Ukraine 🙏\nI love the architecture, I love the blue color, the interior is beautiful 😍\nAbsolutely stunning. 🙏\nI came to Kyiv in 2019.\nI hope to visit again.",
+      "time": 1726287014,
+      "translated": false
+    },
+    {
+      "author_name": "D",
+      "author_url": "https://www.google.com/maps/contrib/100367855282268271612/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjX-AMq30_IcKSEq25gKQhUZTRXUheivIGLTZK2yNLlwKVOCSI6ISA=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "If you're staying at the InterContinental, St. Michael's Monastery is literally opposite. But even if you're not staying there, it's worth travelling across the city to see this beautiful religious building with its sky-blue walls, intricate riches and golden domed roof.\nInside evokes many emotions through the haze of incense especially if visiting during some prayers / singing / chanting.",
+      "time": 1716968258,
+      "translated": false
+    },
+    {
+      "author_name": "Steve Bintley",
+      "author_url": "https://www.google.com/maps/contrib/108010780340305730878/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUz91tVXj2WT6I7ulfH4Gp5APOIk3cPC3KNiD2RZ0AT-lIBXQFCDg=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 4,
+      "relative_time_description": "6 years ago",
+      "text": "It’s really worth visiting here when you’re in the city. On a sunny day the golden roof really is glistening in the sun and the blue walls stand out prominently against the greyness of the surrounding area. Outside the surrounding wall there’s a nice square where you can sit and watch the world go by, including on my visit a photo shoot for a wedding, with loads of impressive and other ornate buildings. There was a number of locals selling stuff outside the entrance in the wall but fortunately they weren’t bothersome at all so don’t let it put you off.\n\nOnce within the walls there’s a real sense of calm. There’s plenty of benches to sit and a nice walk around the grounds. There’s some other old buildings next to the main cathedral and a small ‘orchard’ which is pleasant in the sun.\n\nUnfortunately I didn’t have time to venture inside the main cathedral but despite that it was well worth checking out and it’s no wonder that it’s one of the cities main sights.",
+      "time": 1537945296,
+      "translated": false
+    },
+    {
+      "author_name": "JENNIS MARTIN",
+      "author_url": "https://www.google.com/maps/contrib/105589518440189327003/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVrgURCP3yqaxoBOP0sc-D-mNsk09DwjwYpzgn4xNncjbfNwa6n=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "4 years ago",
+      "text": "The blue walls and golden domes of the exterior are very picturesque. The interior is quite impressive as well, and it is interesting to compare the fresh paintings here with the much older paintings in the nearby St Sophia’s.",
+      "time": 1620832475,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "place_of_worship",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.364504+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "07:00",
+          "end": "19:15"
+        }
+      ]
+    }
+  }
+}

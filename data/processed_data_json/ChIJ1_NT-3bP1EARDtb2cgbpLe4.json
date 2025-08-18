@@ -1,0 +1,144 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Pechers'kyi district",
+  "address": "Lavrska St, 27, Kyiv, Ukraine, 02000",
+  "phone_number": "+380 44 285 9457",
+  "place_id": "ChIJ1_NT-3bP1EARDtb2cgbpLe4",
+  "url": "https://maps.google.com/?cid=17162629968886683150",
+  "coordinates": {
+    "lat": 50.4265139,
+    "lng": 30.56291139999999
+  },
+  "rating": 4.7,
+  "reviews": [
+    {
+      "author_name": "Ethan Shoe",
+      "author_url": "https://www.google.com/maps/contrib/113441551705098623018/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXVKA2-1MD9ywFq8PDmFedOMHGl1iXFZ4JZGzEny9BZzpr-JTjQJA=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "10 months ago",
+      "text": "Had a great time going up into the top observation deck of the statue. Olga did a good job instructing me the whole way and telling me facts while at the top. I didn't get to see the rest of the museum.",
+      "time": 1728652979,
+      "translated": false
+    },
+    {
+      "author_name": "Alex Vikstrom",
+      "author_url": "https://www.google.com/maps/contrib/112054137987609033410/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjX1ViBYMG6jIO-IuMECgDHbF_SjM5fcfmlw7ykTtoUEwRkmZh08=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "So freaking cool. Even the grounds around this place are beautiful.\nPlaques explained everything in English and Ukrainian. Apparently you can climb inside the helicopter but it was closed for Corona. ☹️\n\nLotta sad stories coming out of the conflict near Donetsk. Was very sad to see how many Ukrainian soldiers have died. There's a small exhibit of cars that have come from that region where the recent conflict is and has been.\n\nGo and considering paying the entrance fee to the war II area to support best place. Seriously one of the coolest museums.",
+      "time": 1627380208,
+      "translated": false
+    },
+    {
+      "author_name": "Brian Smith",
+      "author_url": "https://www.google.com/maps/contrib/118290649472229993138/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIdVRlp-H2rLeyYxVsQay7b93P7kdV-tIO_yf-oudyYgR4k6A=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "This sits right outside of the Motherland Monument, with some interesting vehicles, art, and sculptures. Easy to get to, wide open spaces, very inexpensive exhibits, and... Just a really cool place. They did a spectacular job putting this together!",
+      "time": 1534765048,
+      "translated": false
+    },
+    {
+      "author_name": "Yaroslav Kerget",
+      "author_url": "https://www.google.com/maps/contrib/105443566242195622461/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWd9NKh9pM6qZr72KbKAtBjItQVX7VlGBm5Z_NYbkiEV_TCUa8=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "5 years ago",
+      "text": "The museum has got some renovations and looks a bit better than before. Some people say you can enter the head of the Mother Motherland monument and from there you can see amazing views of Kyiv, but I never have been there. Need to try it ones.",
+      "time": 1567444468,
+      "translated": false
+    },
+    {
+      "author_name": "Prateek Tandon",
+      "author_url": "https://www.google.com/maps/contrib/117123410128212081347/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXW3i1eiREM3H3FZykx2aBrVxKqg4nSvE10XzzxU1gmMccrEXWW9Q=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "Great experience to visit this place. Brings the great european wars to life. Good place to visit with kids and family. Car parking is available. Quite a bit of walking will be required. This place is wheelchair friendly.\n\nIf you love military photogtaphy this is the place to take ur camera to. Tanks, planes and soldier status can be foubd here. Most of the meuseum is open air so be watchful of the weather. Good for a couple of hours visit.",
+      "time": 1638245609,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "museum",
+    "point_of_interest",
+    "store",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.304922+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "10:00",
+          "end": "20:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "20:00"
+        }
+      ]
+    }
+  }
+}

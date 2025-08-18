@@ -1,0 +1,142 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Shevchenkivs'kyi district",
+  "address": "Yaroslaviv Val St, 33 A, Kyiv, Ukraine, 02000",
+  "phone_number": "+380 68 687 8171",
+  "place_id": "ChIJ2x51xl3O1EARE9bEBNOFFG4",
+  "url": "https://maps.google.com/?cid=7932111985070888467",
+  "coordinates": {
+    "lat": 50.4538271,
+    "lng": 30.5059839
+  },
+  "rating": 4.2,
+  "reviews": [
+    {
+      "author_name": "Emrullah",
+      "author_url": "https://www.google.com/maps/contrib/107519620017988664030/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWT1mVJNaeUyKGa2Y35_JKLqcDXaFJZ12Shw4OKB1XGO9amAeNZ=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "7 months ago",
+      "text": "Very good hotel at the center of Kiev , I stayed here lıke almost a week so would definetely suggest for you !",
+      "time": 1735689545,
+      "translated": false
+    },
+    {
+      "author_name": "E K",
+      "author_url": "https://www.google.com/maps/contrib/100073366499884008249/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVVidiHdTIQafZLyTQwmZ8q4sEs7bFr-P09rOwKGBycs51DOCQ=s128-c0x00000000-cc-rp-mo-ba2",
+      "rating": 4,
+      "relative_time_description": "5 years ago",
+      "text": "We booked the budget room and it was bigger than we expected. This hotel is good if you need just a place to sleep as this is a small hotel and there is nothing else to do. It's centrally located but quiet. Close to Golden Gate, walking distance to Maidan and even St. Andrew's church. Lots of restaurants and cafes around.\nStaff were polite. Price was very good. I didn't give 5 stars as bathroom needed little bit better cleaning, but overall I can say that we were happy with this hotel and would stay there again.",
+      "time": 1568074112,
+      "translated": false
+    },
+    {
+      "author_name": "Ramunė Vaičiulytė",
+      "author_url": "https://www.google.com/maps/contrib/115905067459737523521/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWUNGy0bUxVOpRfAcY9c4a6WtRjheDv1hN8i4xTgicOrdfhWvEm2Q=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 3,
+      "relative_time_description": "6 years ago",
+      "text": "In the photos it looks better than in reality. But rooms are clean, workers are polite and helpful, just one problem - some of their rooms are downstairs and they have no restaurant or normal eating place. Most I was impressed about workers honesty, because everybody everywhere in Kiev just tries to cheat and earn money from you. So, if you are searching for the place to sleep, it is really good. If you expect more service as spa and so on, you must look for another place.",
+      "time": 1542229956,
+      "translated": false
+    },
+    {
+      "author_name": "Karsten",
+      "author_url": "https://www.google.com/maps/contrib/114267834313152092175/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJWU_nmVFayH2erGRih0zK4c1O8UKAKDDxn4IqkY7fyUxfEnlCF=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "6 years ago",
+      "text": "VERY nice located. Small rooms for a budget price. The cleaning of the rooms (especially the bathroom) needs improvement but if you are looking for a bed to sleep and you don't need high standards, this is your place. Good bang for your bucks. Friendly receptionist.",
+      "time": 1547817170,
+      "translated": false
+    },
+    {
+      "author_name": "metin bicer",
+      "author_url": "https://www.google.com/maps/contrib/105741795445462891143/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJnlx3n9YXFOK_t7WYGkzpgNDbG6HclrF8hZhjsQxNQlEek=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "7 years ago",
+      "text": "The place is close to city center. And rooms are clean and comfortable. But you cant find the place easily because the hotel is in a courtyard. Usually personel are helpful about baggage leaving. Laundry prices are acceptable. Also all kitchen equipment are exist.",
+      "time": 1530967023,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "lodging",
+    "point_of_interest"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.000005+03:00",
+    "weekly": {
+      "Saturday": [
+        {
+          "start": "00:00",
+          "end": "23:59"
+        }
+      ],
+      "Monday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "21:00"
+        }
+      ]
+    }
+  }
+}

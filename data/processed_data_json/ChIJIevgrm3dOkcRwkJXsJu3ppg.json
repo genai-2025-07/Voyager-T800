@@ -1,0 +1,29 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Rynok Square, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "",
+  "place_id": "ChIJIevgrm3dOkcRwkJXsJu3ppg",
+  "url": "https://maps.google.com/?cid=10999681019205337794",
+  "coordinates": {
+    "lat": 49.8413276,
+    "lng": 24.0315923
+  },
+  "rating": 0.0,
+  "reviews": [],
+  "price_level": 0,
+  "tags": [
+    "route"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}
