@@ -1,12 +1,13 @@
 import streamlit as st
 from datetime import datetime
-import asyncio
 import sys
 import os
 import json
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-from chains.itinerary_chain import full_response, stream_response, clear_session_memory
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+from app.chains.itinerary_chain import full_response, stream_response
 
 
 st.set_page_config(
@@ -14,6 +15,7 @@ st.set_page_config(
     page_icon="🚀",
     layout="wide"
 )
+
 with open(os.path.join(os.path.dirname(__file__), "style.css")) as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
@@ -100,23 +102,37 @@ def delete_session(session_id):
     """Delete a session"""
     if session_id in st.session_state.sessions:
         del st.session_state.sessions[session_id]
-        # Clear the AI memory for this session
-        clear_session_memory(session_id)
         if session_id == st.session_state.current_session_id:
             # If we deleted the current session, create a new one
             create_new_session()
 
 
+class StreamlitWriter(io.StringIO):
+    def __init__(self, placeholder):
+        super().__init__()
+        self.placeholder = placeholder
+    def write(self, s):
+        super().write(s)
+        self.placeholder.markdown(self.getvalue())
+
+def run_ai_stream(user_message, session_id):
+    placeholder = st.empty()
+    writer = StreamlitWriter(placeholder)
+    with redirect_stdout(writer):
+        stream_response(user_message, session_id)
+    return writer.getvalue()
+
 def run_ai_response(user_message, session_id):
     """
-    Wrapper to run your existing async AI response in Streamlit
+    Run the synchronous `full_response` and capture its printed output as a string.
     """
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        response = loop.run_until_complete(full_response(user_message, session_id))
-        loop.close()
-        return response
+        import io
+        from contextlib import redirect_stdout
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            full_response(user_message, session_id)
+        return buffer.getvalue()
     except Exception as e:
         return f"❌ Error in AI processing: {str(e)}"
 
@@ -248,8 +264,8 @@ if user_input and user_input.strip():
         "timestamp": datetime.now()
     })
 
-    with st.spinner(" Voyager-T800 is analyzing your request and crafting your itinerary..."):
-        assistant_response = run_ai_response(user_input.strip(), st.session_state.session_id)
+    with st.spinner(" Voyager-T800 is analyzing your request..."):
+        assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id)
 
     st.session_state.messages.append({
         "role": "assistant",

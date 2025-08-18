@@ -84,12 +84,28 @@ chain = RunnablePassthrough.assign(
     chat_history=extract_chat_history_content
 ) | prompt | llm
 
+session_memories = {}
+
+def get_session_memory(session_id):
+    """Get or create memory instance for a specific session"""
+    history = session_memories.get(session_id)
+    if history is None:
+        # Create a dedicated summary memory per session to avoid cross-session bleed
+        session_summary_memory = ConversationSummaryMemory(
+            llm=llm,
+            prompt=memory_prompt,
+            max_token_limit=1000
+        )
+        history = SummaryChatMessageHistory(session_summary_memory)
+        session_memories[session_id] = history
+    return history    
+
 # Wrapper for message history
 runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
     # Always return the same memory object for session history
     # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history=lambda session_id: SummaryChatMessageHistory(memory),
+    get_session_history=lambda session_id: get_session_memory(session_id),
     input_messages_key="user_input",
     history_messages_key="chat_history"
 )
