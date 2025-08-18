@@ -5,35 +5,21 @@ from langchain.schema import StrOutputParser
 from langchain.schema.runnable import RunnablePassthrough
 import json
 import re
+import os
 from typing import List, Optional
-from models.llms.itinerary import ItineraryDay, TravelItinerary
+from app.models.llms.itinerary import ItineraryDay, TravelItinerary
+from app.utils.read_prompt_from_file import load_prompt_from_file  
 import logging
 
 logger = logging.getLogger(__name__)
+
 class ItineraryParserTemplate:
-    def __init__(self) -> None:
-        self.system_instruction = """
-        You are a travel planning expert who converts detailed travel descriptions into structured itineraries.
-        
-        The travel description will be provided between ## markers. Convert it into a structured day-by-day itinerary.
-        
-        Guidelines:
-        - Break down the trip into daily plans
-        - Include specific activities for each day
-        - Identify the main location for each day
-        - Determine the primary transportation method
-        - If accommodation is mentioned, include it
-        - Keep activities practical and realistic (max 10 per day)
-        - Transportation options: "driving", "walking", "cycling", "public_transit", "flight", "mixed"
-        
-        Output ONLY clean JSON without markdown formatting or additional text.
-        
-        {format_instructions}
-        """
-        
-        self.user_request = """
-        ## {request} ##
-        """
+    def __init__(self, prompt_file: str = None) -> None:
+        if prompt_file is None:
+            prompt_file = os.path.join("app", "prompts", "itinerary_parser.txt")
+            
+        self.system_instruction = load_prompt_from_file(prompt_file)
+        self.user_request = "## {request} ##"  
         
         self.parser = PydanticOutputParser(pydantic_object=TravelItinerary)
         self.system_message = SystemMessagePromptTemplate.from_template(
@@ -50,12 +36,26 @@ class ItineraryParserTemplate:
         ])
 
 class ItineraryParserAgent:
-    def __init__(self, model="gpt-3.5-turbo", api_key=None, temp=0):
-        if not api_key:
-            raise ValueError("API key is required")
+    def __init__(self, model=None, temp=None, prompt_file: str = None):
         
-        self.model = ChatOpenAI(model=model, temperature=temp, openai_api_key=api_key)
-        self.prompt = ItineraryParserTemplate()
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required"
+            )
+        
+        if model is None:
+            model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        
+        if temp is None:
+            temp = float(os.getenv("OPENAI_TEMPERATURE", "0"))
+        
+        self.model = ChatOpenAI(
+            model=model,
+            temperature=temp,
+            openai_api_key=api_key
+        )
+        self.prompt = ItineraryParserTemplate(prompt_file)
         self.chain = (
             RunnablePassthrough() 
             | self.prompt.prompt_template 
@@ -77,10 +77,11 @@ class ItineraryParserAgent:
             return itinerary
             
         except json.JSONDecodeError as e:
-            logger.info("JSON parsing failed, trying text parsing: {e}")
-            return self._fallback_text_parsing(request, result)
+            logger.error(f"JSON parsing failed: {e}")
+            raise ValueError(f"Failed to parse JSON response: {e}")
             
         except Exception as e:
+            logger.error(f"Failed to parse itinerary: {e}")
             raise ValueError(f"Failed to parse itinerary: {e}")
     
     def _clean_json_output(self, output: str) -> str:
