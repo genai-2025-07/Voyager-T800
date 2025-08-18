@@ -1,0 +1,50 @@
+app:
+  name: voyager-t800
+  env: dev
+  version: 0.1.0
+
+model:
+  openai:
+    api_key: ${OPENAI_API_KEY:""}
+    model_name: text-embedding-3-small
+    temperature: 0.7
+    base_url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  groq:
+    api_key: ${GROQ_API_KEY:""}
+    model_name: llama3-8b-8192
+    temperature: 0.7
+
+embedding:
+  provider: openai
+  model: text-embedding-3-small
+  input_dir: data/raw
+  output_dir: data/embeddings
+  metadata_csv_path: data/metadata.csv
+
+vectordb:
+  provider: chroma
+  chroma:
+    persist_directory: .chroma
+    collection: voyager
+  weaviate:
+    url: ${WEAVIATE_URL:http://localhost:8080}
+    api_key: ${WEAVIATE_API_KEY:""}
+    class_name: voyager
+
+bedrock:
+  enabled: ${BEDROCK_ENABLED:false}
+  region_name: ${AWS_REGION:""}
+  profile_name: ${AWS_PROFILE:""}
+  aws_access_key_id: ${AWS_ACCESS_KEY_ID:""}
+  aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY:""}
+  aws_session_token: ${AWS_SESSION_TOKEN:""}
+  endpoint_url: ${BEDROCK_ENDPOINT_URL:""}
+  model_id: ${BEDROCK_MODEL_ID:""}
+  temperature: ${BEDROCK_TEMPERATURE:0.7}
+  max_tokens: ${BEDROCK_MAX_TOKENS:1024}
+  top_p: ${BEDROCK_TOP_P:0.7}
+  top_k: ${BEDROCK_TOP_K:5}
+
+logging_config_file: app/config/logger/logger.yaml
+
+
