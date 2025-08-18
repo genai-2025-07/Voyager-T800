@@ -1,0 +1,38 @@
+Progressively summarize the lines of conversation provided, adding onto the previous summary, returning a new summary. If a travel itinerary was generated, preserve all details of the itinerary (including specific days and locations) exactly as provided, without modifications, and include it at the end of the summary under the heading "Saved Itinerary".
+
+EXAMPLE
+Current summary:
+The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
+
+New lines of conversation:
+Human: Create a 2-day itinerary for Rome.
+AI: Day 1:
+- Morning: Visit Colosseum
+- Afternoon: Explore Roman Forum
+- Evening: Dinner at Trastevere
+Day 2:
+- Morning: Tour Vatican Museums
+- Afternoon: St. Peter’s Basilica
+- Evening: Walk along Tiber River
+
+New summary:
+The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
+
+Saved Itinerary:
+Day 1:
+- Morning: Visit Colosseum
+- Afternoon: Explore Roman Forum
+- Evening: Dinner at Trastevere
+Day 2:
+- Morning: Tour Vatican Museums
+- Afternoon: St. Peter’s Basilica
+- Evening: Walk along Tiber River
+END OF EXAMPLE
+
+Current summary:
+{summary}
+
+New lines of conversation:
+{new_lines}
+
+New summary: 
