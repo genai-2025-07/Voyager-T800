@@ -24,8 +24,9 @@ description: "A summary of the project's tech stack. Use this for context on lib
 
 #### Vector Database
 
-- **FAISS 1.10.0**  – [MVP] efficient similarity search
-- **Chroma v1.0.15** – alternative with built-in integrations and metadata filters
+- **Weaviate v1.26+** – [MVP] scalable, feature-rich vector database with hybrid search, multimodal support, and knowledge graph capabilities, well-suited for production-ready applications.
+- **Chroma v1.0.15** – lightweight alternative for rapid prototyping, offering built-in LangChain integration and simple metadata filtering.
+
 
 #### GenAI Stack
 

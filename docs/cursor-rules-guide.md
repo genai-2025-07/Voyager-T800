@@ -1,6 +1,6 @@
 # **Developer Guide: AI-Assisted Development with Cursor Rules**
 
-This document outlines the structure, purpose, and usage patterns of the Cursor rules implemented in the "Ukraine Travel Assistant" project. These rules are a living part of our codebase, designed to encode our best practices, accelerate development, and maintain high code quality.
+This document outlines the structure, purpose, and usage patterns of the Cursor rules implemented in the "Voyager-T800" project. These rules are a living part of our codebase, designed to encode our best practices, accelerate development, and maintain high code quality.
 
 ### **Philosophy: Why We Use Rules**
 

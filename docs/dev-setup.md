@@ -149,7 +149,7 @@ pip list
 - **`Ctrl+Shift+F` / `Cmd+Shift+F`**: Search through project files
 - **`Ctrl+/` / `Cmd+/`**: Toggle line comments
 
-### 4.2 Crusor rules
+### 4.2 Cursor rules
 
 We use Cursor's "Project Rules" feature to ensure code consistency, enforce best practices, and speed up development.
 
