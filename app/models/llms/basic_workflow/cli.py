@@ -18,13 +18,14 @@ class VoyagerCLI:
         self.generator = ItineraryGenerator()
         self.session_history = []
         self.args = args
+        self.args.save_history = True
         self.command_handlers = {
             'quit': lambda: "exit",
             'exit': lambda: "exit", 
             'q': lambda: "exit",
             'help': lambda: self._show_help() or "continue",
             'history': lambda: self._show_history() or "continue",
-            'save': self._handle_save_command
+            'save': lambda: self._handle_save_command() or "continue"
         }
         
         self.command_descriptions = {
@@ -511,65 +512,69 @@ class VoyagerCLI:
     
     def _print_string_text(self, text: str, max_line_length: int):
         """
-        Print string text with word wrapping.
-        
-        This method handles the actual text formatting and word wrapping logic.
-        It includes protection against infinite loops, extremely long words,
-        and provides fallback behavior when processing fails.
-        
+        Print string text with word wrapping, preserving original newlines.
+
+        This method formats and prints text, preserving original line breaks.
+        Each line is wrapped to the specified maximum line length, but explicit
+        newlines in the input are not removed or merged. Handles long words and
+        provides fallback behavior on error.
+
         Args:
             text: The string text to format
             max_line_length: Maximum characters per line
         """
         try:
-            words = text.split()
-            
-            if not words:
-                print("No content available")
-                return
-            
-            current_line = ""
+            lines = text.splitlines()
             line_count = 0
             max_lines = 1000
-            
-            for word in words:
+
+            for original_line in lines:
+                words = original_line.split()
+                current_line = ""
+                for word in words:
+                    if line_count >= max_lines:
+                        print("⚠️  Text too long, truncating display")
+                        return
+
+                    if len(word) > max_line_length:
+                        if current_line:
+                            print(current_line.rstrip())
+                            line_count += 1
+                            current_line = ""
+                        for i in range(0, len(word), max_line_length - 1):
+                            chunk = word[i : i + max_line_length - 1]
+                            print(chunk)
+                            line_count += 1
+                            if line_count >= max_lines:
+                                print("⚠️  Text too long, truncating display")
+                                return
+                        continue
+
+                    if len(current_line) + len(word) + 1 <= max_line_length:
+                        current_line += word + " "
+                    else:
+                        if current_line:
+                            print(current_line.rstrip())
+                            line_count += 1
+                        current_line = word + " "
+
+                if current_line and line_count < max_lines:
+                    print(current_line.rstrip())
+                    line_count += 1
+
+                if line_count < max_lines:
+                    print()
+                    line_count += 1
                 if line_count >= max_lines:
                     print("⚠️  Text too long, truncating display")
-                    break
-                
-                if len(word) > max_line_length:
-                    if current_line:
-                        print(current_line.rstrip())
-                        line_count += 1
-                        current_line = ""
-                    
-                    for i in range(0, len(word), max_line_length - 1):
-                        chunk = word[i:i + max_line_length - 1]
-                        print(chunk)
-                        line_count += 1
-                        if line_count >= max_lines:
-                            break
-                    continue
-                
-                if len(current_line) + len(word) + 1 <= max_line_length:
-                    current_line += word + " "
-                else:
-                    if current_line:
-                        print(current_line.rstrip())
-                        line_count += 1
-                    current_line = word + " "
-                
-                if line_count >= max_lines:
-                    print("⚠️  Text too long, truncating display")
-                    break
-            
-            if current_line and line_count < max_lines:
-                print(current_line.rstrip())
-                
+                    return
+
         except Exception as e:
             print(f"❌ Error processing text: {str(e)}")
             print("Displaying truncated content:")
-            print(text[:200] + "..." if len(text) > 200 else text)
+            print(
+                text[:200] + "..." if len(text) > 200 else text
+            )
     
     def _save_conversation(self):
         """
@@ -603,7 +608,7 @@ class VoyagerCLI:
             
             print("\n📋 Your Personalized Itinerary:")
             print("=" * 50)
-            print(itinerary)
+            self._print_formatted_text(itinerary)
             print("=" * 50)
 
             if self.args.save_history:

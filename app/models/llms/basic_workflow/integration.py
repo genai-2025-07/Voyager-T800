@@ -31,6 +31,7 @@ class ItineraryGenerator:
         if not self.api_key:
             raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass it to constructor.")
         
+        self.prompts_folder_path = os.getenv('PROMPTS_FOLDER_PATH')
         self.client = OpenAI(api_key=self.api_key)
         self.model = model
         self.max_tokens = max_tokens
@@ -55,7 +56,7 @@ class ItineraryGenerator:
     
     def _load_prompt_template(self, template_name: str) -> str:
         try:
-            template_path = os.path.join(os.path.dirname(__file__), f"{template_name}.txt")
+            template_path = os.path.join(self.prompts_folder_path, f"{template_name}.txt")
             with open(template_path, 'r', encoding='utf-8') as f:
                 return f.read().strip()
         except FileNotFoundError as e:
