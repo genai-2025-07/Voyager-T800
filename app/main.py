@@ -6,7 +6,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.models.llms.basic_workflow.cli import start_cli
+try:
+    from app.models.llms.basic_workflow.cli import start_cli
+except ImportError:
+    print("Error: app.models.llms.basic_workflow.cli not found")
 
 def main():
     try:
