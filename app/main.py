@@ -6,16 +6,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.config.logging_config import setup_logging, get_logger
 from app.models.llms.basic_workflow.cli import start_cli
 
 def main():
     try:
-        setup_logging()
-        logger = get_logger("voyager_t800")
-        
-        logger.info("Starting Voyager T800 application")
-        
         start_cli()
         
     except KeyboardInterrupt:
