@@ -3,11 +3,7 @@ import argparse
 import sys
 from typing import Optional
 
-from app.config.logging_config import get_logger
 from .integration import ItineraryGenerator, save_to_session_history, save_conversation_to_file
-
-logger = get_logger("voyager_t800.cli")
-
 
 class VoyagerCLI:
     def __init__(self, args):
@@ -141,18 +137,14 @@ class VoyagerCLI:
                 self.session_history = save_to_session_history(
                     self.session_history, user_input, itinerary, preferences
                 )
-                logger.info(f"💾 Added to session history (total: {len(self.session_history)})")
             
         except (ValueError, RuntimeError) as e:
             print(f"❌ Error generating itinerary: {str(e)}")
-            logger.error(f"Itinerary generation error: {str(e)}")
         except Exception as e:
             print(f"❌ Unexpected error. Try again.")
-            logger.error(f"Unexpected error in request processing: {str(e)}")
     
     def single_request(self, user_input: str) -> Optional[str]:
         try:
-            logger.info(f"Processing single request: {user_input}")
             itinerary = self.generator.generate_enhanced_itinerary(user_input)
             
             preferences = self.generator.parse_travel_request(user_input)
@@ -162,7 +154,6 @@ class VoyagerCLI:
             return itinerary
             
         except Exception as e:
-            logger.error(f"Error processing single request: {str(e)}")
             return None
 
 
@@ -201,6 +192,4 @@ def start_cli():
         sys.exit(0)
     except Exception as e:
         print(f"❌ Application error: {str(e)}")
-        logger.error(f"Application error: {str(e)}")
         sys.exit(1)
-J

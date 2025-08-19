@@ -11,9 +11,6 @@ from enum import Enum
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Local imports
-from app.config.logging_config import get_logger
-
 
 class Budget(Enum):
     BUDGET_FRIENDLY = "Budget-friendly"
@@ -27,8 +24,6 @@ class TravelStyle(Enum):
     CULTURAL = "Cultural"
 
 load_dotenv()
-
-logger = get_logger("voyager_t800.integration")
 
 class ItineraryGenerator:  
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo-preview", max_tokens: int = 2000, temperature: float = 0.3):
@@ -45,7 +40,6 @@ class ItineraryGenerator:
         self.preferences_config = self._load_config("preferences_mapping.json")
         self.destinations_config = self._load_config("destinations_mapping.json")
         
-        logger.info(f"ItineraryGenerator initialized successfully with model={model}, temperature={temperature}")
     
     def _load_config(self, config_file: str) -> dict:
         try:
@@ -53,13 +47,10 @@ class ItineraryGenerator:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except FileNotFoundError as e:
-            logger.error(f"Configuration file not found: {config_file}")
             raise RuntimeError(f"Configuration file not found: {config_file}")
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in configuration file: {config_file}")
             raise RuntimeError(f"Invalid JSON in configuration file: {config_file}")
         except Exception as e:
-            logger.error(f"Failed to load configuration {config_file}: {e}")
             raise RuntimeError(f"Failed to load configuration {config_file}: {e}")
     
     def _load_prompt_template(self, template_name: str) -> str:
@@ -68,16 +59,12 @@ class ItineraryGenerator:
             with open(template_path, 'r', encoding='utf-8') as f:
                 return f.read().strip()
         except FileNotFoundError as e:
-            logger.error(f"Prompt template file not found: {template_name}.txt")
             raise RuntimeError(f"Prompt template file not found: {template_name}.txt")
         except PermissionError as e:
-            logger.error(f"Permission denied accessing prompt template: {template_name}.txt")
             raise RuntimeError(f"Permission denied accessing prompt template: {template_name}.txt")
         except UnicodeDecodeError as e:
-            logger.error(f"Failed to decode prompt template {template_name}.txt: {e}")
             raise RuntimeError(f"Failed to decode prompt template {template_name}.txt: {e}")
         except OSError as e:
-            logger.error(f"OS error loading prompt template {template_name}: {e}")
             raise RuntimeError(f"OS error loading prompt template {template_name}: {e}")
 
     def _create_system_prompt(self) -> str:
@@ -104,7 +91,6 @@ class ItineraryGenerator:
         start_time = time.time()
         
         try:
-            logger.info("Starting itinerary generation")
             
             system_prompt = self._create_system_prompt()
             
@@ -126,8 +112,7 @@ class ItineraryGenerator:
             end_time = time.time()
             response_time = end_time - start_time
             if response.usage is not None:
-                tokens_used = response.usage.total_tokens
-                logger.info(f"Itinerary generated successfully in {response_time:.2f}s using {tokens_used} tokens")
+                print(response_time)
             else:
                 raise RuntimeError("Response usage information not available")
             
@@ -136,19 +121,15 @@ class ItineraryGenerator:
         except Exception as e:
             if response.usage is None:
                 error_msg = e.message
-                logger.error(error_msg)
                 raise RuntimeError(error_msg)
             elif "authentication" in e.message or "api_key" in e.message:
                 error_msg = "Authentication failed. Please check your OpenAI API key."
-                logger.error(error_msg) 
                 raise ValueError(error_msg)
             elif "rate limit" in e.message:
                 error_msg = "Rate limit exceeded. Please try again later."
-                logger.error(error_msg)
                 raise RuntimeError(error_msg)
             else:
                 error_msg = f"OpenAI API error: {e.message}"
-                logger.error(error_msg)
                 raise RuntimeError(error_msg)
 
     def get_days(self, user_input_lower: str) -> str:
@@ -191,20 +172,16 @@ class ItineraryGenerator:
             if week_phrase in user_input_lower:
                 return f"{days} days"
         
-        logger.info(f"No duration pattern found, using default: {default_duration}")
         return default_duration
 
     def get_destinations(self, user_input_lower: str) -> str:
         try:
             ukrainian_destinations = self.destinations_config['ukrainian_destinations']
         except FileNotFoundError as e:
-            logger.error(f"Destinations file not found: destinations.json")
             return self.preferences_config["default_preferences"]["destination"]
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in destinations file: {e}")
             return self.preferences_config["default_preferences"]["destination"]
         except Exception as e:
-            logger.error(f"Failed to load destinations from JSON: {e}")
             return self.preferences_config["default_preferences"]["destination"]
         
         found_destinations = []
@@ -229,7 +206,6 @@ class ItineraryGenerator:
         else:
 
             default_dest = self.preferences_config["default_preferences"]["destination"]
-            logger.info(f"No destination pattern found, using default: {default_dest}")
             return default_dest
 
     def parse_travel_request(self, user_input: str) -> Dict[str, str]:
@@ -315,8 +291,6 @@ class ItineraryGenerator:
             additional_context=preferences['additional_context']
         )
         
-        logger.info(f"Generating itinerary for {preferences['destination']} ({preferences['duration']})")
-        
         return self.generate_itinerary(detailed_prompt)
 
 
@@ -365,15 +339,11 @@ def save_conversation_to_file(session_history: list):
         return filepath
         
     except PermissionError as e:
-        logger.error(f"Permission denied creating conversation file: {e}")
         return None
     except OSError as e:
-        logger.error(f"OS error saving conversation file: {e}")
         return None
     except UnicodeEncodeError as e:
-        logger.error(f"Failed to encode conversation content: {e}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error saving conversation: {e}")
         return None
 
