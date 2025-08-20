@@ -416,6 +416,8 @@ class VoyagerCLI:
             return "Not specified"
         elif isinstance(value, dict):
             return "\n".join(f"- {k}: {v}" for k, v in value.items())
+        elif isinstance(value, str):
+            return value
         else:
             raise ValueError(f"Invalid preference value type: {type(value)}")
 
