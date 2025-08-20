@@ -1,0 +1,31 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  json:
+    (): pythonjsonlogger.jsonlogger.JsonFormatter
+    format: '%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'
+
+filters:
+  add_service_context:
+    (): app.config.logger.logger.ServiceFilter
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: json
+    filters: [add_service_context]
+    stream: ext://sys.stdout
+
+root:
+  level: INFO
+  handlers: [console]
+
+loggers:
+  uvicorn.error:
+    level: WARNING
+    propagate: True
+  uvicorn.access:
+    level: WARNING
+    propagate: True

@@ -1,2 +1,20 @@
-# Entry point for the FastAPI application.
-# Currently a placeholder. Application instance and routes will be added here in the future.
+import logging
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+
+from app.config.logger.logger import RequestIDMiddleware, setup_logger
+
+
+load_dotenv()
+setup_logger()
+
+app = FastAPI()
+app.add_middleware(RequestIDMiddleware)
+logger = logging.getLogger(__name__)
+
+
+@app.get('/')
+async def root():
+    logger.info('Root endpoint called')
+    return {'message': 'Hello World'}

@@ -1,0 +1,48 @@
+.session-card {
+    border: 2px solid #06717d;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    background-color: #f5f7f7;
+    cursor: pointer;
+}
+
+.session-name {
+    font-weight: bold;
+    color: #00645a;
+}
+
+.session-date {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.message-container {
+    display: flex;
+    justify-content: flex-end;
+    margin: 10px 0;
+}
+
+.message-bubble {
+    background-color: #0066cc;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 15px 15px 5px 15px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+.message-container-left {
+    display: flex;
+    justify-content: flex-start;
+    margin: 10px 0;
+}
+
+.message-bubble-left {
+    background-color: #f0f2f6;
+    color: #333;
+    padding: 10px 15px;
+    border-radius: 15px 15px 15px 5px;
+    max-width: 75%;
+    word-wrap: break-word;
+}
