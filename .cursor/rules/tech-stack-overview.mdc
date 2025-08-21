@@ -36,4 +36,4 @@ description: "A summary of the project's tech stack. Use this for context on lib
 
 - **Cursor IDE** – [MVP] for code editing and AI-assisted development
 - **Docker** – [MVP] for reproducible containerized environments
-- **GitHub Classroom** – [MVP] for collaboration, code reviews, and onboarding
+- **GitHub** – [MVP] for collaboration, code reviews, and onboarding
