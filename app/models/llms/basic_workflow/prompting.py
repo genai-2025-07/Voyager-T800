@@ -1,6 +1,21 @@
-from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
+import os
+import yaml
+import re
 
+class FallbackMapping:
+    def __init__(self, values: Dict[str, Any], fallbacks: Dict[str, str]):
+        self.values = values
+        self.fallbacks = fallbacks
+
+    def __getitem__(self, key: str) -> str:
+        if key in self.values:
+            return str(self.values[key])
+        
+        if key in self.fallbacks:
+            return self.fallbacks[key]
+        
+        return f'[missing: {key}]'
 
 class PromptManager:
     """
@@ -14,20 +29,106 @@ class PromptManager:
         prompts_dir (Path): Directory containing prompt template files
     """
     
-    def __init__(self, prompts_dir: Optional[str] = None):
+    def __init__(self):
         """
         Initialize the PromptManager with a prompts directory.
         
-        Args:
-            prompts_dir: Optional path to the prompts directory. If None, uses
-                        the default prompts directory relative to this file.
-        """
-        if prompts_dir is None: 
-            current_file_dir = Path(__file__).parent
-            self.prompts_dir = (current_file_dir.parent.parent / "prompts").resolve()
-        else:
-            self.prompts_dir = Path(prompts_dir).resolve()
+        The prompts directory path is loaded from a YAML configuration file
+        specified by the MAP_DATA_CONFIG_PATH environment variable.
         
+        Raises:
+            ValueError: If MAP_DATA_CONFIG_PATH environment variable is not set
+            FileNotFoundError: If the configuration file doesn't exist
+            yaml.YAMLError: If the configuration file contains invalid YAML
+            KeyError: If the 'prompts_dir' key is missing from the configuration
+            RuntimeError: If the prompts directory doesn't exist or is not accessible
+        """
+        self.config_dict = self._load_config_file()
+        self.prompts_dir = self._extract_prompts_dir()
+        self.fallback_values = self._extract_fallback_values()
+
+    def _get_config_path(self) -> str:
+        config_path = os.getenv('MAP_DATA_CONFIG_PATH')
+        if not config_path:
+            raise ValueError(
+                "MAP_DATA_CONFIG_PATH environment variable is not set. "
+                "Please set it to the path of your configuration file."
+            )
+        return config_path
+
+    def _load_config_file(self) -> dict:
+        config_path = self._get_config_path()
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_dict = yaml.safe_load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"Configuration file not found: {config_path}\n"
+                f"Please ensure the file exists and MAP_DATA_CONFIG_PATH points to the correct location."
+            )
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError(
+                f"Invalid YAML in configuration file {config_path}: {e}\n"
+                f"Please check the YAML syntax."
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Unexpected error reading configuration file {config_path}: {e}"
+            )
+        
+        if not isinstance(config_dict, dict):
+            raise ValueError(
+                f"Configuration file {config_path} must contain a YAML dictionary, "
+                f"got {type(config_dict).__name__}"
+            )
+        
+        return config_dict
+
+    def _extract_prompts_dir(self) -> str:
+        if 'prompts_dir' not in self.config_dict:
+            raise KeyError(
+                f"Configuration file is missing required key 'prompts_dir'.\n"
+                f"Available keys: {list(self.config_dict.keys())}"
+            )
+        
+        prompts_dir_path = self.config_dict['prompts_dir']
+        if not isinstance(prompts_dir_path, str):
+            raise ValueError(
+                f"Configuration key 'prompts_dir' must be a string, "
+                f"got {type(prompts_dir_path).__name__}"
+            )
+        
+        if not prompts_dir_path.strip():
+            raise ValueError(
+                "Configuration key 'prompts_dir' cannot be empty or whitespace-only"
+            )
+        
+        return self._validate_prompts_directory(prompts_dir_path)
+
+    def _validate_prompts_directory(self, prompts_dir_path: str):
+        try:
+            from pathlib import Path
+            prompts_dir = Path(prompts_dir_path).resolve()
+            
+            if not prompts_dir.exists():
+                raise FileNotFoundError(
+                    f"Prompts directory does not exist: {prompts_dir}\n"
+                    f"Please ensure the directory exists or update the configuration."
+                )
+            
+            if not prompts_dir.is_dir():
+                raise NotADirectoryError(
+                    f"Prompts path is not a directory: {prompts_dir}\n"
+                    f"Please ensure the path points to a directory, not a file."
+                )
+            
+            return prompts_dir
+                
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to validate prompts directory {prompts_dir_path}: {e}"
+            )
+
     def load_prompt(self, name: str) -> str:
         """
         Load a prompt template from a text file.
@@ -43,15 +144,59 @@ class PromptManager:
             str: The contents of the prompt template file
             
         Raises:
+            ValueError: If the name contains invalid characters or path traversal attempts
             FileNotFoundError: If the prompt template file doesn't exist
             UnicodeDecodeError: If the file contains invalid UTF-8 characters
         """
-        template_path = self.prompts_dir / f"{name}.txt"
+        sanitized_name = self._sanitize_filename(name)
+        
+        template_path = self.prompts_dir / f"{sanitized_name}.txt"
+        try:
+            resolved_path = template_path.resolve()
+            if not str(resolved_path).startswith(str(self.prompts_dir.resolve())):
+                raise ValueError(
+                    f"Path traversal attempt detected. Requested path would resolve outside "
+                    f"the prompts directory: {resolved_path}"
+                )
+        except (RuntimeError, OSError) as e:
+            raise ValueError(f"Invalid path: {e}")
         
         if not template_path.exists():
             raise FileNotFoundError(f"Prompt template '{name}' not found at {template_path}")
         
         return template_path.read_text(encoding="utf-8")
+
+    def _sanitize_filename(self, name: str) -> str:
+
+        if not name or not name.strip():
+            raise ValueError("Filename cannot be empty or whitespace-only")
+        
+        name = name.strip()
+        
+        dangerous_patterns = [
+            '..', '../', '..\\', '..\\\\',
+            '/', '\\',
+            '~',
+            ':',
+        ]
+        
+        for pattern in dangerous_patterns:
+            if pattern in name:
+                raise ValueError(
+                    f"Filename contains dangerous pattern '{pattern}' that could lead to path traversal. "
+                    f"Only alphanumeric characters, hyphens, and underscores are allowed."
+                )
+        
+        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+            raise ValueError(
+                f"Filename contains invalid characters. Only alphanumeric characters, "
+                f"hyphens (-), and underscores (_) are allowed. Got: '{name}'"
+            )
+        
+        if len(name) > 100:
+            raise ValueError(f"Filename too long. Maximum length is 100 characters. Got: {len(name)}")
+        
+        return name
     
     def format_prompt(self, template: str, values: Dict[str, Any]) -> str:
         """
@@ -84,71 +229,29 @@ class PromptManager:
         if not isinstance(values, dict):
             raise TypeError(f"Values must be a dictionary, got {type(values).__name__}")
         
-        try:
-            return template.format(**values)
-        except KeyError as e:
-            missing_key = str(e).strip("'")
-            return self._format_with_fallbacks(template, values, missing_key)
-    
-    def _format_with_fallbacks(self, template: str, values: Dict[str, Any], missing_key: str) -> str:
-        """
-        Format template with fallback values for missing keys.
+        fallback_mapping = FallbackMapping(values, self.fallback_values)
         
-        Args:
-            template: The template string to format
-            values: Dictionary of available values
-            missing_key: The key that was missing from the values dictionary
-            
-        Returns:
-            str: Template formatted with fallbacks for missing keys
-        """
-        fallback_values = values.copy()
+        return template.format_map(fallback_mapping)
 
-        fallbacks = {
-            'city': 'the destination',
-            'days': 'several',
-            'month': 'your preferred time',
-            'preferences': 'your interests',
-            'budget': 'your budget',
-            'nation': 'the country',
-            'special_requirements': 'any special requirements',
-            'chat_history': 'previous conversation context',
-            'user_input': 'your travel request'
-        }
+    def _extract_fallback_values(self) -> Dict[str, str]:
+        if 'fallback_values' not in self.config_dict:
+            raise KeyError("Configuration file is missing required key 'fallback_values'.")
         
-        if missing_key in fallbacks:
-            fallback_values[missing_key] = fallbacks[missing_key]
-        else:
-            fallback_values[missing_key] = f'[missing: {missing_key}]'
+        fallback_values = self.config_dict['fallback_values']
+        if not isinstance(fallback_values, dict):
+            raise ValueError(
+                f"Configuration key 'fallback_values' must be a dictionary, "
+                f"got {type(fallback_values).__name__}"
+            )
         
-        try:
-            return template.format(**fallback_values)
-        except KeyError as e:
-            return self._replace_all_placeholders(template, fallback_values)
-    
-    def _replace_all_placeholders(self, template: str, values: Dict[str, Any]) -> str:
-        """
-        Replace all remaining placeholders with fallback values or generic placeholders.
+        for key, value in fallback_values.items():
+            if not isinstance(value, str):
+                raise ValueError(
+                    f"Fallback value for key '{key}' must be a string, "
+                    f"got {type(value).__name__}"
+                )
         
-        Args:
-            template: The template string with remaining placeholders
-            values: Dictionary of available values
-            
-        Returns:
-            str: Template with all placeholders replaced
-        """
-        import re
-        
-        placeholder_pattern = r'\{([^}]+)\}'
-        
-        def replace_placeholder(match):
-            key = match.group(1)
-            if key in values:
-                return str(values[key])
-            else:
-                return f'[placeholder: {key}]'
-        
-        return re.sub(placeholder_pattern, replace_placeholder, template)
+        return fallback_values
     
     def get_formatted_prompt(self, name: str, values: Dict[str, Any]) -> str:
         """
