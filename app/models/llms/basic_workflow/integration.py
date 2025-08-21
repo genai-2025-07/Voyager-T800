@@ -4,12 +4,23 @@ import os
 import time
 import json
 import datetime
-from typing import Dict, Optional
+from typing import Dict
 from enum import Enum
+from contextlib import contextmanager
 
 # Third-party libraries
 from openai import OpenAI
 from dotenv import load_dotenv
+
+@contextmanager
+def timer(operation_name: str):
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"{operation_name}: {execution_time:.2f} seconds")
 
 
 class Budget(Enum):
@@ -26,8 +37,8 @@ class TravelStyle(Enum):
 load_dotenv()
 
 class ItineraryGenerator:  
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo-preview", max_tokens: int = 2000, temperature: float = 0.3):
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+    def __init__(self, model: str = "gpt-4-turbo-preview", max_tokens: int = 2000, temperature: float = 0.3):
+        self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass it to constructor.")
         
@@ -40,10 +51,23 @@ class ItineraryGenerator:
         self.days_config = self._load_config("days_mapping.json")
         self.preferences_config = self._load_config("preferences_mapping.json")
         self.destinations_config = self._load_config("destinations_mapping.json")
+        self._validate_configs()
         
+    def _validate_configs(self):
+        if not hasattr(self.destinations_config, 'get') or 'ukrainian_destinations' not in self.destinations_config:
+            raise RuntimeError("destinations_mapping.json must contain 'ukrainian_destinations' section")
+        
+        if not hasattr(self.preferences_config, 'get') or 'default_preferences' not in self.preferences_config:
+            raise RuntimeError("preferences_mapping.json must contain 'default_preferences' section")
+        
+        if not hasattr(self.days_config, 'get') or 'default_duration' not in self.days_config:
+            raise RuntimeError("days_mapping.json must contain 'default_duration' section")
     
     def _load_config(self, config_file: str) -> dict:
         try:
+            if not self.config_folder_path:
+                raise ValueError("CONFIG_FOLDER_PATH environment variable is not set. Please add it to your .env file.")
+            
             config_path = os.path.join(self.config_folder_path, config_file)
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -88,50 +112,60 @@ class ItineraryGenerator:
         )
 
     def generate_itinerary(self, prompt_text: str) -> str:
+        """
+        Generate an itinerary using the OpenAI API with timing measurement.
         
-        start_time = time.time()
-        
-        try:
+        Args:
+            prompt_text: The user prompt for itinerary generation
             
-            system_prompt = self._create_system_prompt()
+        Returns:
+            str: Generated itinerary text
             
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt_text}
-                ],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                top_p=0.9,
-                frequency_penalty=0.1,
-                presence_penalty=0.1
-            )
+        Raises:
+            RuntimeError: For API errors or missing usage information
+            ValueError: For authentication errors
+        """
+        response = None
+        with timer("itinerary generation"):
+            try:
+                system_prompt = self._create_system_prompt()
             
-            itinerary = response.choices[0].message.content.strip()
-            
-            end_time = time.time()
-            response_time = end_time - start_time
-            if response.usage is not None:
-                print(response_time)
-            else:
-                raise RuntimeError("Response usage information not available")
-            
-            return itinerary
-            
-        except Exception as e:
-            if response.usage is None:
-                error_msg = e.message
-                raise RuntimeError(error_msg)
-            elif "authentication" in e.message or "api_key" in e.message:
-                error_msg = "Authentication failed. Please check your OpenAI API key."
-                raise ValueError(error_msg)
-            elif "rate limit" in e.message:
-                error_msg = "Rate limit exceeded. Please try again later."
-                raise RuntimeError(error_msg)
-            else:
-                error_msg = f"OpenAI API error: {e.message}"
-                raise RuntimeError(error_msg)
+
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt_text}
+                    ],
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    top_p=0.9,
+                    frequency_penalty=0.1,
+                    presence_penalty=0.1
+                )
+                
+                if not hasattr(response, 'choices') or not response.choices:
+                    raise RuntimeError("No choices returned from OpenAI API")
+                
+                first_choice = response.choices[0]
+                if not hasattr(first_choice, 'message') or not first_choice.message:
+                    raise RuntimeError("No message in API response choice")
+                
+                if not hasattr(first_choice.message, 'content') or not first_choice.message.content:
+                    raise RuntimeError("No content in API response message")
+                
+                itinerary = first_choice.message.content.strip()
+                return itinerary
+                
+            except Exception as e:
+                error_message = str(e)
+                
+                if "authentication" in error_message.lower() or "api_key" in error_message.lower():
+                    raise ValueError("Authentication failed. Please check your OpenAI API key.")
+                elif "rate limit" in error_message.lower():
+                    raise RuntimeError("Rate limit exceeded. Please try again later.")
+                else:
+                    raise RuntimeError(f"OpenAI API error: {error_message}")
 
     def get_days(self, user_input_lower: str) -> str:
         import re
@@ -176,15 +210,16 @@ class ItineraryGenerator:
         return default_duration
 
     def get_destinations(self, user_input_lower: str) -> str:
-        try:
-            ukrainian_destinations = self.destinations_config['ukrainian_destinations']
-        except FileNotFoundError as e:
-            return self.preferences_config["default_preferences"]["destination"]
-        except json.JSONDecodeError as e:
-            return self.preferences_config["default_preferences"]["destination"]
-        except Exception as e:
-            return self.preferences_config["default_preferences"]["destination"]
+        """
+        Extract destination information from user input.
         
+        Args:
+            user_input_lower: Lowercase user input string
+            
+        Returns:
+            str: Extracted destination or default destination
+        """
+        ukrainian_destinations = self.destinations_config['ukrainian_destinations']
         found_destinations = []
         
         for dest_key, dest_name in ukrainian_destinations.items():
@@ -205,9 +240,7 @@ class ItineraryGenerator:
             return found_destinations[0]
         
         else:
-
-            default_dest = self.preferences_config["default_preferences"]["destination"]
-            return default_dest
+            return self.preferences_config["default_preferences"]["destination"]
 
     def parse_travel_request(self, user_input: str) -> Dict[str, str]:
         default_prefs = self.preferences_config["default_preferences"]
@@ -280,19 +313,28 @@ class ItineraryGenerator:
         return preferences
 
     def generate_enhanced_itinerary(self, user_input: str) -> str:
+        """
+        Generate an enhanced itinerary by parsing user input and creating a detailed prompt.
         
-        preferences = self.parse_travel_request(user_input)
-        
-        detailed_prompt = self._create_user_prompt(
-            destination=preferences['destination'],
-            duration=preferences['duration'],
-            interests=preferences['interests'],
-            budget=preferences['budget'],
-            travel_style=preferences['travel_style'],
-            additional_context=preferences['additional_context']
-        )
-        
-        return self.generate_itinerary(detailed_prompt)
+        Args:
+            user_input: Raw user input string
+            
+        Returns:
+            str: Generated itinerary text
+        """
+        with timer("enhanced itinerary generation"):
+            preferences = self.parse_travel_request(user_input)
+            
+            detailed_prompt = self._create_user_prompt(
+                destination=preferences['destination'],
+                duration=preferences['duration'],
+                interests=preferences['interests'],
+                budget=preferences['budget'],
+                travel_style=preferences['travel_style'],
+                additional_context=preferences['additional_context']
+            )
+            
+            return self.generate_itinerary(detailed_prompt)
 
 
 def save_to_session_history(session_history: list, user_input: str, itinerary: str, preferences: Dict[str, str]):
@@ -307,9 +349,9 @@ def save_to_session_history(session_history: list, user_input: str, itinerary: s
 
 def save_conversation_to_file(session_history: list):
     try:
-        history_dir = os.getenv('HISTORY_FOLDER_DIRECTION')
+        history_dir = os.getenv('HISTORY_FOLDER_DIRECTORY')
         if not history_dir:
-            raise ValueError("HISTORY_FOLDER_DIRECTION environment variable is not set. Please add it to your .env file.")
+            raise ValueError("HISTORY_FOLDER_DIRECTORY environment variable is not set. Please add it to your .env file.")
         
         if not os.path.exists(history_dir):
             os.makedirs(history_dir)
@@ -336,7 +378,6 @@ def save_conversation_to_file(session_history: list):
                 f.write(entry['itinerary'])
                 f.write("\n\n" + "=" * 60 + "\n\n")
         
-        print(f"💾 Complete conversation saved to: {filepath}")
         return filepath
         
     except PermissionError as e:
