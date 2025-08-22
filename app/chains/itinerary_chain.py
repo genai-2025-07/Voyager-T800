@@ -1,12 +1,15 @@
 from langchain.memory import ConversationSummaryMemory
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_openai import OpenAIEmbeddings
 import os
 import time
 from app.utils.read_prompt_from_file import load_prompt_from_file
+from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
+from app.memory.database_prototype_setup import create_weaviate_db_with_loaded_documents
 from dotenv import load_dotenv
 import logging
 
@@ -24,10 +27,25 @@ try:
 except Exception as e:
     logging.error(f"ERROR exporting Groq API key: {e}")
 
+# Set OpenAI API key for embeddings
+try:
+    openai_key = os.getenv("OPENAI_API_KEY")
+except Exception as e:
+    logging.error(f"ERROR exporting OpenAI API key: {e}")
+
+embeddings_dir = "data/embeddings"
+embed_model = os.getenv('EMBED_MODEL', 'text-embedding-3-small')
+
 # Initialize Groq LLM
 # Parameterize model name and temperature via environment variables for flexibility
 model_name = os.getenv("GROQ_MODEL_NAME", "llama3-8b-8192")
 temperature = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
+
+# Define the embedding model used for query embedding (matches the generation model)
+embeddings = OpenAIEmbeddings(
+    model=embed_model,
+    openai_api_key=openai_key
+)
 
 llm = ChatGroq(
     groq_api_key=groq_key,
@@ -36,6 +54,8 @@ llm = ChatGroq(
     streaming=True
 )
 
+vectorstore = create_weaviate_db_with_loaded_documents(embeddings, embeddings_dir)
+
 try:
     itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
     summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
@@ -43,7 +63,7 @@ except Exception as e:
     logging.error(f"ERROR loading prompts: {e}")
 
 prompt = PromptTemplate(
-    input_variables=["chat_history", "user_input"],
+    input_variables=["chat_history", "user_input", "context"],
     template=itinerary_template
 )
 
@@ -58,30 +78,31 @@ memory = ConversationSummaryMemory(
     max_token_limit=1000
 )
 
-# Chain where we will pass the last message from the chat history
-def extract_chat_history_content(x):
-    """
-    Safely extract the content of the last message from chat_history.
-    Handles various possible input structures and errors.
-    """
-    try:
-        chat_history = x.get("chat_history", [])
-        if not isinstance(chat_history, list) or not chat_history:
-            return ""
-        last_msg = chat_history[-1]
-        # Handle dict or object with 'content'
-        if isinstance(last_msg, dict):
-            return last_msg.get("content", "")
-        elif hasattr(last_msg, "content"):
-            return getattr(last_msg, "content", "")
-        else:
-            return str(last_msg)
-    except Exception as e:
-        logging.warning(f"WARNING: Failed to extract chat_history content: {e}")
-        return ""
+retriver_type = os.getenv('RETRIVER', 'similarity')
+mmr_lambda = float(os.getenv('MMR_LAMBDA', '0.5'))
 
+if retriver_type == 'similarity':
+    top_k = int(os.getenv('TOP_K', '5'))
+    # Create retriever for semantic search (top K relevant chunks)
+    retriever = vectorstore.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": top_k}
+    )
+    logging.info("Using retriever: SIMILARITY")
+
+elif retriver_type == 'mmr':
+    top_k = int(os.getenv('TOP_K', '5'))
+    mmr_lambda = float(os.getenv('MMR_LAMBDA', '0.5'))
+    retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": top_k, "lambda_mult": mmr_lambda}
+    )
+    logging.info(f"Using retriever: MMR (lambda_mult={mmr_lambda})")
+
+# Chain where we will pass the last message from the chat history
 chain = RunnablePassthrough.assign(
-    chat_history=extract_chat_history_content
+    chat_history=extract_chat_history_content,
+    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"])))  # Format retrieved documents with sources and city for context
 ) | prompt | llm
 
 # Wrapper for message history
@@ -137,6 +158,9 @@ def main():
             user_input = input("\nQuery ('q' to quit): ")
             if user_input.lower() == 'q':
                 break
+            elif user_input.lower() == 'mem':
+                print(f"\n\nMemory: {memory.buffer}")
+                continue
 
             print("\n\nAnswer: ", end='')
 
