@@ -43,6 +43,10 @@ vectordb:
     api_key: ${WEAVIATE_API_KEY:""}
     class_name: voyager
 
+summary_memory:
+  summary_trigger_count: 2
+  max_token_limit: 1000
+
 bedrock:
   enabled: ${BEDROCK_ENABLED:false}
   region_name: ${AWS_REGION:""}

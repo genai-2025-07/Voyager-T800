@@ -78,6 +78,11 @@ class VectorDBSettings(BaseConfigModel):
     weaviate: WeaviateSettings = Field(default_factory=WeaviateSettings)
 
 
+class SummaryMemorySettings(BaseConfigModel):
+    summary_trigger_count: int = Field(default=2, gt=0, description="Number of turns after which summary is triggered.")
+    max_token_limit: int = Field(default=1000, gt=0, description="Maximum token limit for conversation summary memory.")
+
+
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(default=False)
     region_name: Optional[str] = None
