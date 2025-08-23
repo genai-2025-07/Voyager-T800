@@ -5,94 +5,70 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
-class AppSettings(BaseModel):
+class BaseConfigModel(BaseModel):
+    model_config = {
+        "extra": "forbid",
+    }
+
+
+class AppSettings(BaseConfigModel):
     name: str = Field(default="voyager-t800")
     env: Literal["dev", "prod", "test"] = Field(default="dev")
     version: str = Field(default="0.1.0")
     api_key: Optional[str] = None
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class OpenAISettings(BaseModel):
+class OpenAISettings(BaseConfigModel):
     api_key: Optional[str] = None
     model_name: str = Field(default="text-embedding-3-small")
     temperature: float = Field(default=0.7)
     base_url: Optional[str] = None
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class GroqSettings(BaseModel):
+class GroqSettings(BaseConfigModel):
     api_key: Optional[str] = None
     model_name: str = Field(default="llama3-8b-8192")
     temperature: float = Field(default=0.7)
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class ModelSettings(BaseModel):
+class ModelSettings(BaseConfigModel):
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
     groq: GroqSettings = Field(default_factory=GroqSettings)
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class EmbeddingSettings(BaseModel):
+class EmbeddingSettings(BaseConfigModel):
     provider: str = Field(default="openai")
     model: str = Field(default="text-embedding-3-small")
     input_dir: str = Field(default="data/raw")
     output_dir: str = Field(default="data/embeddings")
     metadata_csv_path: str = Field(default="data/metadata.csv")
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class Settings(BaseModel):
+class Settings(BaseConfigModel):
     app: AppSettings = Field(default_factory=AppSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     logging_config_file: Optional[str] = Field(default=None)
 
-    model_config = {
-        "extra": "ignore",
-    }
 
-
-class ChromaSettings(BaseModel):
+class ChromaSettings(BaseConfigModel):
     persist_directory: str = Field(default=".chroma")
     collection: str = Field(default="voyager")
 
-    model_config = {"extra": "ignore"}
 
-
-class WeaviateSettings(BaseModel):
+class WeaviateSettings(BaseConfigModel):
     url: str = Field(default="http://localhost:8080")
     api_key: Optional[str] = None
     class_name: str = Field(default="voyager")
 
-    model_config = {"extra": "ignore"}
 
-
-class VectorDBSettings(BaseModel):
+class VectorDBSettings(BaseConfigModel):
     provider: Literal["chroma", "weaviate"] = Field(default="chroma")
     chroma: ChromaSettings = Field(default_factory=ChromaSettings)
     weaviate: WeaviateSettings = Field(default_factory=WeaviateSettings)
 
-    model_config = {"extra": "ignore"}
 
-
-class BedrockSettings(BaseModel):
+class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(default=False)
     region_name: Optional[str] = None
     profile_name: Optional[str] = None
@@ -106,20 +82,14 @@ class BedrockSettings(BaseModel):
     top_p: Optional[float] = None
     top_k: Optional[int] = None
 
-    model_config = {"extra": "ignore"}
 
-
-class Settings(BaseModel):
+class Settings(BaseConfigModel):
     app: AppSettings = Field(default_factory=AppSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     vectordb: VectorDBSettings = Field(default_factory=VectorDBSettings)
     bedrock: BedrockSettings = Field(default_factory=BedrockSettings)
     logging_config_file: Optional[str] = Field(default=None)
-
-    model_config = {
-        "extra": "ignore",
-    }
 
 
 __all__ = [
