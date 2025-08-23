@@ -83,6 +83,11 @@ class SummaryMemorySettings(BaseConfigModel):
     max_token_limit: int = Field(default=1000, gt=0, description="Maximum token limit for conversation summary memory.")
 
 
+class PromptSettings(BaseConfigModel):
+    itinerary_template_path: str = Field(default="app/prompts/test_itinerary_prompt.txt", description="Path to the itinerary prompt file.")
+    summary_template_path: str = Field(default="app/prompts/test_summary_prompt.txt", description="Path to the summary prompt file.")
+
+
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(default=False)
     region_name: Optional[str] = None
@@ -120,6 +125,8 @@ class Settings(BaseConfigModel):
     vectordb: VectorDBSettings = Field(default_factory=VectorDBSettings)
     bedrock: BedrockSettings = Field(default_factory=BedrockSettings)
     attraction_parser: AttractionParserSettings = Field(default_factory=AttractionParserSettings)
+    summary_memory: SummaryMemorySettings = Field(default_factory=SummaryMemorySettings)
+    prompt: PromptSettings = Field(default_factory=PromptSettings)
     logging_config_file: Optional[str] = Field(default=None)
 
 
@@ -134,6 +141,8 @@ __all__ = [
     "WeaviateSettings",
     "BedrockSettings",
     "AttractionParserSettings",
+    "SummaryMemorySettings",
+    "PromptSettings",
     "Settings",
 ]
 

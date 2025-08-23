@@ -47,6 +47,10 @@ summary_memory:
   summary_trigger_count: 2
   max_token_limit: 1000
 
+prompt:
+  itinerary_template_path: app/prompts/test_itinerary_prompt.txt
+  summary_template_path: app/prompts/test_summary_prompt.txt
+
 bedrock:
   enabled: ${BEDROCK_ENABLED:false}
   region_name: ${AWS_REGION:""}
