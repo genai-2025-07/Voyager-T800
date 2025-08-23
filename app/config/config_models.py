@@ -36,12 +36,22 @@ class ModelSettings(BaseConfigModel):
     groq: GroqSettings = Field(default_factory=GroqSettings)
 
 
-class EmbeddingSettings(BaseConfigModel):
+class EmbeddingSettings(BaseConfigModel): # Assuming BaseConfigModel for extra="forbid"
     provider: str = Field(default="openai")
     model: str = Field(default="text-embedding-3-small")
     input_dir: str = Field(default="data/raw")
     output_dir: str = Field(default="data/embeddings")
     metadata_csv_path: str = Field(default="data/metadata.csv")
+    max_tokens: int = Field(default=450, description="Max tokens per chunk before splitting.")
+    overlap_ratio: float = Field(default=0.2, ge=0.0, lt=1.0, description="Chunk overlap ratio (0-1).")
+    batch_size: int = Field(default=64, gt=0, description="Batch size for embedding API calls.")
+    polite_delay: float = Field(default=0.1, ge=0.0, description="Delay (seconds) between batch API calls.")
+    retry_attempts: int = Field(default=5, ge=0, description="Number of retry attempts for failed API calls.")
+    retry_min_wait: float = Field(default=1.0, ge=0.0, description="Minimum wait time between retries (seconds).")
+    retry_max_wait: float = Field(default=30.0, ge=0.0, description="Maximum wait time between retries (seconds).")
+    chunking_method: Literal["sliding", "paragraph"] = Field(default="sliding", description="Method for data chunking: 'sliding' or 'paragraph'.")
+    cleaning_version: str = Field(default="v1.2", description="Data cleaning configuration version.")
+    supported_extensions: set[str] = Field(default_factory=lambda: {'.txt', '.json'}, description="Supported input file extensions.")
 
 
 class Settings(BaseConfigModel):

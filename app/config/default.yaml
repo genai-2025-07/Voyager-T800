@@ -20,6 +20,18 @@ embedding:
   input_dir: data/raw
   output_dir: data/embeddings
   metadata_csv_path: data/metadata.csv
+  max_tokens: 450
+  overlap_ratio: 0.2
+  batch_size: 64
+  polite_delay: 0.1
+  retry_attempts: 5
+  retry_min_wait: 1.0
+  retry_max_wait: 30.0
+  chunking_method: sliding
+  cleaning_version: v1.2
+  supported_extensions:
+    - .txt
+    - .json
 
 vectordb:
   provider: chroma
