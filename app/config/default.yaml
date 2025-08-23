@@ -57,6 +57,20 @@ bedrock:
   top_p: ${BEDROCK_TOP_P:0.7}
   top_k: ${BEDROCK_TOP_K:5}
 
+attraction_parser:
+  csv_file: data/attractions_names_list.csv
+  debug_mode: false
+  output_dir: data/raw
+  metadata_file: data/metadata.csv
+  remove_non_latin: true
+  preserve_mixed_words: true
+  aggressive_filtering: false
+  use_see_also: false
+  wikipedia_api_url: https://en.wikipedia.org/w/api.php
+  user_agent: VoyagerT800AttractionsBot/1.0 (https://example.com/contact)
+  rate_limit_delay: 0.5
+  summary_max_length: 200
+
 logging_config_file: app/config/logger/logger.yaml
 
 

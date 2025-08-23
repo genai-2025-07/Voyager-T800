@@ -93,12 +93,28 @@ class BedrockSettings(BaseConfigModel):
     top_k: Optional[int] = None
 
 
+class AttractionParserSettings(BaseConfigModel):
+    csv_file: str = Field(default="data/attractions_names_list.csv", description="Path to the CSV file containing attraction data.")
+    debug_mode: bool = Field(default=False, description="Enable debug mode with additional logging and file output.")
+    output_dir: str = Field(default="data/raw", description="Directory where processed text files will be saved.")
+    metadata_file: str = Field(default="data/metadata.csv", description="Path to the CSV file where metadata will be saved.")
+    remove_non_latin: bool = Field(default=True, description="Enable/disable non-Latin removal.")
+    preserve_mixed_words: bool = Field(default=True, description="Preserve words with mixed scripts during filtering.")
+    aggressive_filtering: bool = Field(default=False, description="Use character-level filtering (more aggressive) for non-Latin removal.")
+    use_see_also: bool = Field(default=False, description="Whether to include 'See also' sections in extracted text.")
+    wikipedia_api_url: str = Field(default="https://en.wikipedia.org/w/api.php", description="Wikipedia API endpoint URL.")
+    user_agent: str = Field(default="VoyagerT800AttractionsBot/1.0 (https://example.com/contact)", description="User-Agent string for Wikipedia API requests.")
+    rate_limit_delay: float = Field(default=0.5, ge=0.0, description="Delay (seconds) between attraction processing to avoid rate limits.")
+    summary_max_length: int = Field(default=200, gt=0, description="Maximum length of the generated summary.")
+
+
 class Settings(BaseConfigModel):
     app: AppSettings = Field(default_factory=AppSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     vectordb: VectorDBSettings = Field(default_factory=VectorDBSettings)
     bedrock: BedrockSettings = Field(default_factory=BedrockSettings)
+    attraction_parser: AttractionParserSettings = Field(default_factory=AttractionParserSettings)
     logging_config_file: Optional[str] = Field(default=None)
 
 
@@ -112,6 +128,7 @@ __all__ = [
     "ChromaSettings",
     "WeaviateSettings",
     "BedrockSettings",
+    "AttractionParserSettings",
     "Settings",
 ]
 
