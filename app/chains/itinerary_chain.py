@@ -9,7 +9,7 @@ import time
 from app.utils.read_prompt_from_file import load_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from app.memory.database_prototype_setup import create_weaviate_db_with_loaded_documents
+from app.retrieval.prototype_retriver import RAGPrototype
 from dotenv import load_dotenv
 import logging
 
@@ -27,25 +27,10 @@ try:
 except Exception as e:
     logging.error(f"ERROR exporting Groq API key: {e}")
 
-# Set OpenAI API key for embeddings
-try:
-    openai_key = os.getenv("OPENAI_API_KEY")
-except Exception as e:
-    logging.error(f"ERROR exporting OpenAI API key: {e}")
-
-embeddings_dir = "data/embeddings"
-embed_model = os.getenv('EMBED_MODEL', 'text-embedding-3-small')
-
 # Initialize Groq LLM
 # Parameterize model name and temperature via environment variables for flexibility
 model_name = os.getenv("GROQ_MODEL_NAME", "llama3-8b-8192")
 temperature = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
-
-# Define the embedding model used for query embedding (matches the generation model)
-embeddings = OpenAIEmbeddings(
-    model=embed_model,
-    openai_api_key=openai_key
-)
 
 llm = ChatGroq(
     groq_api_key=groq_key,
@@ -53,8 +38,6 @@ llm = ChatGroq(
     temperature=temperature,
     streaming=True
 )
-
-vectorstore = create_weaviate_db_with_loaded_documents(embeddings, embeddings_dir)
 
 try:
     itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
@@ -78,26 +61,10 @@ memory = ConversationSummaryMemory(
     max_token_limit=1000
 )
 
-retriver_type = os.getenv('RETRIVER', 'similarity')
-mmr_lambda = float(os.getenv('MMR_LAMBDA', '0.5'))
-
-if retriver_type == 'similarity':
-    top_k = int(os.getenv('TOP_K', '5'))
-    # Create retriever for semantic search (top K relevant chunks)
-    retriever = vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": top_k}
-    )
-    logging.info("Using retriever: SIMILARITY")
-
-elif retriver_type == 'mmr':
-    top_k = int(os.getenv('TOP_K', '5'))
-    mmr_lambda = float(os.getenv('MMR_LAMBDA', '0.5'))
-    retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": top_k, "lambda_mult": mmr_lambda}
-    )
-    logging.info(f"Using retriever: MMR (lambda_mult={mmr_lambda})")
+# Initialize RAG Prototype and retriever
+embeddings_dir = os.getenv("EMBEDDINGS_DIR", "data/embeddings")
+rag = RAGPrototype(embeddings_dir)
+retriever = rag.get_retriever()
 
 # Chain where we will pass the last message from the chat history
 chain = RunnablePassthrough.assign(
