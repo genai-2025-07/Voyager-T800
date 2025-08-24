@@ -7,7 +7,9 @@ def temp_config_dir(tmp_path: Path) -> Path:
     """
     Provides a temporary directory for config files.
     """
-    return tmp_path / "app" / "config"
+    mock_app_config_dir = tmp_path / "app" / "config"
+    mock_app_config_dir.mkdir(parents=True, exist_ok=True)
+    return mock_app_config_dir
 
 @pytest.fixture
 def create_yaml_file():
@@ -41,24 +43,6 @@ def cleanup_env_vars(monkeypatch: pytest.MonkeyPatch):
     # This fixture ensures any env vars set during a test are removed or reverted
     # by monkeypatch's autouse behavior.
     pass
-
-@pytest.fixture
-def mock_project_root(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """
-    Mocks the project root to control where the ConfigLoader looks for config files.
-    """
-    # Create a dummy app/config directory within the tmp_path
-    mock_app_config_dir = tmp_path / "app" / "config"
-    mock_app_config_dir.mkdir(parents=True, exist_ok=True)
-
-    from app.config.loader import ConfigLoader
-    monkeypatch.setattr(ConfigLoader, "project_root", tmp_path)
-
-    # Also ensure the default.yaml path is correctly resolved relative to this root
-    monkeypatch.setattr(ConfigLoader, "base_config_path", mock_app_config_dir / "default.yaml")
-    monkeypatch.setattr(ConfigLoader, "config_dir", mock_app_config_dir)
-
-    return tmp_path
 
 @pytest.fixture
 def dummy_prompt_file(tmp_path: Path) -> Path:
