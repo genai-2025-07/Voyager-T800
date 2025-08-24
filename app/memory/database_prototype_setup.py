@@ -13,20 +13,30 @@ class_obj = {
     "class": "Document",
     "vectorizer": "none",  # precomputed vectors
     "properties": [
-        {"name": "text", "dataType": ["text"]},
-        {"name": "source", "dataType": ["text"]},
-        {"name": "city", "dataType": ["text"]},
+        {
+            "name": "text", 
+            "dataType": ["text"]
+        },
+        {
+            "name": "source", 
+            "dataType": ["text"]
+        },
+        {
+            "name": "city", 
+            "dataType": ["text"]
+        },
     ]
 }
-
-# дозволені поля для метаданих
-ALLOWED_METADATA_KEYS = {"source", "city"}
 
 
 def setup_weaviate(embeddings):
     """
     Sets up the Weaviate vector store with the specified class schema.
     Initializes the embedded Weaviate instance and creates the class if it does not exist.
+    Args:
+        embeddings: The embedding model to use with the vector store.
+    Returns:
+        Weaviate vector store instance.
     """
     try:
         client = weaviate.Client(
@@ -40,7 +50,7 @@ def setup_weaviate(embeddings):
 
         if "Document" not in existing_classes:
             client.schema.create_class(class_obj)
-            logging.info("Created Weaviate class 'Document'.")
+            logger.info("Created Weaviate class 'Document'.")
 
         # LangChain vectorstore wrapper
         vector_store = Weaviate(
@@ -72,42 +82,19 @@ def create_weaviate_db_with_loaded_documents(embeddings, chunks_dir):
                 chunk_data = json.load(f)
                 data.append(chunk_data)
         except Exception as e:
-            logging.error(f"ERROR loading {file_path}: {e}")
+            logger.error(f"ERROR loading {file_path}: {e}")
 
-    logging.info(f"Loaded {len(data)} document chunks from JSON files.")
+    logger.info(f"Loaded {len(data)} document chunks from JSON files.")
 
+    # Add chunks to Weaviate
     if data:
-        texts = []
-        vectors = []
-        metadatas = []
-
-        for d in data:
-            # текст завжди в str
-            text_val = d.get("text", "")
-            if not isinstance(text_val, str):
-                text_val = json.dumps(text_val, ensure_ascii=False)  # серіалізуємо dict → str
-            texts.append(text_val)
-
-            # вектор
-            vectors.append(d.get("embedding", []))
-
-            # метадані (тільки дозволені)
-            meta = d.get("metadata", {})
-            filtered_meta = {}
-            if "source_file" in meta:
-                filtered_meta["source"] = str(meta["source_file"])
-            if "city" in meta:
-                filtered_meta["city"] = str(meta["city"])
-            metadatas.append(filtered_meta)
-
+        texts = [d["text"] for d in data]
+        vectors = [d["embedding"] for d in data]
+        metadatas = [{"source": d["metadata"]["source_file"], "city": d["metadata"]["city"]} for d in data]
         try:
-            vectorstore.add_texts(
-                texts=texts,
-                metadatas=metadatas,
-                vectors=vectors
-            )
-            logging.info("Successfully loaded document chunks into Weaviate.")
+            vectorstore.add_texts(texts=texts, metadatas=metadatas, vectors=vectors)
+            logger.info("Successfully loaded document chunks into Weaviate.")
         except Exception as e:
-            logging.error(f"ERROR adding documents to Weaviate: {e}")
+            logger.error(f"ERROR adding documents to Weaviate: {e}")
 
     return vectorstore

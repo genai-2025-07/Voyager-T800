@@ -3,7 +3,6 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_openai import OpenAIEmbeddings
 import os
 import time
 from app.utils.read_prompt_from_file import load_prompt_from_file

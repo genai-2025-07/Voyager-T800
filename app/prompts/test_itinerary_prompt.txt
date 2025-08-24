@@ -10,5 +10,6 @@ Previous conversation: {chat_history}
 User query: {user_input}
 
 Retrieved context: {context}
+If some of the provided context is not relevant(another city etc.), don`t use it in the final response.
 
 Response: 
