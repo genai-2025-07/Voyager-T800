@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environment
 .env
+.prod.env
 .venv/
 venv/
 env/
@@ -31,3 +32,6 @@ htmlcov/
 
 # Jupyter notebooks
 *.ipynb_checkpoints
+
+# Docker secrets
+/secrets/*

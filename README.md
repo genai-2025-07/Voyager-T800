@@ -22,6 +22,7 @@
 - **Embeddings & Vector Search**: FAISS / Chroma / Pinecone
 - **LLMs**: OpenAI GPT / Anthropic Claude via AWS Bedrock
 - **Vision APIs**: AWS Rekognition, CLIP, or equivalent
+- **Infrastructure**: Docker Compose with DynamoDB, Redis, and Weaviate
 
 ---
 
@@ -78,8 +79,8 @@ Each branch or contribution should align with the current module or sprint. See 
 
 The application uses two environment files for configuration:
 
-- `.env` – for production application configs (DB credentials, app settings, etc.)
-- `.env.dev` – for local development configs (DB credentials, app settings, etc.)
+- `.env` – Development-specific settings
+- `.prod.env` – Production-specific settings
 
 **Do NOT put AWS credentials in these files!**
 
@@ -94,12 +95,18 @@ export AWS_SECRET_ACCESS_KEY=your-secret-access-key
 export AWS_REGION=eu-central-1
 ```
 
-Then start the stack:
-```sh
-docker-compose --profile dev up --build
-```
+### Docker Setup
 
-The `docker-compose.yml` is configured to pass these variables from your shell into the container. If any of these variables are missing, the application will fail fast at startup.
+For detailed Docker configuration, environment setup, and usage instructions, see **[Docker Setup Guide](docs/docker-setup.md)**.
+
+**Quick Start:**
+```sh
+# Development
+docker compose --profile dev up --build
+
+# Production  
+docker compose --profile prod --env-file .prod.env up --build 
+```
 
 ---
 

@@ -16,8 +16,6 @@ __pycache__/
 venv/
 env/
 ENV/
-.env.docker
-*.env
 
 # -------------------------
 # Build & packaging artefacts

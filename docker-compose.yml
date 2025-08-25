@@ -1,4 +1,64 @@
+# -----------------------------------------------------------------------------
+# Voyager-T800 Docker Compose Configuration
+# -----------------------------------------------------------------------------
+# SERVICE OVERVIEW:
+# - api-dev: Development API with hot reload, source mounting, and debugging tools
+# - api: Production API optimized for performance and security
+# - dynamodb-local: Local DynamoDB instance for development and testing
+# - redis: Redis cache with authentication and data persistence
+# - weaviate-db: Vector database for AI-powered travel recommendations
+#
+# USAGE INSTRUCTIONS:
+#
+# DEVELOPMENT ENVIRONMENT:
+#   Prerequisites:
+#     - Export AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#     - Ensure .env file exists with development settings
+#   
+#   Startup:
+#     docker compose --profile dev up --build
+#   
+#   Default access:
+#     - API: http://localhost:8000
+#     - DynamoDB: http://localhost:8003
+#     - Redis: localhost:6379
+#     - Weaviate: http://localhost:8090
+#
+# PRODUCTION ENVIRONMENT:
+#   Prerequisites:
+#     - Export AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#     - Ensure .prod.env file exists with production settings
+#   
+#   Startup:
+#     docker compose --profile prod --env-file .prod.env up --build
+#   
+#   Default access:
+#     - API: http://localhost:8001
+#     - DynamoDB: http://localhost:8003
+#     - Redis: localhost:6379
+#     - Weaviate: http://localhost:8090
+#
+# ENVIRONMENT VARIABLES:
+# 
+# SHELL EXPORT (Required - Never in files):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#   These must be exported in your shell before running docker compose
+#
+# .env/.prod.env FILES:
+#   - DYNAMO_HOST_PORT, DYNAMO_CONTAINER_PORT
+#   - REDIS_HOST_PORT, REDIS_CONTAINER_PORT  
+#   - WEAVIATE_DB_HOST_PORT, WEAVIATE_DB_CONTAINER_PORT
+#   - HOST_PORT_DEV, CONTAINER_PORT_DEV
+#   - HOST_PORT_PROD, CONTAINER_PORT_PROD
+#   - GRPS_API_PORT, PERSISTENCE_DATA_PATH
+#
+# For detailed configuration and troubleshooting, see docs/docker-setup.md
+# -----------------------------------------------------------------------------
+version: "3.9"
 services:
+  # ============================================================================
+  # PRODUCTION CONFIGURATION
+  # ============================================================================
   api:
     build:
       context: .
@@ -6,96 +66,148 @@ services:
       target: prod
     container_name: api-prod
     ports:
-      - "8000:8000"   # expose API
+      - "${HOST_PORT_PROD:-8001}:${CONTAINER_PORT_PROD:-8001}"
     env_file:
-      - .env  # Application config (no AWS keys)
+      - .prod.env
     environment:
+      # AWS credentials are passed ONLY from the host shell environment variables
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_REGION
-      # AWS credentials are passed from the host shell, not from .env
     depends_on:
-      - db
-      - redis
-      - vector-db
+      dynamodb-local:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate-db:
+        condition: service_healthy
     networks:
       - app-network
     profiles: ["prod"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CONTAINER_PORT_PROD}/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
   
+  # ============================================================================
+  # DEVELOPMENT CONFIGURATION
+  # ============================================================================
   api-dev:
     build:
       context: .
       dockerfile: Dockerfile
       target: dev
     container_name: api-dev
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app        # hot reload
-      - poetry_cache:/root/.cache/pypoetry
     env_file:
-      - .env # Dev config (no AWS keys)
+      - .env
+    ports:
+      - "${HOST_PORT_DEV:-8000}:${CONTAINER_PORT_DEV:-8000}"
+    volumes:
+      # Mount only necessary directories for development
+      - ./app/api:/app/app/api
+      - ./app/chains:/app/app/chains
+      - ./app/config:/app/app/config
+      - ./app/frontend:/app/app/frontend
+      - ./app/main.py:/app/app/main.py
+      - ./app/__init__.py:/app/app/__init__.py
     environment:
+      # AWS credentials are passed ONLY from the host shell environment variables
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_REGION
-      # AWS credentials are passed from the host shell, not from .env.dev
     depends_on:
-      - db
-      - redis
-      - vector-db
+      dynamodb-local:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate-db:
+        condition: service_healthy
     networks:
       - app-network
     profiles: ["dev"]
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CONTAINER_PORT_DEV}/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
   
-  db:
-    image: postgres:15
-    container_name: postgres-db
+  # ============================================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================================
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
     restart: unless-stopped
-    env_file:
-      - .env.docker
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
-      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+    command: -jar DynamoDBLocal.jar -sharedDb -dbPath ./data -port ${DYNAMO_CONTAINER_PORT}
+    working_dir: /home/dynamodblocal       
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ./dynamodb:/home/dynamodblocal/data  
     networks:
-      - app-network 
-    # Not exposing to host
-  
+      - app-network
+    ports:
+      - "${DYNAMO_HOST_PORT}:${DYNAMO_CONTAINER_PORT}" 
+    environment:
+      # AWS credentials are passed ONLY from the host shell environment variables
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_REGION
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'if [ "$(curl -s -o /dev/null -I -w ''%{http_code}'' http://localhost:${DYNAMO_CONTAINER_PORT})" == "400" ]; then exit 0; else exit 1; fi',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7
     container_name: redis-cache
     restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
     networks:
       - app-network
-    # not exposed to host
-  
-  vector-db:
+    ports:
+      - "${REDIS_HOST_PORT}:${REDIS_CONTAINER_PORT}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  weaviate-db:
     image: semitechnologies/weaviate:1.32.3
     container_name: weaviate
     restart: unless-stopped
-    env_file:
-      - .env.docker
-    environment:
-      QUERY_DEFAULTS_LIMIT: ${QUERY_DEFAULTS_LIMIT:-25}
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: ${AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED:-true}
-      PERSISTENCE_DATA_PATH: ${PERSISTENCE_DATA_PATH:-/var/lib/weaviate}
     volumes:
-      - weaviate_data:/var/lib/weaviate
+      - weaviate_data:${PERSISTENCE_DATA_PATH}
     ports:
-      - "8080:8080"  # external API for dev/testing
+      - "${WEAVIATE_DB_HOST_PORT}:${WEAVIATE_DB_CONTAINER_PORT}"
+      - "${GRPS_API_PORT}:${GRPS_API_PORT}" # gRPC API
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${WEAVIATE_DB_CONTAINER_PORT}/v1/.well-known/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    command:
+      - --host
+      - ${HOST}
+      - --port
+      - ${WEAVIATE_DB_CONTAINER_PORT}
+      - --scheme
+      - http
 
 volumes:
-  db_data:
-  redis_data:
+  dynamodb_data:
   weaviate_data:
-  poetry_cache:
+  redis_data:
 
 networks:
   app-network:
