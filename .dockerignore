@@ -1,0 +1,72 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+
+# -------------------------
+# Virtual environments
+# -------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -------------------------
+# Build & packaging artefacts
+# -------------------------
+build/
+dist/
+*.egg
+*.whl
+
+# -------------------------
+# Poetry
+# -------------------------
+.poetry/
+.cache/pypoetry/
+
+# -------------------------
+# Logs & temp files
+# -------------------------
+*.log
+*.tmp
+*.swp
+
+# -------------------------
+# Data & cache directories
+# -------------------------
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+__pypackages__/
+
+# -------------------------
+# VCS (git, hg, etc.)
+# -------------------------
+.git/
+.gitignore
+.gitattributes
+.hg/
+.hgignore
+
+# -------------------------
+# Docker
+# -------------------------
+Dockerfile*
+.dockerignore
+
+# -------------------------
+# Project-specific
+# -------------------------
+tests/        # exclude tests from runtime image
+docs/         # exclude docs from runtime image
+notebooks/    # Jupyter notebooks (if any)
+*.sqlite3     # local sqlite dbs if generated
+data/         # exclude local raw data (mounted separately if needed)
