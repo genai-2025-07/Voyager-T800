@@ -21,6 +21,7 @@ class RAGPrototype:
         embed_model (str): Embedding model to use.
         retriever_type (str): Type of retriever ('similarity' or 'mmr').
         top_k (int): Number of top documents to retrieve.
+        fetch_k (int): Number of documents to fetch for MMR retriever.
         mmr_lambda (float): Lambda parameter for MMR retriever.
         embeddings (OpenAIEmbeddings): Embedding model instance.
         vectorstore (Weaviate): Weaviate vector store instance.
@@ -76,7 +77,6 @@ class RAGPrototype:
             )
         else:
             logger.error(f"Unknown RETRIVER type: {self.retriever_type}")
-            #raise ValueError(f"Unknown RETRIVER type: {self.retriever_type}")
 
     def get_retriever(self):
         return self.retriever

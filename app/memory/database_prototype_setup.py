@@ -65,12 +65,16 @@ def setup_weaviate(embeddings):
 
     except Exception as e:
         logger.error(f"Error setting up Weaviate: {e}")
-        raise
 
 
 def create_weaviate_db_with_loaded_documents(embeddings, chunks_dir):
     """
     Adds document chunks to the Weaviate vector store.
+    Args:
+        embeddings: The embedding model to use with the vector store.
+        chunks_dir (str): Directory containing JSON files with document chunks.
+    Returns:        
+        Weaviate vector store instance with loaded documents.
     """
     vectorstore = setup_weaviate(embeddings)
 

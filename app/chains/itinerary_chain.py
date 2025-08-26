@@ -93,7 +93,7 @@ def stream_response(user_input, session_id="default_session"):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
             
             print(content, end='', flush=True)
-            time.sleep(0.05)  # Simulate a delay for streaming effect
+            time.sleep(0.025)  # Simulate a delay for streaming effect
     except Exception as e:
         logging.error(f"ERROR: {e}")
 
