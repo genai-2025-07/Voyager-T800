@@ -82,7 +82,7 @@ WORKDIR /app
 # Expose dev port
 
 # Hot reload server
-CMD uvicorn app.main:app --reload --host ${HOST:-0.0.0.0} --port ${CONTAINER_PORT_DEV:-8000} 
+CMD uvicorn ${UVICORN_MODULE_DEV:-app.main}:app --reload --host ${HOST:-0.0.0.0} --port ${CONTAINER_PORT_DEV:-8000} 
 
 
 ################################
@@ -102,4 +102,4 @@ WORKDIR /app
 USER appuser
 
 # Production server with Gunicorn + Uvicorn workers
-CMD gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w ${GUNICORN_WORKERS:-4} -b ${HOST:-0.0.0.0}:${CONTAINER_PORT_PROD:-8001} --access-logfile ${ACCESS_LOG_FILE:-}
+CMD gunicorn ${UVICORN_MODULE_PROD:-app.main}:app -k uvicorn.workers.UvicornWorker -w ${GUNICORN_WORKERS:-4} -b ${HOST:-0.0.0.0}:${CONTAINER_PORT_PROD:-8001} --access-logfile ${ACCESS_LOG_FILE:-} --log-level ${LOG_LEVEL:-info}

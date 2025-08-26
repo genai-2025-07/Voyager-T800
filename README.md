@@ -101,6 +101,16 @@ For detailed Docker configuration, environment setup, and usage instructions, se
 
 **Quick Start:**
 ```sh
+# 1. Set up secrets (one-time setup)
+mkdir -p secrets
+echo "<password>" > secrets/redis_password.txt
+
+# 2. Export AWS credentials
+export AWS_ACCESS_KEY_ID=your-access-key-id
+export AWS_SECRET_ACCESS_KEY=your-secret-access-key
+export AWS_REGION=eu-central-1
+
+# 3. Start services
 # Development
 docker compose --profile dev up --build
 

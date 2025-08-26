@@ -25,7 +25,12 @@ The project uses Docker Compose to manage multiple services:
    nano .env
    nano .prod.env
    ```
-3. **Set AWS credentials** in your shell environment:
+3. **Create Redis secret file:**
+   ```bash
+   mkdir -p secrets
+   echo "<password>" > secrets/redis_password.txt
+   ```
+4. **Set AWS credentials** in your shell environment:
    ```bash
    export AWS_ACCESS_KEY_ID=your-access-key-id
    export AWS_SECRET_ACCESS_KEY=your-secret-access-key
@@ -37,6 +42,7 @@ The project uses Docker Compose to manage multiple services:
 - [ ] Docker and Docker Compose installed
 - [ ] `.env` file created with development settings
 - [ ] `.prod.env` file created with production settings  
+- [ ] `./secrets/redis_password.txt` created with Redis password
 - [ ] AWS credentials exported in shell
 
 ### Development Environment
@@ -78,7 +84,6 @@ docker compose --profile prod down
     - ./app/config:/app/app/config
     - ./app/frontend:/app/app/frontend
     - ./app/main.py:/app/app/main.py
-    - ./app/__init__.py:/app/app/__init__.py
   ```
 
 #### Production API (`api`)
@@ -100,9 +105,9 @@ docker compose --profile prod down
 #### Redis
 - **Container**: `redis-cache`
 - **Port**: Configurable via `REDIS_HOST_PORT`
-- **Authentication**: Uses Docker secrets for password
+- **Authentication**: Uses Docker secrets for secure password management
 - **Data Persistence**: Named volume for Redis data
-- **Health Check**: Redis ping with authentication
+- **Health Check**: Redis ping with authentication via secrets
 
 #### Weaviate
 - **Container**: `weaviate`
@@ -125,7 +130,7 @@ export AWS_SECRET_ACCESS_KEY=your-secret-access-key
 export AWS_REGION=eu-central-1
 ```
 
-**Why shell export?** Security - AWS credentials are never stored in files and are passed directly from your shell to the containers.
+# WARNING: Never store AWS credentials in source-controlled files.
 
 #### 2. Environment Files
 **`.env` file (Development):**
@@ -178,7 +183,7 @@ DYNAMO_CONTAINER_PORT=8000
 # Redis
 REDIS_HOST_PORT=6379
 REDIS_CONTAINER_PORT=6379
-REDIS_PASSWORD=your_redis_password
+REDIS_PASSWORD= # Should be set through docker secret, see part 3
 
 # Weaviate
 WEAVIATE_DB_HOST_PORT=8080
@@ -191,6 +196,21 @@ HOST_PORT_DEV=8000
 CONTAINER_PORT_DEV=8000
 HOST_PORT_PROD=8001
 CONTAINER_PORT_PROD=8001
+
+#### 3. Docker Secrets Configuration
+**Stored in `./secrets/` directory:**
+
+- **`redis_password.txt`**: Redis authentication password
+
+**Setup commands:**
+```bash
+# Create secrets directory
+mkdir -p secrets
+
+# Create Redis password file
+echo "<password>" > secrets/redis_password.txt
+
+```
 
 ## Volume Management
 
@@ -238,7 +258,7 @@ docker compose --profile dev ps
 # Access running container
 docker compose --profile dev exec api-dev bash
 
-# View volume contents
+# Inspect a named Docker volume (example: weaviate_data)
 docker volume inspect voyager-t800_weaviate_data
 ```
 
