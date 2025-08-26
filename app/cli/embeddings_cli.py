@@ -6,11 +6,13 @@ This module handles CLI argument parsing, validation, and orchestration.
 import argparse
 import logging
 import sys
+from typing import Literal, List
 
 from pathlib import Path
 
 from dotenv import load_dotenv
 
+from app.config.loader import ConfigLoader
 from app.config.logger.logger import setup_logger
 from app.retrieval.embedding.generate_embeddings import (
     DEFAULT_BATCH_SIZE,
@@ -126,7 +128,32 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help='Delay (seconds) between batch API calls to avoid rate limits',
     )
 
+    parser.add_argument(
+        '--config',
+        default=None,
+        help='Path to the configuration file'
+    )
+
     return parser
+
+
+def validate_path(path: Path, path_type: Literal['directory', 'file']) -> bool:
+    if not path.exists():
+        return False
+
+    if path_type == 'directory' and not path.is_dir():
+        logger.error(f"Error: Input directory '{path}' does not exist or is not a directory")
+        return False
+
+    if path_type == 'file' and not path.is_file():
+        logger.error(f"Error: Config file '{path}' does not exist or is not a file")
+        return False
+
+    return True
+
+
+def validate_extensions(file_path: Path, extensions: List[str]) -> bool:
+    return file_path.suffix.lower() in extensions
 
 
 def validate_arguments(args: argparse.Namespace) -> bool:
@@ -142,6 +169,7 @@ def validate_arguments(args: argparse.Namespace) -> bool:
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
     metadata_file = Path(args.metadata_csv_path)
+    config_file_path = args.config
     batch_size = args.batch_size
     max_tokens = args.max_tokens
     overlap = args.overlap
@@ -151,6 +179,12 @@ def validate_arguments(args: argparse.Namespace) -> bool:
     polite_delay = args.polite_delay
 
     valid = True
+
+    # Config file
+    if config_file_path:
+        config_file = Path(config_file_path)
+        valid = validate_path(config_file, 'file')
+        valid = validate_extensions(config_file, ['yaml'])
 
     # Input directory
     if not input_dir.exists() or not input_dir.is_dir():
@@ -206,6 +240,9 @@ def run_embedding_pipeline(args: argparse.Namespace) -> bool:
     """Run the embedding pipeline with the given arguments."""
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
+    config_loader = ConfigLoader(args.config)
+    settings = config_loader.get_settings()
+    SUPPORTED_EXTENSIONS = settings.embedding.supported_extensions
 
     # Discover files
     files = sorted(discover_input_files(input_dir, SUPPORTED_EXTENSIONS))
