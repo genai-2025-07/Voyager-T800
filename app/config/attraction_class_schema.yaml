@@ -1,0 +1,196 @@
+class: Attraction
+description: "Tourism attractions and related places with unified schema"
+vectorizer: "none"
+vectorIndexType: "dynamic"
+vectorIndexConfig:
+  distance: "cosine"
+  dynamic:
+    threshold: 10000
+properties:
+  - name: name
+    dataType:
+      - text
+    tokenization: word
+  - name: city
+    dataType:
+      - text
+  - name: address
+    dataType:
+      - text
+  - name: postal_code
+    dataType:
+      - text
+  - name: administrative_area_level_1
+    dataType:
+      - text
+  - name: administrative_area_level_2
+    dataType:
+      - text
+  - name: sublocality_level_1
+    dataType:
+      - text
+  - name: coordinates
+    dataType:
+      - geoCoordinates
+  - name: place_id
+    dataType:
+      - text
+  - name: phone_number
+    dataType:
+      - text
+  - name: maps_url
+    dataType:
+      - text
+  - name: opening_hours
+    dataType:
+      - object
+    nestedProperties:
+      - name: type
+        dataType:
+          - text
+      - name: week_start
+        dataType:
+          - text
+      - name: week_end
+        dataType:
+          - text
+      - name: last_refreshed
+        dataType:
+          - text
+      - name: weekly
+        dataType:
+          - object
+        nestedProperties:
+          - name: Monday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+          - name: Tuesday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+          - name: Wednesday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+          - name: Thursday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+          - name: Friday
+            dataType:
+              - object[]
+            nestedProperties:
+                - name: start
+                  dataType:
+                    - text
+                - name: end
+                  dataType:
+                    - text
+          - name: Saturday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+          - name: Sunday
+            dataType:
+              - object[]
+            nestedProperties:
+              - name: start
+                dataType:
+                  - text
+              - name: end
+                dataType:
+                  - text
+  - name: price_level
+    dataType:
+      - int
+  - name: rating
+    dataType:
+      - number
+  - name: reviews
+    dataType:
+      - object[]
+    nestedProperties:
+      - name: author_name
+        dataType:
+          - text
+      - name: rating
+        dataType:
+          - int
+      - name: text
+        dataType:
+          - text
+      - name: time
+        dataType:
+          - text
+      - name: language
+        dataType:
+          - text
+  - name: tags
+    dataType:
+      - text[]
+    tokenization: word
+  - name: wheelchair_accessible_entrance
+    dataType:
+      - boolean
+  - name: serves_beer
+    dataType:
+      - boolean
+  - name: serves_breakfast
+    dataType:
+      - boolean
+  - name: serves_brunch
+    dataType:
+      - boolean
+  - name: serves_dinner
+    dataType:
+      - boolean
+  - name: serves_lunch
+    dataType:
+      - boolean
+  - name: serves_vegetarian_food
+    dataType:
+      - boolean
+  - name: serves_wine
+    dataType:
+      - boolean
+  - name: takeout
+    dataType:
+      - boolean
+  - name: last_updated
+    dataType:
+      - date
+invertedIndexConfig:
+  indexTimestamps: true
+  indexNullState: true
+  indexPropertyLength: true
