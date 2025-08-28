@@ -1,19 +1,10 @@
 import re
-from typing import List, Optional, Dict
+import unicodedata
+from typing import List, Optional, Dict, ClassVar
 from dataclasses import dataclass
 from enum import Enum
 
-from app.models.llms.itinerary import ItineraryDay, TravelItinerary
-
-
-class TransportationType(Enum):
-    """Supported transportation types"""
-    DRIVING = "driving"
-    WALKING = "walking"
-    CYCLING = "cycling"
-    PUBLIC_TRANSIT = "public_transit"
-    FLIGHT = "flight"
-    MIXED = "mixed"
+from app.models.llms.itinerary import ItineraryDay, TravelItinerary, RequestMetadata, TransportationType
 
 
 class ParsingError(Exception):
@@ -38,25 +29,30 @@ class ParsingConfig:
 class ParsingPatterns:
     """Container for all regex patterns used in parsing"""
     
-    DAY_PATTERNS = [
-        r'день\s*(\d+)',
-        r'day\s*(\d+)',
-        r'(\d+)[-\s]*й?\s*день',
-        r'(\d+)(?:st|nd|rd|th)\s*day',
-        r'^(\d+)\.?\s*(?=\w)',
-        r'перший\s*день',
-        r'другий\s*день',
-        r'третій\s*день',
-        r'останній\s*день',
+    # Day patterns for identifying day numbers
+    DAY_PATTERNS: ClassVar[List[str]] = [
+        r'день\s*(\d+)',          # день 1, день2
+        r'day\s*(\d+)',           # day 1, day2
+        r'(\d+)[-\s]*й?\s*день',  # 1-й день, 1 день
+        r'(\d+)(?:st|nd|rd|th)\s*day',  # 1st day, 2nd day
+        r'^(\d+)\.?\s*(?=\w)',    # 1. Activity, 2 Activity
+        r'перший\s*день',         # перший день
+        r'другий\s*день',         # другий день
+        r'третій\s*день',         # третій день
+        r'останній\s*день',       # останній день
     ]
     
-    DAY_WORD_MAP = {
+    # Mapping of day words to numbers
+    DAY_WORD_MAP: ClassVar[Dict[str, int]] = {
         'перший': 1, 'другий': 2, 'третій': 3, 'четвертий': 4, "п'ятий": 5,
+        'шостий': 6, 'сьомий': 7, 'восьмий': 8, "дев'ятий": 9, 'десятий': 10,
         'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
+        'sixth': 6, 'seventh': 7, 'eighth': 8, 'ninth': 9, 'tenth': 10,
         'останній': 999, 'last': 999
     }
     
-    LOCATION_PATTERNS = [
+    # Patterns for extracting locations
+    LOCATION_PATTERNS: ClassVar[List[str]] = [
         r'(?:поїздка|подорож)\s+(?:в|до|у)\s+([А-Яєіїґa-z\s-]+?)(?:\s+на|\s*[,\.\n]|$)',
         r'(?:поїхати|їхати|летіти|відвідати)\s+(?:в|до|у)\s+([А-Яєіїґa-z\s-]+?)(?:\s+на|\s*[,\.\n]|$)',
         r'(?:trip|travel|visit|go)\s+to\s+([A-Za-z\s-]+?)(?:\s+for|\s*[,\.\n]|$)',
@@ -64,21 +60,23 @@ class ParsingPatterns:
         r'([А-ЯA-Z][А-Яєіїґa-z\s-]+?)(?=\s*[-–:]\s*(?:день|day|прибуття|arrival))',
     ]
     
-    ACTIVITY_PATTERNS = [
-        r'^\s*[-•*]\s*(.+)$',
-        r'^\s*\d+\.\s*(.+)$',
-        r'^\s*\d+\)\s*(.+)$',
-        r'(?:відвідування|відвідати)\s+(.+)$',
-        r'(?:visit|visiting)\s+(.+)$',
-        r'(?:прогулянка|прогулятися)\s+(.+)$',
-        r'(?:walk|walking)\s+(.+)$',
-        r'(?:вечеря|обід|сніданок)\s+(.+)$',
-        r'(?:dinner|lunch|breakfast)\s+(.+)$',
-        r'(?:екскурсія|тур)\s+(.+)$',
-        r'(?:tour|excursion)\s+(.+)$',
+    # Patterns for extracting activities from text
+    ACTIVITY_PATTERNS: ClassVar[List[str]] = [
+        r'^\s*[-•*]\s*(.+)$',                    # - Activity, • Activity
+        r'^\s*\d+\.\s*(.+)$',                    # 1. Activity
+        r'^\s*\d+\)\s*(.+)$',                    # 1) Activity
+        r'(?:відвідування|відвідати)\s+(.+)$',   # відвідати музей
+        r'(?:visit|visiting)\s+(.+)$',           # visit museum
+        r'(?:прогулянка|прогулятися)\s+(.+)$',   # прогулянка парком
+        r'(?:walk|walking)\s+(.+)$',             # walk in park
+        r'(?:вечеря|обід|сніданок)\s+(.+)$',     # обід в ресторані
+        r'(?:dinner|lunch|breakfast)\s+(.+)$',   # dinner at restaurant
+        r'(?:екскурсія|тур)\s+(.+)$',           # екскурсія містом
+        r'(?:tour|excursion)\s+(.+)$',          # city tour
     ]
     
-    TRANSPORT_KEYWORDS = {
+    # Transportation keywords for detection
+    TRANSPORT_KEYWORDS: ClassVar[Dict[TransportationType, List[str]]] = {
         TransportationType.DRIVING: ['машина', 'автомобіль', 'car', 'drive', 'driving'],
         TransportationType.WALKING: ['пішки', 'ходьба', 'walk', 'walking', 'on foot'],
         TransportationType.CYCLING: ['велосипед', 'bike', 'bicycle', 'cycling', 'велосипедна'],
@@ -86,11 +84,15 @@ class ParsingPatterns:
         TransportationType.FLIGHT: ['літак', 'авіа', 'flight', 'plane', 'airplane'],
     }
     
-    NOISE_WORDS = {
+    # Words to ignore when extracting activities
+    NOISE_WORDS: ClassVar[set] = {
         'день', 'day', 'активності', 'activities', 'план', 'plan', 'маршрут', 'itinerary',
         'розклад', 'schedule', 'програма', 'program', 'поїздка', 'trip', 'подорож', 'travel',
         'прибуття', 'arrival', "від'їзд", 'departure', 'ввечері', 'evening', 'потім', 'then'
     }
+    
+    # Pattern for allowed characters in text normalization
+    NORMALIZE_ALLOWED_CHARS_PATTERN: ClassVar[str] = r'[^\w\s\-\.\,\:\;\!\?\(\)№àáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ]'
 
 
 class TextNormalizer:
@@ -98,14 +100,18 @@ class TextNormalizer:
     
     @staticmethod
     def normalize_text(text: str) -> str:
-        """Clean and normalize input text while preserving line structure"""
+        """
+        Clean and normalize input text while preserving line structure.
+        Handles Unicode normalization and removes unwanted characters.
+        """
         lines = text.split('\n')
         normalized_lines = []
         
         for line in lines:
             line = re.sub(r'[ \t]+', ' ', line)
-            line = re.sub(r'[^\w\s\-\.\,\:\;\!\?\(\)№àáâãäåæçèéêëìíîïñòóôõöøùúûüýÿ]', ' ', line)
-            line = line.replace('—', '-').replace('–', '-')
+            line = re.sub(ParsingPatterns.NORMALIZE_ALLOWED_CHARS_PATTERN, ' ', line)
+            line = line.replace('—', '-').replace('–', '-') 
+            line = unicodedata.normalize('NFKC', line)
             
             line = line.strip()
             if line:
@@ -142,8 +148,11 @@ class ActivityExtractor:
         if len(activity) <= self.config.min_activity_length:
             return False
         
-        if any(noise in activity.lower() for noise in self.patterns.NOISE_WORDS):
-            return False
+        # Use exact word matching to avoid false positives
+        activity_lower = activity.lower()
+        for noise_word in self.patterns.NOISE_WORDS:
+            if re.search(r'\b' + re.escape(noise_word) + r'\b', activity_lower):
+                return False
         
         # Check if contains meaningful text
         return bool(re.search(r'[а-яєіїґА-ЯЄІЇҐa-zA-Z]{3,}', activity))
@@ -154,7 +163,7 @@ class ActivityExtractor:
         activity = re.sub(r'[,;]+$', '', activity)
         
         if activity:
-            activity = activity[0].upper() + activity[1:]
+            activity = activity.capitalize()
         
         return activity
 
@@ -177,9 +186,10 @@ class DayParser:
                 except (ValueError, IndexError):
                     continue
         
-        # Try word patterns
+        # Try word patterns with exact word matching
+        line_lower = line.lower()
         for word, number in self.patterns.DAY_WORD_MAP.items():
-            if word in line.lower():
+            if re.search(r'\b' + re.escape(word) + r'\b', line_lower):
                 if number == 999:  # "останній" or "last"
                     return self._guess_last_day_number(line)
                 return number
@@ -190,26 +200,46 @@ class DayParser:
         """Extract activity from line that also contains day number"""
         original_line = line
         
-        # Remove day patterns
+        # Remove day patterns carefully to preserve activity text
         for pattern in self.patterns.DAY_PATTERNS:
             line = re.sub(pattern, '', line, flags=re.IGNORECASE)
         
-        # Remove day words
+        # Remove day words using word boundaries
         for word in self.patterns.DAY_WORD_MAP.keys():
-            line = re.sub(r'\b' + word + r'\b', '', line, flags=re.IGNORECASE)
+            line = re.sub(r'\b' + re.escape(word) + r'\b', '', line, flags=re.IGNORECASE)
         
         # Clean up remaining text
         line = re.sub(r'^[-:.\s]+', '', line).strip()
         
-        if len(line) > 3 and not any(noise in line.lower() for noise in self.patterns.NOISE_WORDS):
-            return line
+        if len(line) > 3:
+            # Check for noise words using word boundaries
+            line_lower = line.lower()
+            has_noise = any(re.search(r'\b' + re.escape(noise) + r'\b', line_lower) 
+                          for noise in self.patterns.NOISE_WORDS)
+            if not has_noise:
+                return line
         
         return None
     
     def _guess_last_day_number(self, line: str) -> int:
         """Guess the number for 'last day' based on context"""
-        duration_match = re.search(r'на\s*(\d+)\s*дні?', line, re.IGNORECASE)
-        return int(duration_match.group(1)) if duration_match else self.config.default_last_day_guess
+        # Try multiple duration patterns
+        duration_patterns = [
+            r'на\s*(\d+)\s*дні?',
+            r'for\s*(\d+)\s*days?',
+            r'(\d+)\s*дні?',
+            r'(\d+)\s*days?'
+        ]
+        
+        for pattern in duration_patterns:
+            duration_match = re.search(pattern, line, re.IGNORECASE)
+            if duration_match:
+                try:
+                    return int(duration_match.group(1))
+                except ValueError:
+                    continue
+        
+        return self.config.default_last_day_guess
 
 
 class DestinationExtractor:
@@ -235,9 +265,15 @@ class DestinationExtractor:
     
     def _clean_destination(self, destination: str) -> str:
         """Clean extracted destination text"""
-        # Remove duration info
-        destination = re.sub(r'\s*на\s*\d+\s*дні?.*$', '', destination, flags=re.IGNORECASE)
-        destination = re.sub(r'\s*for\s*\d+\s*days?.*$', '', destination, flags=re.IGNORECASE)
+        # Remove duration info using multiple patterns
+        duration_patterns = [
+            r'\s*на\s*\d+\s*дні?.*$',
+            r'\s*for\s*\d+\s*days?.*$'
+        ]
+        
+        for pattern in duration_patterns:
+            destination = re.sub(pattern, '', destination, flags=re.IGNORECASE)
+        
         return destination.strip()
     
     def _is_valid_destination(self, destination: str) -> bool:
@@ -266,9 +302,19 @@ class TransportationDetector:
 
 
 class ManualItineraryParser:
-    """Main parser class that orchestrates the parsing process"""
+    """
+    Main parser class that orchestrates the parsing process.
+    Converts free-form travel itinerary text into structured data.
+    """
     
     def __init__(self, config: Optional[ParsingConfig] = None, debug: bool = False):
+        """
+        Initialize the parser with configuration and components.
+        
+        Args:
+            config: Parsing configuration settings
+            debug: Enable debug logging
+        """
         self.debug = debug
         self.config = config or ParsingConfig()
         self.patterns = ParsingPatterns()
@@ -281,7 +327,19 @@ class ManualItineraryParser:
         self.transport_detector = TransportationDetector(self.patterns)
     
     def parse_itinerary_text(self, text: str) -> TravelItinerary:
-        """Parse travel itinerary from free-form text"""
+        """
+        Parse travel itinerary from free-form text.
+        
+        Args:
+            text: Free-form travel itinerary text
+            
+        Returns:
+            TravelItinerary: Structured itinerary object
+            
+        Raises:
+            InvalidTextError: If input text is empty or invalid
+            ParsingError: If parsing fails completely
+        """
         if not text or not text.strip():
             raise InvalidTextError("Input text cannot be empty")
         
@@ -301,11 +359,18 @@ class ManualItineraryParser:
             if not itinerary_days:
                 itinerary_days = self._create_fallback_itinerary(lines, destination)
             
+            # Create metadata
+            metadata = RequestMetadata(
+                original_request=text,
+                parser_used='manual'
+            )
+            
             return TravelItinerary(
                 destination=destination or "Unknown",
                 duration_days=len(itinerary_days),
                 transportation=transportation.value,  # Convert enum to string
-                itinerary=itinerary_days
+                itinerary=itinerary_days,
+                metadata=metadata
             )
         except Exception as e:
             self._log(f"Error during parsing: {e}")

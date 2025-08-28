@@ -1,11 +1,15 @@
 import json
-from typing import List
-from app.models.llms.itinerary import ItineraryDay
+from typing import List, Union
+from app.models.llms.itinerary import ItineraryDay, TravelItinerary, RequestMetadata
 from app.utils.llm_parser import ItineraryParserAgent
 from app.utils.manual_parser import ManualItineraryParser
+from dicttoxml import dicttoxml 
+import xml.dom.minidom
+import logging
 
+logger = logging.getLogger(__name__)
 
-def parse_itinerary_output(response: str) -> List[ItineraryDay]:
+def parse_itinerary_output(response: str) -> TravelItinerary:
     """
     Parses itinerary output using AI parser with manual parser fallback.
     
@@ -13,7 +17,7 @@ def parse_itinerary_output(response: str) -> List[ItineraryDay]:
         response (str): Raw itinerary response text to parse.
         
     Returns:
-        List[ItineraryDay]: List of parsed itinerary days.
+        TravelItinerary: Complete itinerary object with metadata.
         
     Raises:
         TypeError: If response is not a string.
@@ -33,7 +37,7 @@ def parse_itinerary_output(response: str) -> List[ItineraryDay]:
         if not hasattr(itinerary, 'itinerary') or not itinerary.itinerary:
             raise ValueError("AI parser returned empty or invalid itinerary")
             
-        return itinerary.itinerary
+        return itinerary
         
     except (AttributeError, KeyError, ValueError) as ai_error:
         print(f"AI parsing error: {ai_error}. Trying manual parser...")
@@ -45,47 +49,58 @@ def parse_itinerary_output(response: str) -> List[ItineraryDay]:
             if not hasattr(manual_result, 'itinerary') or not manual_result.itinerary:
                 raise ValueError("Manual parser returned empty or invalid itinerary")
                 
-            return manual_result.itinerary
+            return manual_result
             
         except (AttributeError, KeyError, ValueError, IndexError) as manual_error:
             print(f"Manual parsing also failed: {manual_error}")
-            return [ItineraryDay(day=1, location="Unknown", activities=["Plan your trip"])]
             
-    except Exception as unexpected_error:
-        print(f"Unexpected error during parsing: {unexpected_error}")
-        return [ItineraryDay(day=1, location="Unknown", activities=["Plan your trip"])]
+            # Create fallback with metadata
+        metadata = RequestMetadata(
+            original_request=response,
+            parser_used='fallback'
+        )
+        
+        return TravelItinerary(
+            destination="Unknown",
+            duration_days=1,
+            transportation="mixed",
+            itinerary=[ItineraryDay(day=1, location="Unknown", activities=["Plan your trip"])],
+            metadata=metadata
+        )
 
 
-def validate_itinerary(itinerary_days: List[ItineraryDay]) -> bool:
+
+
+def validate_itinerary(itinerary: TravelItinerary) -> bool:
     """
-    Validates that itinerary days are properly sequenced and structured.
+    Validates that travel itinerary is properly structured.
     
     Args:
-        itinerary_days (List[ItineraryDay]): List of itinerary days to validate.
+        itinerary (TravelItinerary): Travel itinerary to validate.
         
     Returns:
         bool: True if itinerary is valid, False otherwise.
         
     Raises:
-        TypeError: If itinerary_days is not a list or contains invalid day objects.
-        AttributeError: If ItineraryDay objects are missing required attributes.
+        TypeError: If itinerary is not a TravelItinerary object.
+        AttributeError: If TravelItinerary object is missing required attributes.
     """
     try:
-        if not isinstance(itinerary_days, list):
-            raise TypeError("itinerary_days must be a list")
+        if not isinstance(itinerary, TravelItinerary):
+            raise TypeError("itinerary must be a TravelItinerary object")
         
-        if not itinerary_days:
+        if not hasattr(itinerary, 'itinerary') or not itinerary.itinerary:
             return False
         
         # Validate each day object has required attributes
-        for day in itinerary_days:
+        for day in itinerary.itinerary:
             if not hasattr(day, 'day'):
                 raise AttributeError(f"ItineraryDay object missing 'day' attribute")
             if not isinstance(day.day, int):
                 raise TypeError(f"Day number must be an integer, got {type(day.day)}")
         
-        days = [day.day for day in itinerary_days]
-        expected = list(range(1, len(itinerary_days) + 1))
+        days = [day.day for day in itinerary.itinerary]
+        expected = list(range(1, len(itinerary.itinerary) + 1))
         
         return sorted(days) == expected
         
@@ -97,40 +112,126 @@ def validate_itinerary(itinerary_days: List[ItineraryDay]) -> bool:
         return False
 
 
-def export_to_json(itinerary_days: List[ItineraryDay]) -> str:
+
+def export_to_json(itinerary: TravelItinerary) -> str:
     """
-    Exports itinerary days to JSON string format.
+    Exports complete travel itinerary to JSON string format.
     
     Args:
-        itinerary_days (List[ItineraryDay]): List of itinerary days to export.
+        itinerary (TravelItinerary): Travel itinerary to export.
         
     Returns:
-        str: JSON string representation of the itinerary.
+        str: JSON string representation of the complete itinerary.
         
     Raises:
         json.JSONEncodeError: If the data cannot be serialized to JSON.
     """
     try:
-        data = [day.dict() for day in itinerary_days]
-        return json.dumps(data, ensure_ascii=False, indent=2)
+        return json.dumps(itinerary.dict(), ensure_ascii=False, indent=2, default=str)
     except json.JSONEncodeError as e:
         raise json.JSONEncodeError(f"Failed to serialize itinerary to JSON: {e}")
 
 
-def export_to_dict(itinerary_days: List[ItineraryDay]) -> List[dict]:
+def export_to_dict(itinerary: TravelItinerary) -> dict:
     """
-    Exports itinerary days to list of dictionaries format.
+    Exports complete travel itinerary to dictionary format.
     
     Args:
-        itinerary_days (List[ItineraryDay]): List of itinerary days to export.
+        itinerary (TravelItinerary): Travel itinerary to export.
         
     Returns:
-        List[dict]: List of dictionaries representing the itinerary days.
+        dict: Dictionary representation of the complete itinerary.
         
     Raises:
-        AttributeError: If ItineraryDay objects don't have dict() method.
+        AttributeError: If TravelItinerary object doesn't have dict() method.
     """
     try:
-        return [day.dict() for day in itinerary_days]
+        return itinerary.dict()
     except AttributeError as e:
         raise AttributeError(f"Error converting itinerary to dict: {e}")
+
+def export_to_xml(itinerary: TravelItinerary) -> str:
+    """
+    Exports complete travel itinerary to XML string format.
+    
+    Args:
+        itinerary (TravelItinerary): Travel itinerary to export.
+        
+    Returns:
+        str: Pretty formatted XML string representation of the complete itinerary.
+        
+    Raises:
+        Exception: If the data cannot be serialized to XML.
+    """
+    try:
+        if not hasattr(itinerary, 'dict') or not callable(getattr(itinerary, 'dict')):
+            raise AttributeError("Itinerary object must have dict() method for XML serialization")
+            
+        json_str = json.dumps(itinerary.dict(), default=str, ensure_ascii=False)
+        data = json.loads(json_str)
+        
+        xml_bytes = dicttoxml(data, custom_root='travel_itinerary', attr_type=False)
+        
+        dom = xml.dom.minidom.parseString(xml_bytes)
+        return dom.toprettyxml(indent="  ", encoding=None)
+        
+    except Exception as e:
+        logger.error(f"Failed to serialize itinerary to XML: {e}")
+        raise
+
+    
+def get_parsing_metadata(itinerary: TravelItinerary) -> RequestMetadata:
+    """
+    Extract parsing metadata from travel itinerary.
+    
+    Args:
+        itinerary (TravelItinerary): Travel itinerary object.
+        
+    Returns:
+        RequestMetadata: Metadata about how the itinerary was parsed.
+        
+    Raises:
+        AttributeError: If itinerary doesn't have metadata attribute.
+    """
+    try:
+        return itinerary.metadata
+    except AttributeError as e:
+        raise AttributeError(f"Itinerary object missing metadata: {e}")
+
+
+def get_original_request(itinerary: TravelItinerary) -> str:
+    """
+    Get the original request text from travel itinerary metadata.
+    
+    Args:
+        itinerary (TravelItinerary): Travel itinerary object.
+        
+    Returns:
+        str: Original request text that was parsed.
+        
+    Raises:
+        AttributeError: If itinerary doesn't have metadata or original_request.
+    """
+    try:
+        return itinerary.metadata.original_request
+    except AttributeError as e:
+        raise AttributeError(f"Cannot access original request: {e}")
+
+
+def get_parsing_timestamp(itinerary: TravelItinerary) -> str:
+    """
+    Get the parsing timestamp from travel itinerary metadata.
+    
+    Args:
+        itinerary (TravelItinerary): Travel itinerary object.
+        
+    Returns:
+        str: ISO format timestamp when the request was processed.
+        
+    Raises:
+        AttributeError: If itinerary doesn't have metadata or timestamp.
+    """
+    try:
+        return itinerary.metadata.timestamp.isoformat()
+    except AttributeError as e:
+        raise AttributeError(f"Cannot access parsing timestamp: {e}")
