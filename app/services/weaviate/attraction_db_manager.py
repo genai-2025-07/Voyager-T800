@@ -35,7 +35,7 @@ class AttractionDBManager:
         Returns the UUID of the created object.
         """
         # Get the data dict
-        data = attraction.export_for_weaviate()
+        data = attraction.to_weaviate_properties()
         
         uuid = self.attraction_collection.data.insert(properties=data)
         return uuid

@@ -43,10 +43,41 @@ class CoordinatesModel(BaseModel):
         return float(v)
 
     class Config:
-        anystr_stip_whitespace = True
+        anystr_strip_whitespace = True
         schema_extra = {
             "example": {"latitude": 49.8407785, "longitude": 24.0305101}
         }
+
+
+_time_re = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+
+
+def _parse_hmm(v: Any) -> str:
+    """
+    Normalize input to 'HH:MM' string.
+    Always returns a string (important).
+    Accepts 'H:MM', 'HH:MM', or datetime.time.
+    """
+    if isinstance(v, str):
+        s = v.strip()
+        m = _time_re.match(s)
+        if not m:
+            raise ValueError(f"time must be in HH:MM format, got {v!r}")
+        h, mm = m.groups()
+        return f"{int(h):02d}:{mm}"
+    if isinstance(v, time):
+        return v.strftime("%H:%M")
+    raise ValueError(f"unsupported time value: {v!r}")
+
+
+def _time_to_minutes(t: Any) -> int:
+    # Accept either 'HH:MM' strings or datetime.time objects
+    if isinstance(t, str):
+        h, m = t.split(":")
+        return int(h) * 60 + int(m)
+    if isinstance(t, time):
+        return t.hour * 60 + t.minute
+    raise ValueError("unsupported time type for comparison")
 
 
 class DayOfWeek(str, Enum):
@@ -60,113 +91,47 @@ class DayOfWeek(str, Enum):
 
     @classmethod
     def is_valid_key(cls, key: str) -> bool:
-        return key.lower() in {d.value for d in cls}
-
-
-def _parse_hmm(value: Union[str, time]) -> time:
-    if isinstance(value, time):
-        return value
-    if not isinstance(value, str):
-        raise TypeError("time must be a string 'HH:MM' or datetime.time")
-    pattern = r"^\s*(\d{2}):(\d{2})\s*$"
-    m = re.match(pattern, value)
-    if not m:
-        raise ValueError("time must be in 'HH:MM' 24-hour format")
-    hour = int(m.group(1))
-    minute = int(m.group(2))
-    if not (0 <= hour <= 23 and 0 <= minute <= 59):
-        raise ValueError("hour must be 0-23 and minute must be 0-59")
-    return time(hour, minute)
-
-
-def _time_to_minutes(t: Union[str, time]) -> int:
-    if isinstance(t, str):
-        try:
-            # Assumes format "HH:MM"
-            t_obj = datetime.strptime(t, "%H:%M").time()
-        except Exception as e:
-            raise ValueError(f"Time string has invalid format: {t}") from e
-    else:
-        t_obj = t
-    return t_obj.hour * 60 + t_obj.minute
+        return key is not None and key.lower() in {d.value for d in cls}
 
 
 class TimeSlotModel(BaseModel):
-    """
-    Pydantic model for time slots in opening hours.
+    start: str = Field(..., description="Start time HH:MM")
+    end: str = Field(..., description="End time HH:MM")
 
-    Validates time format and ensures logical time ranges.
-
-    Attributes:
-        start: Start time in HH:MM format
-        end: End time in HH:MM format
-
-    Validators:
-        validate_time_format(): Ensures proper time format
-        validate_time_range(): Ensures start time is before end time
-    """
-    start: str = Field(..., description="Start time in HH:MM")
-    end: str = Field(..., description="End time in HH:MM")
-
+    # return normalized string
     @field_validator("start", mode="before")
     def validate_time_format_start(cls, v):
-        """Ensures proper time format for start."""
         return _parse_hmm(v)
 
-    @field_validator("start", mode="before")
+    @field_validator("end", mode="before")
     def validate_time_format_end(cls, v):
-        """Ensures proper time format for end."""
         return _parse_hmm(v)
 
     @model_validator(mode="after")
     def validate_time_range(cls, model: "TimeSlotModel"):
-        """Ensures start < end in minutes. Does not allow overnight spanning."""
-        start = model.start
-        end = model.end
-        if start is None or end is None:
+        if model.start is None or model.end is None:
             raise ValueError("both start and end are required")
-        if _time_to_minutes(start) >= _time_to_minutes(end):
-            raise ValueError("start time must be strictly before end time (no overnight ranges allowed)")
+        if _time_to_minutes(model.start) >= _time_to_minutes(model.end):
+            raise ValueError("start must be before end (no overnight ranges allowed)")
         return model
-    
+
     class Config:
-        anystr_strip_whitespace = True
-        schema_extra = {"example": {
-          "start": "00:00",
-          "end": "23:59"
-        }}
+        str_strip_whitespace = True  # pydantic v2 name
 
 
 class OpeningHoursModel(BaseModel):
-    """
-    Pydantic model for complete opening hours structure.
+    type: str = Field(None)
+    week_start: Optional[str] = Field(None)
+    week_end: Optional[str] = Field(None)
+    last_refreshed: Optional[str] = Field(None)
+    weekly: Dict[str, List[TimeSlotModel]] = Field(default_factory=dict)
 
-    Validates weekly schedule with proper time slot validation.
-
-    Attributes:
-        type: Opening hours type (e.g., 'weekly')
-        week_start: Week start date (ISO date: YYYY-MM-DD)
-        week_end: Week end date (ISO date: YYYY-MM-DD)
-        last_refreshed: Last update timestamp (ISO datetime)
-        weekly: Dictionary of daily schedules:
-            keys = day names (monday..sunday) or integers 0..6
-            values = list of TimeSlotModel
-    """
-
-    type: str = Field(None, description="Type of opening hours, e.g. 'weekly'")
-    week_start: Optional[str] = Field(None, description="Start date of the week (YYYY-MM-DD)")
-    week_end: Optional[str] = Field(None, description="End date of the week (YYYY-MM-DD)")
-    last_refreshed: Optional[datetime] = Field(None, description="Last refresh timestamp (ISO datetime)")
-    weekly: Dict[str, List[TimeSlotModel]] = Field(default_factory=dict, description="Daily schedules")
-    
-    # Add validators to ensure proper date format if needed
     @field_validator("week_start", "week_end")
     def validate_date_format(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return None
         if isinstance(v, str):
             try:
-                # Validate it's a proper date format
                 datetime.strptime(v, "%Y-%m-%d")
                 return v
             except ValueError:
@@ -181,39 +146,38 @@ class OpeningHoursModel(BaseModel):
 
     @field_validator("weekly", mode="before")
     def validate_weekly_schedule_structure(cls, v):
-        """
-        Ensure weekly schedule keys are normalized strings (lowercase day names).
-        Accepts keys as day names or integers 0..6.
-        """
+        # ensure dict-like, normalize day keys to enum values (lowercase)
         if not isinstance(v, dict):
             raise ValueError("weekly must be a dict of day -> list of time slots")
         normalized: Dict[str, List] = {}
         for k, val in v.items():
-            # Accept integer day indices
             if isinstance(k, int):
                 if not (0 <= k <= 6):
                     raise ValueError("day index must be between 0 and 6")
                 day = list(DayOfWeek)[k].value
             else:
-                day = str(k).strip().lower()
-                if day.isdigit() and 0 <= int(day) <= 6:
-                    day = list(DayOfWeek)[int(day)].value
-                elif not DayOfWeek.is_valid_key(day):
+                day_candidate = str(k).strip().lower()
+                if day_candidate.isdigit() and 0 <= int(day_candidate) <= 6:
+                    day = list(DayOfWeek)[int(day_candidate)].value
+                elif DayOfWeek.is_valid_key(day_candidate):
+                    day = day_candidate
+                else:
                     raise ValueError(f"invalid day key: {k}. Use monday..sunday or 0..6")
-            # Expect list of timeslots (will be validated by pydantic on assignment)
-            normalized.setdefault(day, val)
+            # ensure slots are lists (defensive)
+            if val is None:
+                normalized[day] = []
+            elif isinstance(val, list):
+                normalized.setdefault(day, val)
+            else:
+                raise ValueError(f"slots for {k!r} must be a list")
         return normalized
 
     @model_validator(mode="after")
-    def validate_date_range_and_slots(cls, model: OpeningHoursModel):
+    def validate_date_range_and_slots(cls, model: "OpeningHoursModel"):
         weekly = model.weekly
-
-        # Validate each day's slots: no overlaps, slots sorted
-        for day, slots in weekly.items():
-            # Coerce list entries to TimeSlotModel if needed (pydantic will typically do this)
+        for day, slots in list(weekly.items()):
             if not isinstance(slots, list):
                 raise ValueError(f"slots for {day} must be a list")
-            # Convert elements to TimeSlotModel when raw dicts were provided
             normalized_slots: List[TimeSlotModel] = []
             for s in slots:
                 if isinstance(s, TimeSlotModel):
@@ -221,30 +185,14 @@ class OpeningHoursModel(BaseModel):
                 elif isinstance(s, dict):
                     normalized_slots.append(TimeSlotModel(**s))
                 else:
-                    raise ValueError(f"invalid timeslot value for {day}: {s}")
-
-            # Sort slots by start time (minutes)
+                    raise ValueError(f"invalid timeslot value for {day}: {s!r}")
             normalized_slots.sort(key=lambda ts: _time_to_minutes(ts.start))
-
-            # Replace with normalized list
             weekly[day] = normalized_slots
-
         model.weekly = weekly
         return model
 
     class Config:
-        anystr_strip_whitespace = True
-        schema_extra = {
-            "example": {
-                "type": "weekly",
-                "week_start": "2025-08-18",
-                "week_end": "2025-08-24",
-                "weekly": {
-                    "monday": [{"start": "09:00", "end": "17:00"}],
-                    "tuesday": [{"start": "09:00", "end": "17:00"}],
-                },
-            }
-        }
+        str_strip_whitespace = True
 
 
 class ReviewModel(BaseModel):
@@ -551,7 +499,7 @@ class AttractionModel(BaseModel):
     # ----------------------
     # Export for Weaviate
     # ----------------------
-    def export_for_weaviate(self) -> Dict:
+    def to_weaviate_properties(self) -> Dict:
         def serialize_opening_hours(oh):
             if oh is None:
                 return None

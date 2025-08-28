@@ -61,7 +61,7 @@ properties:
         dataType:
           - object
         nestedProperties:
-          - name: Monday
+          - name: monday
             dataType:
               - object[]
             nestedProperties:
@@ -71,7 +71,7 @@ properties:
               - name: end
                 dataType:
                   - text
-          - name: Tuesday
+          - name: tuesday
             dataType:
               - object[]
             nestedProperties:
@@ -81,7 +81,7 @@ properties:
               - name: end
                 dataType:
                   - text
-          - name: Wednesday
+          - name: wednesday
             dataType:
               - object[]
             nestedProperties:
@@ -91,7 +91,7 @@ properties:
               - name: end
                 dataType:
                   - text
-          - name: Thursday
+          - name: thursday
             dataType:
               - object[]
             nestedProperties:
@@ -101,7 +101,7 @@ properties:
               - name: end
                 dataType:
                   - text
-          - name: Friday
+          - name: friday
             dataType:
               - object[]
             nestedProperties:
@@ -111,7 +111,7 @@ properties:
                 - name: end
                   dataType:
                     - text
-          - name: Saturday
+          - name: saturday
             dataType:
               - object[]
             nestedProperties:
@@ -121,7 +121,7 @@ properties:
               - name: end
                 dataType:
                   - text
-          - name: Sunday
+          - name: sunday
             dataType:
               - object[]
             nestedProperties:

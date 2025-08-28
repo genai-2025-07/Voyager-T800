@@ -27,8 +27,6 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
 
-DEFAULT_OPENING_HOURS_STRING = "OpeningHours(type='weekly', week_start='2025-08-11', week_end='2025-08-17', last_refreshed='2025-08-17T21:57:59.043618', weekly={'Monday': [{'start': '12:00', 'end': '21:00'}], 'Tuesday': [{'start': '12:00', 'end': '21:00'}], 'Wednesday': [{'start': '12:00', 'end': '21:00'}], 'Thursday': [{'start': '12:00', 'end': '21:00'}], 'Friday': [{'start': '12:00', 'end': '21:00'}], 'Saturday': [{'start': '10:00', 'end': '21:00'}], 'Sunday': [{'start': '10:00', 'end': '21:00'}]})"
-
 
 @dataclass
 class ChunkData:
@@ -168,25 +166,67 @@ def _parse_tags_field(raw: Any) -> List[str]:
     return []
 
 
-def _parse_opening_hours_field(raw: Any) -> Optional[OpeningHoursModel]:
-    if raw is None or raw == "":
+def _parse_opening_hours_field(raw: str) -> Optional[OpeningHoursModel]:
+    if isinstance(raw, str) and "OpeningHours(" in raw:
+        # default value, we don't need it
         return None
-    # Try JSON or literal eval of a dict representation
+    
+    # helper to normalize weekly keys to canonical capitalized weekday names
+    def _normalize_weekly(weekly_raw: Any) -> Dict[str, Any]:
+        weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        normalized = {}
+        if not isinstance(weekly_raw, dict):
+            return {}
+        for k, v in weekly_raw.items():
+            if not isinstance(k, str):
+                continue
+            key_lower = k.strip().lower()
+            # find canonical weekday match
+            matched = next((d for d in weekday_names if d.lower() == key_lower), None)
+            if matched is None:
+                # try to title-case unknown keys
+                matched = k.strip().title()
+            # ensure the value is a list of dicts with start/end
+            if isinstance(v, list):
+                cleaned_list = []
+                for item in v:
+                    if isinstance(item, dict):
+                        start = item.get("start") or item.get("Start") or item.get("start_time")
+                        end = item.get("end") or item.get("End") or item.get("end_time")
+                        cleaned_list.append({"start": start, "end": end})
+                normalized[matched] = cleaned_list
+            else:
+                normalized[matched] = v
+        # make sure all days exist (avoid missing keys downstream)
+        for d in weekday_names:
+            if d not in normalized:
+                normalized[d] = []
+        return normalized
+
     parsed = _safe_eval_pythonish(raw)
+    # If already a model instance
     if isinstance(parsed, OpeningHoursModel):
         return parsed
+
+    # If we got a dict-like structure, normalize and instantiate model
     if isinstance(parsed, dict):
-        # pydantic OpeningHoursModel should normalize day keys
         try:
-            return OpeningHoursModel(**parsed)
+            if 'weekly' in parsed and isinstance(parsed.get('weekly'), dict):
+                parsed['weekly'] = _normalize_weekly(parsed['weekly'])
+            # try pydantic validation
+            res = OpeningHoursModel(**parsed)
+            return res
         except ValidationError as e:
-            logger.debug(f"OpeningHoursModel validation failed: {e}")
+            logger.debug(f"OpeningHoursModel validation failed for dict input: {e}")
             return None
-    # If the representation is something like "OpeningHours(... weekly={...})"
-    if isinstance(raw, str) and raw == DEFAULT_OPENING_HOURS_STRING:
-        return None
+        except Exception as e:
+            logger.exception(f"Unexpected error parsing opening hours dict: {e}")
+            return None
+
+    # Handle dataclass/repr strings like "OpeningHours(... weekly={...})"
 
     return None
+
 
 
 def _parse_attraction_row(row: Dict[str, Any]) -> Optional[AttractionModel]:
@@ -476,6 +516,14 @@ class DataLoader:
             )
             results.append(attraction)
 
+
+
         logger.info(f"Loaded {len(results)} grouped attractions with chunks")
         return results
 
+
+if __name__ == "__main__":
+    embeddings_dir = Path("data/embeddings")
+    metadata_file = Path("data/attractions_metadata.csv")
+    loader = DataLoader(embeddings_dir, metadata_file)
+    grouped_attractions = loader.load_all()
