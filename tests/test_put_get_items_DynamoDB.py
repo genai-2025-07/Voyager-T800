@@ -9,6 +9,21 @@ TABLE_NAME = "session_metadata"
 
 @pytest.fixture
 def dynamodb_table():
+    """
+    Pytest fixture that creates a temporary mock DynamoDB table for testing.
+    This fixture uses `moto`'s `mock_aws` to simulate DynamoDB behavior
+    without requiring access to a real AWS account. It creates a table
+    with the following schema:
+      - Partition key: `user_id` (String)
+      - Sort key: `session_id` (String)
+
+    The table is configured with on-demand billing mode (`PAY_PER_REQUEST`).
+
+    Yields:
+        boto3.resources.factory.dynamodb.Table: A reference to the mocked
+        DynamoDB table, which can be used in tests to insert, query, and
+        retrieve items.
+    """
     with mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
         table = dynamodb.create_table(
@@ -28,6 +43,9 @@ def dynamodb_table():
 
 @pytest.fixture
 def sample_messages():
+    """
+    Pytest fixture that creates list of sample messages.
+    """
     return [
             {
             "message_id": "msg_001",
@@ -66,6 +84,24 @@ def sample_messages():
 
 @pytest.mark.unit
 def test_put_and_get_item(dynamodb_table, sample_messages):
+    """
+    Unit test for verifying insertion and retrieval of items in the DynamoDB table.
+
+    This test ensures that:
+      1. The `put_item` function successfully stores an item in the table.
+      2. The `get_item` function retrieves the same item with all fields intact.
+
+    The test uses a mocked DynamoDB table (via the `dynamodb_table` fixture)
+    and a predefined list of sample messages (via the `sample_messages` fixture).
+
+    Assertions:
+        - `put_item` should return True after successful insertion.
+        - Retrieved item should contain:
+            * Matching `user_id` and `session_id`.
+            * Correct `session_summary`.
+            * Correct `started_at` timestamp.
+            * The same `messages` list that was inserted.
+    """
     user_id = "u123"
     session_id = "s456"
     summary = "Test session"

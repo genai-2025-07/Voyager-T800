@@ -18,11 +18,13 @@ def put_item(db_table, user_id:str, session_id:str, session_summary:str, started
     """
     Adds an item to the table.
 
-        :param user_id: The user unique identifier (Partition Key).
-        :param session_id: The unique session identifier (Sort Key).
-        :param session_summary: The short description of session context.
-        :param started_at: The starting time of session.
-        :param messages: The list of each message information (message id, sender type, sending time, content, metadata (language, message type), trip data (destination, duration days, transportation, itinerary)). 
+    Args:
+        db_table: The table to put data in it.
+        user_id (str): The user unique identifier (Partition Key).
+        session_id (str): The unique session identifier (Sort Key).
+        session_summary (str): The short description of session context.
+        started_at (datetime): The starting time of session.
+        messages (List): The list of each message information (message id, sender type, sending time, content, metadata (language, message type), trip data (destination, duration days, transportation, itinerary)). 
     """
     try:
         db_table.put_item(
@@ -38,7 +40,18 @@ def put_item(db_table, user_id:str, session_id:str, session_summary:str, started
         raise
 
 
-def get_item(db_table, user_id, session_id ):
+def get_item(db_table, user_id:str, session_id:str ):
+    """
+    Returns an item from table, using unique identifier of user and session.
+
+    Args:
+        db_table: The table to get data from.
+        user_id (str): The user unique identifier (Partition Key).
+        session_id (str): The session unique identifier (Sort Key).
+
+    Returns:
+          dict: Dictionary with the retrieved item under the 'Item' key.  
+    """
     try:
         response= db_table.get_item(Key = {"user_id":user_id, "session_id":session_id})
 
