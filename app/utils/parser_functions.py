@@ -54,7 +54,6 @@ def parse_itinerary_output(response: str) -> TravelItinerary:
         except (AttributeError, KeyError, ValueError, IndexError) as manual_error:
             print(f"Manual parsing also failed: {manual_error}")
             
-            # Create fallback with metadata
         metadata = RequestMetadata(
             original_request=response,
             parser_used='fallback'
