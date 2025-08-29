@@ -42,6 +42,8 @@ class ConfigLoader:
                 If None, will check VOYAGER_CONFIG environment variable,
                 then fall back to environment-based file (dev.yaml/prod.yaml)
                 based on APP_ENV or app.env setting.
+            project_root (str | None): Path to project root.
+                If None, will fall back to second parent folder.
 
         Raises:
             FileNotFoundError: If base configuration file is not found
