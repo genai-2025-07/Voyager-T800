@@ -33,7 +33,7 @@ class ConfigLoader:
         settings (Settings | None): Validated configuration settings
     """
 
-    def __init__(self, config_path: str | None = None):
+    def __init__(self, config_path: str | None = None, project_root: str | None = None):
         """
         Initialize the ConfigLoader with optional override configuration path.
 
@@ -50,7 +50,7 @@ class ConfigLoader:
         # Load .env early to populate environment for expansion
         load_dotenv(override=False)
 
-        self.project_root = Path(__file__).resolve().parents[2]
+        self.project_root = project_root or Path(__file__).resolve().parents[2]
         self.config_dir = self.project_root / "app" / "config"
         self.base_config_path = self.config_dir / "default.yaml"
 
