@@ -1,9 +1,10 @@
+from app.retrieval.prototype_retriever import RAGPrototype
 import logging
 from dotenv import load_dotenv
 import os
 
 load_dotenv()  # Load environment variables from .env file
-DEBUG = os.getenv('DEBUG', 'False')
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +43,14 @@ def format_docs(docs):
         for d in docs:
             print(f"Source: {d.metadata.get('source', 'unknown')}")
             print(f"City: {d.metadata.get('city', 'unknown')}")
-            print(f"Content: {d.page_content[:200]}...\n")
+            print(f"Content: {str(d.page_content)[:200]}...\n")
         print("--- End Retrieved Docs ---\n\n")
 
     return "\n\n".join(
-        f"Source: {doc.metadata.get('source', 'unknown')}\nCity: {doc.metadata.get('city', 'unknown')}\nContent: {doc.page_content}"
+        f"Source: {doc.metadata.get('source', 'unknown')}\nCity: {doc.metadata.get('city', 'unknown')}\nContent: {doc.page_content.strip()}"
         for doc in docs
     )
+
+def get_rag_retriever():
+    rag = RAGPrototype(os.getenv("EMBEDDINGS_DIR", "data/embeddings"))
+    return rag.get_retriever()

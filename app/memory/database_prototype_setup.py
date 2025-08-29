@@ -42,7 +42,9 @@ def setup_weaviate(embeddings):
         client = weaviate.Client(
             embedded_options=EmbeddedOptions()
         )
-        client.schema.delete_all()  # Clear existing schema for fresh setup
+        
+        if os.getenv("DEBUG") == "True":
+            client.schema.delete_all()  # Clear existing schema for fresh setup
         
         # Create schema if not exists
         schema = client.schema.get()
@@ -65,6 +67,7 @@ def setup_weaviate(embeddings):
 
     except Exception as e:
         logger.error(f"Error setting up Weaviate: {e}")
+        return None
 
 
 def create_weaviate_db_with_loaded_documents(embeddings, chunks_dir):
@@ -77,6 +80,9 @@ def create_weaviate_db_with_loaded_documents(embeddings, chunks_dir):
         Weaviate vector store instance with loaded documents.
     """
     vectorstore = setup_weaviate(embeddings)
+    if vectorstore is None:
+        logger.error("Vectorstore setup failed.")
+        return None
 
     json_files = glob.glob(os.path.join(chunks_dir, "*.json"))
     data = []
@@ -92,9 +98,23 @@ def create_weaviate_db_with_loaded_documents(embeddings, chunks_dir):
 
     # Add chunks to Weaviate
     if data:
-        texts = [d["text"] for d in data]
-        vectors = [d["embedding"] for d in data]
-        metadatas = [{"source": d["metadata"]["source_file"], "city": d["metadata"]["city"]} for d in data]
+        texts = []
+        vectors = []
+        metadatas = []
+        for d in data:
+            try:
+                text = d.get("text", "")
+                embedding = d.get("embedding", [])
+                metadata = d.get("metadata", {})
+                source = metadata.get("source_file", "unknown_source")
+                city = metadata.get("city", "unknown_city")
+                
+                texts.append(text)
+                vectors.append(embedding)
+                metadatas.append({"source": source, "city": city})
+            except Exception as e:
+                logger.error(f"Error processing document chunk: {e}")
+                continue
         try:
             vectorstore.add_texts(texts=texts, metadatas=metadatas, vectors=vectors)
             logger.info("Successfully loaded document chunks into Weaviate.")

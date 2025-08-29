@@ -6,9 +6,8 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 import os
 import time
 from app.utils.read_prompt_from_file import load_prompt_from_file
-from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
+from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from app.retrieval.prototype_retriver import RAGPrototype
 from dotenv import load_dotenv
 import logging
 
@@ -61,9 +60,7 @@ memory = ConversationSummaryMemory(
 )
 
 # Initialize RAG Prototype and retriever
-embeddings_dir = os.getenv("EMBEDDINGS_DIR", "data/embeddings")
-rag = RAGPrototype(embeddings_dir)
-retriever = rag.get_retriever()
+retriever = get_rag_retriever()
 
 # Chain where we will pass the last message from the chat history
 chain = RunnablePassthrough.assign(

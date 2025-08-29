@@ -5,12 +5,6 @@ from app.memory.database_prototype_setup import create_weaviate_db_with_loaded_d
 
 logger = logging.getLogger(__name__)
 
-# Set OpenAI API key for embeddings
-try:
-    openai_key = os.getenv("OPENAI_API_KEY")
-except Exception as e:
-    logger.error(f"ERROR exporting OpenAI API key: {e}")
-
 class RAGPrototype:
     """
     Class to initialize and manage a RAG (Retrieval-Augmented Generation) prototype
@@ -35,7 +29,7 @@ class RAGPrototype:
     def __init__(self, embeddings_dir="data/embeddings"):
         self.embeddings_dir = embeddings_dir
         self.embed_model = os.getenv('EMBED_MODEL', 'text-embedding-3-small')
-        self.retriever_type = os.getenv('RETRIVER', 'similarity').lower()
+        self.retriever_type = os.getenv('RETRIEVER', 'similarity').lower()
         self.top_k = int(os.getenv('TOP_K', '5'))
         self.fetch_k = int(os.getenv('FETCH_K', '10'))
         self.mmr_lambda = float(os.getenv('MMR_LAMBDA', '0.5'))
@@ -49,6 +43,8 @@ class RAGPrototype:
         # Vectorstore (Weaviate) initialization
         try:
             self.vectorstore = create_weaviate_db_with_loaded_documents(self.embeddings, self.embeddings_dir)
+            if self.vectorstore is None:
+                raise RuntimeError("Vectorstore initialization returned None.")
             logger.info("Vectorstore initialized")
         except Exception as e:
             logger.error(f"ERROR initializing vectorstore: {e}")
@@ -77,6 +73,7 @@ class RAGPrototype:
             )
         else:
             logger.error(f"Unknown RETRIVER type: {self.retriever_type}")
+            raise ValueError(f"Unknown RETRIEVER type: {self.retriever_type}")
 
     def get_retriever(self):
         return self.retriever
