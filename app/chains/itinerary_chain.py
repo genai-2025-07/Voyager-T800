@@ -40,8 +40,22 @@ prompt = PromptTemplate(input_variables=['chat_history', 'user_input'], template
 
 memory_prompt = PromptTemplate(input_variables=['summary', 'new_lines'], template=summary_template)
 
-memory = ConversationSummaryMemory(llm=llm, prompt=memory_prompt, max_token_limit=1000)
+# Configuration: expose token limit and session TTL via environment variables
+try:
+    MEMORY_MAX_TOKEN_LIMIT = int(os.getenv("SESSION_MEMORY_MAX_TOKEN_LIMIT", "1000"))
+except Exception:
+    MEMORY_MAX_TOKEN_LIMIT = 1000
 
+try:
+    SESSION_MEMORY_TTL_SECONDS = int(os.getenv("SESSION_MEMORY_TTL_SECONDS", "3600"))
+except Exception:
+    SESSION_MEMORY_TTL_SECONDS = 3600
+
+memory = ConversationSummaryMemory(
+    llm=llm,
+    prompt=memory_prompt,
+    max_token_limit=MEMORY_MAX_TOKEN_LIMIT
+)
 
 # Chain where we will pass the last message from the chat history
 def extract_chat_history_content(x):
@@ -68,12 +82,80 @@ def extract_chat_history_content(x):
 
 chain = RunnablePassthrough.assign(chat_history=extract_chat_history_content) | prompt | llm
 
+session_memories = {}
+
+def _cleanup_expired_sessions():
+    """
+    Remove session histories that have not been accessed within TTL to avoid memory leaks.
+    No-op if TTL is non-positive.
+    """
+    try:
+        ttl = SESSION_MEMORY_TTL_SECONDS
+        now = time.time()
+        expired_session_ids = []
+        for s_id, entry in list(session_memories.items()):
+            if not isinstance(entry, dict) or "last_access" not in entry:
+                continue
+            if now - entry["last_access"] > ttl:
+                expired_session_ids.append(s_id)
+        for s_id in expired_session_ids:
+            del session_memories[s_id]
+    except Exception as e:
+        logging.warning(f"WARNING during session cleanup: {e}")
+
+def get_session_memory(session_id:str):
+    """
+    Get or initialize a conversation memory instance for a given session.
+
+    This function ensures that each session has its own dedicated
+    `ConversationSummaryMemory` wrapped in `SummaryChatMessageHistory`
+    to prevent cross-session memory bleed. If no memory exists for the
+    provided session ID, a new one is created and stored.This function ensures each session has its own dedicated
+    `ConversationSummaryMemory` wrapped in `SummaryChatMessageHistory`
+    to prevent cross-session memory bleed.
+
+    Features:
+    - Cleans up expired sessions before returning memory.
+    - Creates a new memory if none exists for the session.
+    - Updates the session's last access time on each call.
+    - Maintains backward compatibility with older plain history objects.
+
+    Args: session_id (str): The unique identifier of the specific session.
+
+    Returns: SummaryChatMessageHistory: an object that manages the chat history and conversation summary for the specified session.
+    """
+    _cleanup_expired_sessions()
+
+    if llm is None:
+        raise RuntimeError("LLM client is not initialized. Ensure 'llm' is configured before requesting session memory.")
+    if memory_prompt is None:
+        raise RuntimeError("Memory prompt is not initialized. Ensure 'memory_prompt' is configured before requesting session memory.")
+
+    entry = session_memories.get(session_id)
+
+    if entry is not None and not isinstance(entry, dict):
+        entry = {"history": entry, "last_access": time.time()}
+        session_memories[session_id] = entry
+
+    if entry is None:
+        session_summary_memory = ConversationSummaryMemory(
+            llm=llm,
+            prompt=memory_prompt,
+            max_token_limit=MEMORY_MAX_TOKEN_LIMIT
+        )
+        history = SummaryChatMessageHistory(session_summary_memory)
+        session_memories[session_id] = {"history": history, "last_access": time.time()}
+        return history
+
+    entry["last_access"] = time.time()
+    return entry["history"]
+
 # Wrapper for message history
 runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
     # Always return the same memory object for session history
     # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history=lambda session_id: SummaryChatMessageHistory(memory),
+    get_session_history=lambda session_id: get_session_memory(session_id),
     input_messages_key='user_input',
     history_messages_key='chat_history',
 )
