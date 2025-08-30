@@ -29,10 +29,7 @@ There are two types of logger initialization depending on where the code is used
 
    You must initialize the logging system at the very beginning of the file:
 
-       from dotenv import load_dotenv
        from app.config.logger.logger import setup_logger
-
-       load_dotenv()
        setup_logger()
 
    Then you can safely get a logger instance:
@@ -70,6 +67,8 @@ import yaml
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config.config import settings
+
 
 request_id_ctx_var: ContextVar[str | None] = ContextVar('request_id', default=None)
 
@@ -93,7 +92,7 @@ class ServiceFilter(logging.Filter):
         Returns:
             bool: Always returns True to keep the record in the log stream.
         """
-        record.service = os.getenv('SERVICE_NAME', 'fastapi-service')
+        record.service = settings.service_name
         record.request_id = request_id_ctx_var.get() or '-'
         return True
 
@@ -150,9 +149,7 @@ def setup_logger():
         FileNotFoundError: If the logging configuration file is not found.
     """
     base_dir = os.path.dirname(__file__)
-    config_path = os.path.join(base_dir, os.getenv('LOGGING_CONFIG_FILE', 'logger.yaml'))
-
-    log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+    config_path = os.path.join(base_dir, settings.logging_config_file)
 
     if not os.path.isfile(config_path):
         raise FileNotFoundError(f'Logger config not found at: {config_path}')
@@ -161,6 +158,6 @@ def setup_logger():
         config = yaml.safe_load(f)
 
     if 'root' in config:
-        config['root']['level'] = log_level
+        config['root']['level'] = settings.log_level
 
     dictConfig(config)

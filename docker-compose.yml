@@ -104,12 +104,7 @@ services:
     ports:
       - "${HOST_PORT_DEV:-8000}:${CONTAINER_PORT_DEV:-8000}"
     volumes:
-      # Mount only necessary directories for development
-      - ./app/api:/app/app/api
-      - ./app/chains:/app/app/chains
-      - ./app/config:/app/app/config
-      - ./app/frontend:/app/app/frontend
-      - ./app/main.py:/app/app/main.py
+      - ./app:/app/app
 
     environment:
       # AWS credentials are passed ONLY from the host shell environment variables

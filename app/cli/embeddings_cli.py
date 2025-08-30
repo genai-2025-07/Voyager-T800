@@ -9,8 +9,6 @@ import sys
 
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from app.config.logger.logger import setup_logger
 from app.retrieval.embedding.generate_embeddings import (
     DEFAULT_BATCH_SIZE,
@@ -34,7 +32,6 @@ from app.retrieval.embedding.generate_embeddings import (
 from app.utils.file_utils import discover_input_files
 
 
-load_dotenv()
 setup_logger()
 logger = logging.getLogger('app.cli.embeddings_cli')
 

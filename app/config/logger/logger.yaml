@@ -25,7 +25,10 @@ root:
 loggers:
   uvicorn.error:
     level: WARNING
-    propagate: True
+    handlers: [console]
+    propagate: False
+
   uvicorn.access:
     level: WARNING
-    propagate: True
+    handlers: [console]
+    propagate: False
