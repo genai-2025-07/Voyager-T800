@@ -46,7 +46,6 @@ The main class that stores all place-related data with unified schema for attrac
 | Property                      |       Type | Storage / Example                     | Tokenization / Notes                                         |
 | ----------------------------- | ---------: | ------------------------------------- | ------------------------------------------------------------ |
 | `chunk_text`                  |       text | `"…denormalized wiki paragraph…"`     | `word` — text used to build vectors / full-text chunk search |
-| `chunk_index`                 |        int | `3`                                   | integer index of chunk within a page                         |
 | `fromAttraction`              | Attraction | Reference to an `Attraction` instance | Weaviate reference: links chunk → parent Attraction          |
 | `name`                        |       text | `"Café Example"`                      | `word` — denormalized for quick filtering / display          |
 | `city`                        |       text | `"Kyiv"`                              | denormalized metadata for fast filtering                     |
@@ -97,7 +96,6 @@ The main class that stores all place-related data with unified schema for attrac
 |----------------------------------|:---------:|------------------------------------------------------|----------------|
 | `name`                           | Yes       | `text` — non-empty, max length **200**               | Trim whitespace; reject empty strings. |
 | `description`                    | Yes        | `text` — max length **5000**                         | Allow rich text but limit size. |
-| `chunk_id`                       | Yes       | `text` — pattern `^[a-zA-Z0-9_\-]+$`, max **100**    | Unique per document chunk. |
 | `address`                        | No        | `text` — max length **300**                          | — |
 | `postal_code`                    | No        | `text` — max length **12**   | — |
 | `administrative_area_level_*`    | No        | `text` — max length **100**                          | — |
