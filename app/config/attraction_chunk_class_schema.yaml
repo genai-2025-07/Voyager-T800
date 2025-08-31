@@ -11,9 +11,6 @@ properties:
     dataType:
       - text
     tokenization: word
-  - name: chunk_index
-    dataType:
-      - int
   - name: fromAttraction
     dataType:
       - Attraction

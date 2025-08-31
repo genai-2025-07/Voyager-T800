@@ -1,11 +1,43 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Union, Any
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, field_serializer
 from datetime import datetime, time, timezone
 import math
 import re
 from enum import Enum
 from urllib.parse import urlparse
+
+
+class ChunkData(BaseModel):
+    chunk_text: str
+    embedding: List[float]
+
+    name: str = Field(..., description="Name of the attraction.")
+    city: str = Field(..., description="Name of the city where attraction is located.")
+    administrative_area_level_1: Optional[str] = Field(None, description="State/Province")
+    administrative_area_level_2: Optional[str] = Field(None, description="County/District")
+    tags: List[str] = Field(default_factory=list, description="List of category tags")
+    rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
+    place_id: str = Field(..., description="Google Places ID")
+
+    def to_weaviate_properties(self) -> Dict[str, Any]:
+        """Convert chunk data to Weaviate properties format"""
+        return {
+            "chunk_text": self.chunk_text,
+            "name": self.name,
+            "city": self.city,
+            "administrative_area_level_1": self.administrative_area_level_1,
+            "administrative_area_level_2": self.administrative_area_level_2,
+            "tags": self.tags,
+            "rating": self.rating,
+            "place_id": self.place_id,
+        }
+
+
+class AttractionWithChunks(BaseModel):
+    source_file: str
+    attraction: "AttractionModel" = Field(..., description="Model with metadata for attraction.")
+    chunks: Optional[List[ChunkData]]
 
 
 _PHONE_NORMALIZE_RE = re.compile(r"[^\d+]")  # remove anything except digits and plus
@@ -215,7 +247,7 @@ class ReviewModel(BaseModel):
     """
 
     author_name: Optional[str] = Field(None, max_length=200, description="Author display name")
-    rating: Union[int, float] = Field(..., description="Rating between 1 and 5 inclusive")
+    rating: float = Field(..., description="Rating between 1 and 5 inclusive")
     text: Optional[str] = Field(None, description="Review text")
     time: Optional[datetime] = Field(None, description="Timestamp of the review (ISO datetime)")
     language: Optional[str] = Field(None, description="Language code (ISO 639-1 or 639-2, e.g. 'en', 'uk', 'fra')")
@@ -258,23 +290,39 @@ class ReviewModel(BaseModel):
 
     @field_validator("time", mode="before")
     def validate_time_field(cls, v):
-        """
-        Accept either a datetime, an ISO datetime string, or integer epoch (seconds).
-        Convert to datetime.
-        """
         if v is None:
             return None
         if isinstance(v, datetime):
+            # make timezone-aware (assume UTC if naive)
+            if v.tzinfo is None:
+                return v.replace(tzinfo=timezone.utc)
             return v
         if isinstance(v, (int, float)):
-            return datetime.fromtimestamp(int(v))
+            # use UTC for epoch seconds
+            return datetime.fromtimestamp(int(v), tz=timezone.utc)
         if isinstance(v, str):
             try:
-                return datetime.fromisoformat(v)
+                dt = datetime.fromisoformat(v)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
             except Exception:
                 raise ValueError("time string must be ISO format (YYYY-MM-DDTHH:MM:SS) or epoch int")
         raise ValueError("time must be datetime, ISO string or epoch int")
 
+    @field_serializer("time")
+    def serialize_time(self, v: Optional[datetime]):
+        """
+        Correct serializer signature: (self, value, info).
+        Normalize to UTC and emit ISO with microseconds and +00:00 offset.
+        """
+        if v is None:
+            return None
+        # ensure timezone-aware then output with microseconds and colon in offset
+        v_utc = v.astimezone(timezone.utc)
+        # isoformat with microseconds yields 'YYYY-MM-DDTHH:MM:SS.ffffff+00:00'
+        return v_utc.isoformat(timespec="microseconds")
+    
     class Config:
         anystr_strip_whitespace = True
         schema_extra = {
@@ -282,7 +330,7 @@ class ReviewModel(BaseModel):
                 "author_name": "Alice",
                 "rating": 5,
                 "text": "Excellent place, friendly staff!",
-                "time": "2025-08-20T12:34:56",
+                "time": "2023-08-25T00:04:59.000000+00:00",
                 "language": "en",
             }
         }
@@ -306,12 +354,12 @@ class AttractionModel(BaseModel):
     administrative_area_level_2: Optional[str] = Field(None, description="County/District")
     sublocality_level_1: Optional[str] = Field(None, description="Local subdivision")
     coordinates: CoordinatesModel = Field(..., description="Geographic coordinates (lat,lng)")
-    place_id: Optional[str] = Field(None, description="Google Places ID")
+    place_id: str = Field(..., description="Google Places ID")
     phone_number: Optional[str] = Field(None, description="Contact phone number (normalized)")
     maps_url: str = Field(..., description="Maps / website URL (maps_url)")
     opening_hours: OpeningHoursModel = Field(None, description="Opening hours structure")
     price_level: Optional[int] = Field(None, description="Price level (0-4)")
-    rating: Optional[Union[int, float]] = Field(None, description="Average rating (0.0 - 5.0)")
+    rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
     reviews: List[ReviewModel] = Field(default_factory=list, description="List of reviews")
     tags: List[str] = Field(default_factory=list, description="List of category tags")
 
@@ -328,9 +376,6 @@ class AttractionModel(BaseModel):
 
     last_updated: datetime = Field(..., description="Last update timestamp (ISO datetime)")
 
-    # ----------------------
-    # Field validators
-    # ----------------------
     @field_validator(
         "wheelchair_accessible_entrance",
         "serves_beer",
@@ -391,7 +436,6 @@ class AttractionModel(BaseModel):
             normalized += f"#{parsed.fragment}"
         return normalized
 
-    # (other validators from the previous model remain the same)
     @field_validator("price_level")
     def validate_price_level(cls, v: Optional[int]) -> Optional[int]:
         if v is None:
@@ -455,9 +499,6 @@ class AttractionModel(BaseModel):
             raise ValueError("reviews must be a list of review objects/dicts")
         return list(v)
 
-    # ----------------------
-    # Model-level validators (minimal changes from prior)
-    # ----------------------
     @model_validator(mode="after")
     def validate_required_and_compute(cls, values):
         if not values.name or not values.name.strip():
@@ -496,9 +537,6 @@ class AttractionModel(BaseModel):
 
         return values
 
-    # ----------------------
-    # Export for Weaviate
-    # ----------------------
     def to_weaviate_properties(self) -> Dict:
         def serialize_opening_hours(oh):
             if oh is None:
@@ -525,7 +563,7 @@ class AttractionModel(BaseModel):
             "maps_url": self.maps_url,
             "opening_hours": serialize_opening_hours(self.opening_hours) if self.opening_hours else None,
             "price_level": self.price_level,
-            "rating": self.rating,
+            "rating": float(self.rating) if self.rating else None,
             "reviews": [r.model_dump() for r in self.reviews],
             "tags": self.tags,
             # explicit boolean fields
@@ -538,7 +576,7 @@ class AttractionModel(BaseModel):
             "serves_vegetarian_food": bool(self.serves_vegetarian_food),
             "serves_wine": bool(self.serves_wine),
             "takeout": bool(self.takeout),
-            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "last_updated": self.last_updated if self.last_updated else None,
         }
         return {k: v for k, v in payload.items() if v is not None}
 

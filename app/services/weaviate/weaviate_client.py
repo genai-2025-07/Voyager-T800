@@ -1,22 +1,44 @@
-import weaviate
-from weaviate.connect import ConnectionParams
-from pydantic import BaseModel
+from __future__ import annotations
+import os
+import yaml
+from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 
+import weaviate
+from weaviate.connect import ConnectionParams
 
-# Pydantic model for connection parameters
+
 class LocalConnectionParams(BaseModel):
-    http_host: str = "localhost"
-    http_port: int = 8080
-    http_secure: bool = False
-    grpc_host: str = "localhost"
-    grpc_port: int = 50051
-    grpc_secure: bool = False
+    """
+    Connection parameters for Weaviate HTTP and (optional) gRPC.
+    All fields are required and described for schema / docs.
+    """
+    http_host: str = Field(..., description="Hostname or IP for Weaviate HTTP endpoint")
+    http_port: int = Field(..., description="Port for Weaviate HTTP endpoint")
+    http_secure: bool = Field(..., description="Use HTTPS for the HTTP endpoint if true")
+    grpc_host: str = Field(..., description="Hostname or IP for Weaviate gRPC endpoint")
+    grpc_port: int = Field(..., description="Port for Weaviate gRPC endpoint")
+    grpc_secure: bool = Field(..., description="Use TLS for gRPC if true")
 
-
-# Pydantic model for a sample health check response
 class HealthCheckResponse(BaseModel):
-    is_ready: bool
+    """
+    Simple health-check response model.
+    """
+    is_ready: bool = Field(..., description="Whether the Weaviate HTTP endpoint reports ready")
+
+
+def load_config_from_yaml(path: str) -> LocalConnectionParams:
+    """Load YAML file and parse into LocalConnectionParams (raises on invalid schema)."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Config file not found: {path}")
+    with open(path, "r", encoding="utf-8") as fh:
+        raw = yaml.safe_load(fh) or {}
+    try:
+        cfg = LocalConnectionParams(**raw)
+    except ValidationError as e:
+        # Re-raise with a clearer message
+        raise RuntimeError(f"Invalid weaviate config at {path}:\n{e}") from e
+    return cfg
 
 
 class WeaviateClientWrapper:

@@ -1,12 +1,13 @@
-import weaviate
-from typing import List, Optional, Dict, Any
-from dataclasses import asdict
-from app.services.weaviate.dataloader import AttractionWithChunks, ChunkData  # Your dataclasses
-from app.services.weaviate.data_models.attraction_models import AttractionModel, EmbeddingModel, EmbeddingMetadataModel  # Your Pydantic models
 import logging
-from weaviate.collections.classes.data import DataObject
+from typing import List, Optional
+import weaviate
+
+from app.services.weaviate.data_models.attraction_models import (
+    AttractionWithChunks
+)
 from weaviate.classes.query import Filter
 from weaviate.classes.query import MetadataQuery
+from weaviate.util import generate_uuid5
 
 from app.config.logger.logger import setup_logger
 from dotenv import load_dotenv
@@ -21,7 +22,6 @@ class AttractionDBManager:
     CRUD manager for Attraction and Chunk data in Weaviate v4.
     Assumes collections 'Attraction' and 'Chunk' exist with appropriate schema.
     """
-
     def __init__(self, client: weaviate.WeaviateClient,
                  attraction_collection_name="Attraction",
                  chunk_collection_name="AttractionChunk"):
@@ -29,111 +29,89 @@ class AttractionDBManager:
         self.attraction_collection = client.collections.get(attraction_collection_name)
         self.chunk_collection = client.collections.get(chunk_collection_name)
 
-    def create_attraction(self, attraction: AttractionModel) -> str:
+    def batch_insert_attractions_with_chunks(self, items: list[AttractionWithChunks],
+                                             batch_size=100) -> list:
         """
-        Insert a new attraction object.
-        Returns the UUID of the created object.
+        Batch insert a list of AttractionWithChunks objects and their chunks, with references.
+        Returns a list of dicts with attraction_uuid and chunk_uuids for each item.
         """
-        # Get the data dict
-        data = attraction.to_weaviate_properties()
-        
-        uuid = self.attraction_collection.data.insert(properties=data)
-        return uuid
+        results = []
 
-    def create_chunks(self, chunks: List[ChunkData], attraction_uuid: Optional[str] = None) -> List[str]:
-        """
-        Batch insert chunk objects with proper vector embedding and cross-reference to attraction.
-        
-        Args:
-            chunks: List of ChunkData objects with embedding vectors and denormalized metadata
-            attraction_uuid: UUID of the parent attraction to create cross-reference
-            
-        Returns:
-            List of UUIDs for created chunk objects
-        """
-        if not chunks:
-            return []
-        
-        # Prepare batch insert data
-        chunk_objects = []
-        
-        for chunk in chunks:
-            # Get the properties dict from chunk (includes denormalized attraction metadata)        
-            chunk_obj = DataObject(
-                properties=chunk.to_weaviate_properties(),
-                vector=chunk.embedding,
-                references={"fromAttraction": attraction_uuid} if attraction_uuid else None
-            )
-            chunk_objects.append(chunk_obj)
-        
-        try:
-            # Batch insert with vectors and references
-            logger.info(f"chunk objects:: {chunk_objects}")
-            response = self.chunk_collection.data.insert_many(chunk_objects)
-            # Handle response - in Weaviate v4, insert_many returns different formats
-            if hasattr(response, 'uuids'):
-                uuids = response.uuids
-            elif hasattr(response, 'all_responses'):
-                uuids = [resp.uuid for resp in response.all_responses if resp.uuid]
-            elif isinstance(response, list):
-                uuids = [str(uuid) for uuid in response if uuid]
+        # Prepare all objects and references
+        objects_to_add = []
+        references_to_add = []
+
+        for idx, item in enumerate(items):
+            if not item.attraction:
+                logger.warning(f"Item №{idx} has no attraction, skipping.")
+                continue  # Skip if no attraction
+
+            # Generate attraction UUID and properties
+            attraction_props = item.attraction.to_weaviate_properties()
+            attraction_uuid = generate_uuid5(attraction_props)
+            objects_to_add.append({
+                "collection": self.attraction_collection,
+                "properties": attraction_props,
+                "uuid": attraction_uuid
+            })
+
+            chunk_uuids = []
+
+            if not item.chunks or item.chunks is None:
+                logger.warning(f"Attraction {attraction_uuid} has no chunks and will be inserted without them.")
             else:
-                # Fallback: try to extract UUIDs from response
-                uuids = []
-                logger.warning(f"Unexpected response format from chunk insertion: {type(response)}")
-            
-            logger.info(f"Successfully inserted {len(uuids)} chunks out of {len(chunks)} attempted")
-            return uuids
-            
-        except Exception as e:
-            logger.error(f"Failed to insert chunks: {e}")
-            raise
-    
-    def create_attraction_with_chunks(self, attraction_with_chunks: AttractionWithChunks) -> Dict[str, Any]:
-        """
-        Create an attraction and all its associated chunks in a coordinated operation.
-        
-        Args:
-            attraction_with_chunks: AttractionWithChunks object containing attraction and chunk data
-            
-        Returns:
-            Dict with attraction_uuid and chunk_uuids
-        """
-        result = {
-            "attraction_uuid": None,
-            "chunk_uuids": [],
-            "success": False
-        }
-        
-        try:
-            # First, create the attraction
-            if attraction_with_chunks.attraction:
-                attraction_uuid = self.create_attraction(attraction_with_chunks.attraction)
-                result["attraction_uuid"] = attraction_uuid
-                logger.info(f"Created attraction with UUID: {attraction_uuid}")
-                
-                # Then create chunks with reference to the attraction
-                if attraction_with_chunks.chunks:
-                    chunk_uuids = self.create_chunks(
-                        attraction_with_chunks.chunks, 
-                        attraction_uuid
-                    )
-                    result["chunk_uuids"] = chunk_uuids
-                    logger.info(f"Created {len(chunk_uuids)} chunks for attraction {attraction_uuid}")
-            else:
-                logger.warning(f"No attraction model found for {attraction_with_chunks.source_file}")
-                # Still try to insert chunks without attraction reference
-                if attraction_with_chunks.chunks:
-                    chunk_uuids = self.create_chunks(attraction_with_chunks.chunks)
-                    result["chunk_uuids"] = chunk_uuids
-            
-            result["success"] = True
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to create attraction with chunks: {e}")
-            result["error"] = str(e)
-            return result
+                for chunk in item.chunks:
+                    chunk_props = chunk.to_weaviate_properties()
+                    chunk_uuid = generate_uuid5(chunk_props)
+                    chunk_uuids.append(chunk_uuid)
+                    objects_to_add.append({
+                        "collection": self.chunk_collection,
+                        "properties": chunk_props,
+                        "uuid": chunk_uuid,
+                        "vector": chunk.embedding
+                    })
+                    references_to_add.append({
+                        "collection": self.chunk_collection,
+                        "from_uuid": chunk_uuid,
+                        "from_property": "fromAttraction",
+                        "to": attraction_uuid
+                    })
+
+            results.append({
+                "attraction_uuid": attraction_uuid,
+                "chunk_uuids": chunk_uuids
+            })
+
+        # Batch insert all objects and references
+        with self.client.batch.fixed_size(batch_size=batch_size) as batch:
+            for obj in objects_to_add:
+                batch.add_object(
+                    collection=obj["collection"].name,  # Specify collection name
+                    properties=obj["properties"],
+                    uuid=obj["uuid"],
+                    vector=obj.get("vector"),
+                )
+            for ref in references_to_add:
+                batch.add_reference(
+                    from_collection=ref["collection"].name,  # Specify collection name
+                    from_uuid=ref["from_uuid"],
+                    from_property=ref["from_property"],
+                    to=ref["to"]
+                )
+            if batch.number_errors > 10:
+                raise Exception("Too many errors during batch import, aborting.")
+
+        # Optionally, wait for indexing to finish (recommended for tests)
+        self.attraction_collection.batch.wait_for_vector_indexing()
+
+        # Handle failed objects if needed
+        failed = self.attraction_collection.batch.failed_objects
+        if failed:
+            logger.error(f"Number of failed imports: {len(failed)}")
+            for i, error_obj in enumerate(failed, 1):
+                logger.error(f"Failed object {i}: {error_obj}")
+
+        return results
 
     def get_attraction(self, uuid: str) -> Optional[dict]:
         """
@@ -188,13 +166,12 @@ class AttractionDBManager:
         """
         Vector search for chunks using a query vector.
         """
-        response = self.chunk_collection.query.near_vector(
+        return self.chunk_collection.query.near_vector(
             near_vector=query_vector,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(distance=True)
         )
-        return [obj.properties for obj in response.objects]
 
     def keyword_search_chunks(
         self,
@@ -207,19 +184,19 @@ class AttractionDBManager:
         """
         Keyword (BM25) search for chunks using a query string.
         """
-        response = self.chunk_collection.query.bm25(
+        return self.chunk_collection.query.bm25(
             query=query,
             query_properties=query_properties,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
-        return [obj.properties for obj in response.objects]
-    # See: [Keyword search](https://docs.weaviate.io/weaviate/search/bm25)
 
     def hybrid_search_chunks(
         self,
         query: str,
+        vector: List[float],
+        query_properties: List[str] = ["name^2", "city^2", "tags"],
         limit: int = 10,
         filters: Optional[Filter] = None,
         alpha: float = 0.75,
@@ -228,14 +205,15 @@ class AttractionDBManager:
         """
         Hybrid search for chunks using a query string (combines vector and keyword search).
         """
-        response = self.chunk_collection.query.hybrid(
+        return self.chunk_collection.query.hybrid(
             query=query,
+            vector=vector,
+            query_properties=query_properties,
             limit=limit,
             filters=filters,
             alpha=alpha,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
-        return [obj.properties for obj in response.objects]
         
     def filter_attractions(
         self,
@@ -246,12 +224,11 @@ class AttractionDBManager:
         """
         Filter attractions using Weaviate filters.
         """
-        response = self.attraction_collection.query.fetch_objects(
+        return self.attraction_collection.query.fetch_objects(
             filters=filters,
             limit=limit,
             return_metadata=return_metadata
         )
-        return [obj.properties for obj in response.objects]
 
     def keyword_search_attractions(
         self,
@@ -264,11 +241,10 @@ class AttractionDBManager:
         """
         Keyword (BM25) search for attractions using a query string.
         """
-        response = self.attraction_collection.query.bm25(
+        return self.attraction_collection.query.bm25(
             query=query,
             query_properties=query_properties,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
-        return [obj.properties for obj in response.objects]

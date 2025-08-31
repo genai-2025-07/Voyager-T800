@@ -1,6 +1,22 @@
+import yaml
+from pydantic import ValidationError
+
 import weaviate
 import weaviate.classes as wvc
-from app.services.weaviate.schema_parser import SchemaConfigModel, Property
+from app.services.weaviate.data_models.schema_models import SchemaConfigModel, Property
+
+
+def parse_weaviate_schema_config(yaml_path: str) -> SchemaConfigModel:
+    """
+    Parse a Weaviate schema YAML config and return a validated Pydantic object.
+    """
+    with open(yaml_path, "r") as f:
+        raw_config = yaml.safe_load(f)
+    try:
+        config = SchemaConfigModel.model_validate(raw_config)
+    except ValidationError as e:
+        raise ValueError(f"Schema validation error: {e}")
+    return config
 
 
 class SchemaManager:
@@ -69,7 +85,6 @@ class SchemaManager:
                 nested_properties=nested,
                 tokenization=tokenization
             )
-        
         
     def _primitive_types(self):
         return {
@@ -151,7 +166,7 @@ class SchemaManager:
         :param name: Name of the collection.
         :return: The collection object.
         """
-        return self.client.collections.get(name)
+        return self.client.collections.use(name)
 
     def delete_collection(self, name: str):
         """

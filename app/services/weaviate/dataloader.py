@@ -2,7 +2,6 @@ from pathlib import Path
 import json
 import ast
 import logging
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
 import pandas as pd
@@ -14,7 +13,9 @@ from app.services.weaviate.data_models.attraction_models import (
     CoordinatesModel,
     OpeningHoursModel,
     ReviewModel,
-    AttractionModel
+    AttractionModel,
+    ChunkData,
+    AttractionWithChunks
 )
 
 from app.config.logger.logger import setup_logger
@@ -26,51 +27,6 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
-
-
-@dataclass
-class ChunkData:
-    # Core chunk properties
-    chunk_text: str
-    chunk_index: int
-    embedding: List[float]
-    embedding_obj: EmbeddingModel
-    chunk_id: str
-    
-    # Denormalized attraction metadata for efficient filtering
-    name: Optional[str] = None
-    city: Optional[str] = None
-    administrative_area_level_1: Optional[str] = None
-    administrative_area_level_2: Optional[str] = None
-    tags: List[str] = None
-    rating: Optional[float] = None
-    place_id: Optional[str] = None
-
-    def __post_init__(self):
-        if self.tags is None:
-            self.tags = []
-
-    def to_weaviate_properties(self) -> Dict[str, Any]:
-        """Convert chunk data to Weaviate properties format"""
-        return {
-            "chunk_text": self.chunk_text,
-            "chunk_index": self.chunk_index,
-            "name": self.name,
-            "city": self.city,
-            "administrative_area_level_1": self.administrative_area_level_1,
-            "administrative_area_level_2": self.administrative_area_level_2,
-            "tags": self.tags,
-            "rating": self.rating,
-            "place_id": self.place_id,
-            # Note: fromAttraction reference will be handled separately in Weaviate operations
-        }
-
-
-@dataclass
-class AttractionWithChunks:
-    source_file: str
-    attraction: Optional[AttractionModel]
-    chunks: List[ChunkData]
 
 
 def _safe_eval_pythonish(s: Any) -> Any:
@@ -464,6 +420,8 @@ class DataLoader:
         logger.info(f"Grouped embeddings into {len(grouped)} source_files")
         # For each source_file, match csv metadata once and create chunks
         for source_file, emb_list in grouped.items():
+            if source_file == "Kyiv_St. Volodymyr's Cathedral.txt":
+                continue
             # use first embedding's metadata for matching heuristics (like city)
             first_meta = emb_list[0].metadata if emb_list else None
 
@@ -482,22 +440,10 @@ class DataLoader:
             chunks: List[ChunkData] = []
             for idx, emb_obj in enumerate(emb_list):
                 emb_meta = emb_obj.metadata
-                
-                # Extract chunk_id - try metadata first, fallback to index
-                chunk_id = getattr(emb_meta, "chunk_id", f"chunk_{idx}")
-                if not chunk_id:
-                    chunk_id = f"chunk_{idx}"
-                
-                # Extract chunk_index
-                chunk_index = _extract_chunk_index(chunk_id, emb_meta)
-                
                 # Create chunk with denormalized attraction metadata
                 chunk = ChunkData(
                     chunk_text=emb_obj.text,
-                    chunk_index=chunk_index,
                     embedding=emb_obj.embedding,
-                    embedding_obj=emb_obj,
-                    chunk_id=chunk_id,
                     # Denormalized attraction fields for efficient filtering
                     name=attraction_model.name if attraction_model else None,
                     city=attraction_model.city if attraction_model else getattr(emb_meta, "city", None),
