@@ -19,8 +19,8 @@ class SessionMetadata(BaseModel):
     user_id: str
     session_id: str
     session_summary: str
-    started_at: datetime
-    messages: List[Dict[str, any]]
+    started_at: str
+    messages: List[Dict]
 
 def put_item(db_table, session_metadata:SessionMetadata):
     """

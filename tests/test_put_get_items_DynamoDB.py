@@ -2,7 +2,7 @@ from moto import mock_aws
 import boto3
 import pytest
 from datetime import datetime, timezone
-from data_layer.dynamodb_client import put_item, get_item
+from data_layer.dynamodb_client import SessionMetadata, put_item, get_item
 
 
 TABLE_NAME = "session_metadata"
@@ -83,37 +83,79 @@ def sample_messages():
          ]
 
 @pytest.mark.unit
-def test_put_and_get_item(dynamodb_table, sample_messages):
+def test_put_item(dynamodb_table, sample_messages):
     """
-    Unit test for verifying insertion and retrieval of items in the DynamoDB table.
+    Unit test for verifying insertion of items in the DynamoDB table.
 
     This test ensures that:
       1. The `put_item` function successfully stores an item in the table.
-      2. The `get_item` function retrieves the same item with all fields intact.
+      2. The item is properly stored with all the expected fields.
 
     The test uses a mocked DynamoDB table (via the `dynamodb_table` fixture)
     and a predefined list of sample messages (via the `sample_messages` fixture).
 
     Assertions:
         - `put_item` should return True after successful insertion.
+        - The item should be retrievable from the table with correct data.
+    """
+    sample_item=SessionMetadata(user_id="u123", 
+                                session_id="s456", 
+                                session_summary="Test session", 
+                                started_at=datetime.now(timezone.utc).isoformat(), 
+                                messages=sample_messages)
+    
+    result = put_item(dynamodb_table, sample_item)
+    assert result is True
+
+    response = dynamodb_table.scan()
+    items = response.get("Items", [])
+
+    assert len(items) > 0  
+    print(f"✅ Table contains {len(items)} item(s)")
+
+@pytest.mark.unit
+def test_get_item(dynamodb_table, sample_messages):
+    """
+    Unit test for verifying retrieval of items from the DynamoDB table.
+
+    This test ensures that:
+      1. The `get_item` function successfully retrieves an item from the table.
+      2. All retrieved fields match the originally stored data.
+
+    The test first inserts an item using `put_item`, then tests the retrieval
+    functionality using `get_item`.
+
+    Assertions:
         - Retrieved item should contain:
             * Matching `user_id` and `session_id`.
             * Correct `session_summary`.
             * Correct `started_at` timestamp.
             * The same `messages` list that was inserted.
     """
-    user_id = "u123"
-    session_id = "s456"
-    summary = "Test session"
-    started = datetime.now(timezone.utc).isoformat()
-    messages = sample_messages
+    sample_item = SessionMetadata(
+        user_id="u789", 
+        session_id="s012", 
+        session_summary="Another test session", 
+        started_at=datetime.now(timezone.utc).isoformat(), 
+        messages=sample_messages
+    )
 
-    result = put_item(dynamodb_table, user_id, session_id, summary, started, messages)
-    assert result is True
+    put_result = put_item(dynamodb_table, sample_item)
+    assert put_result is True
 
-    item = get_item(dynamodb_table, user_id, session_id)
-    assert item["user_id"] == user_id
-    assert item["session_id"] == session_id
-    assert item["session_summary"] == summary
-    assert item["started_at"] == started
-    assert item["messages"] == messages
+    item = get_item(dynamodb_table, sample_item)
+    assert item is not None
+    
+    print(f"\n📋 Retrieved Item Details:")
+    print(f"   user_id: {item.get('user_id', 'NOT_FOUND')}")
+    print(f"   session_id: {item.get('session_id', 'NOT_FOUND')}")
+    print(f"   session_summary: {item.get('session_summary', 'NOT_FOUND')}")
+    print(f"   started_at: {item.get('started_at', 'NOT_FOUND')}")
+    print(f"   messages count: {len(item.get('messages', []))}")
+    print(f"   messages: {item.get('messages', [])}")
+    
+    assert item["user_id"] == sample_item.user_id
+    assert item["session_id"] == sample_item.session_id
+    assert item["session_summary"] == sample_item.session_summary
+    assert item["started_at"] == sample_item.started_at
+    assert item["messages"] == sample_item.messages
