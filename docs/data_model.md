@@ -14,15 +14,10 @@ Each combination (user_id, session_id) is unique and represents one session reco
 |**Attribute**  |**Type**                  |**Description**                                              | 
 |---------------|--------------------------|-------------------------------------------------------------|
 |user_id        |String                    |Unique identifier for the user                               |
-|---------------|--------------------------|-------------------------------------------------------------|
 |session_id     |String                    |Unique identifier for the session                            |
-|---------------|--------------------------|-------------------------------------------------------------|
 |session_summary|String                    |Short description of the session context                     |
-|---------------|--------------------------|-------------------------------------------------------------|
 |started_at     |String (ISO 8601 datetime)|Session start timestamp                                      |
-|---------------|--------------------------|-------------------------------------------------------------|
 |messages       |List of Dict              |Each message is stored as a dict with details described below|
-|---------------|--------------------------|-------------------------------------------------------------|
 
 
 **_messages_ structure**
@@ -32,15 +27,10 @@ Items in _messages_ contain the following fields:
 |**Field**      |**Type**                  |**Description**                                                                  | 
 |---------------|--------------------------|---------------------------------------------------------------------------------|
 |message_id     |String                    |Unique identifier for the message                                                |
-|---------------|--------------------------|---------------------------------------------------------------------------------|
 |sender         |String                    |Specify who sent this message (user or AI assistant)                             |
-|---------------|--------------------------|---------------------------------------------------------------------------------|
 |timestamp      |String (ISO 8601 datetime)|Time when particular message was sent                                            |
-|---------------|--------------------------|---------------------------------------------------------------------------------|
 |trip_data      |Dict                      |Dictionary with such data (destination, duration days, transportation, itinerary)|
-|---------------|--------------------------|---------------------------------------------------------------------------------|
 |metadata       |Dict                      |Dictionary with such data (language, message type)                               |
-|---------------|--------------------------|---------------------------------------------------------------------------------|
 
 Depends on who has sent specific message, there are different fields in it:
 - if sender is user: "message_id","sender", "timestamp", "content", "metadata".
