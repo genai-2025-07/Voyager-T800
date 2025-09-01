@@ -105,13 +105,13 @@ def test_put_item(dynamodb_table, sample_messages):
                                 messages=sample_messages)
     
     result = put_item(dynamodb_table, sample_item)
-    assert result is True
+    assert result is 200
 
     response = dynamodb_table.scan()
     items = response.get("Items", [])
 
     assert len(items) > 0  
-    print(f"✅ Table contains {len(items)} item(s)")
+    print(f"Table contains {len(items)} item(s)")
 
 @pytest.mark.unit
 def test_get_item(dynamodb_table, sample_messages):
@@ -141,7 +141,7 @@ def test_get_item(dynamodb_table, sample_messages):
     )
 
     put_result = put_item(dynamodb_table, sample_item)
-    assert put_result is True
+    assert put_result is 200
 
     item = get_item(dynamodb_table, sample_item)
     assert item is not None
@@ -153,7 +153,7 @@ def test_get_item(dynamodb_table, sample_messages):
     print(f"   started_at: {item.get('started_at', 'NOT_FOUND')}")
     print(f"   messages count: {len(item.get('messages', []))}")
     print(f"   messages: {item.get('messages', [])}")
-    
+
     assert item["user_id"] == sample_item.user_id
     assert item["session_id"] == sample_item.session_id
     assert item["session_summary"] == sample_item.session_summary

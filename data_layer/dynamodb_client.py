@@ -31,14 +31,14 @@ def put_item(db_table, session_metadata:SessionMetadata):
         session_metadata: The session metadata to put in the table.
     """
     try:
-        db_table.put_item(
+        response=db_table.put_item(
             Item={"user_id":session_metadata.user_id,
             "session_id":session_metadata.session_id,
             "session_summary":session_metadata.session_summary,
             "started_at":session_metadata.started_at,
             "messages":session_metadata.messages}
         )
-        return True
+        return response["ResponseMetadata"]["HTTPStatusCode"]
     except ClientError as e:
         logger.error (f"Error putting item: {e.response['Error']['Message']}")
         raise
