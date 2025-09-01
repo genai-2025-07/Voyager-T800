@@ -56,8 +56,12 @@ class WeaviateClientWrapper:
             grpc_port=self.params.grpc_port,
             grpc_secure=self.params.grpc_secure,
         )
-        self.client = weaviate.WeaviateClient(connection_params=connection_params)
-        self.client.connect()  # Required for explicit instantiation
+        try:
+            self.client = weaviate.WeaviateClient(connection_params=connection_params)
+            self.client.connect()
+        except Exception as e:
+            self.client = None
+            raise RuntimeError(f"Weaviate connection failed: {e}")
 
     def disconnect(self):
         if self.client:

@@ -73,7 +73,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 
 request_id_ctx_var: ContextVar[str | None] = ContextVar('request_id', default=None)
-
+formatter_str = '%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'
 
 class ServiceFilter(logging.Filter):
     """
@@ -161,13 +161,13 @@ def setup_logger():
         # console handler
         ch = logging.StreamHandler()
         ch.setLevel(getattr(logging, log_level, logging.INFO))
-        ch.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'))
+        ch.setFormatter(logging.Formatter(formatter_str))
         root_logger.addHandler(ch)
 
         # file handler
         fh = logging.FileHandler(str(log_dir / 'app.log'))
         fh.setLevel(getattr(logging, log_level, logging.INFO))
-        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'))
+        fh.setFormatter(logging.Formatter(formatter_str))
         root_logger.addHandler(fh)
 
         # add ServiceFilter so `service` and `request_id` fields exist

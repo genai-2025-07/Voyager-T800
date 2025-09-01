@@ -89,7 +89,7 @@ def main():
         db_manager = AttractionDBManager(client_wrapper.client)
         try: 
             attraction_with_chunks_result = db_manager.batch_insert_attractions_with_chunks(
-                grouped_attractions)
+                grouped_attractions)["results"]
         except Exception as insert_e:
             logger.exception(f"Error processing groups: {insert_e}")
 
