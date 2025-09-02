@@ -221,7 +221,7 @@ class ConfigLoader:
             if s[i] == "$" and i + 1 < len(s) and s[i + 1] == "{":
                 j = s.find("}", i + 2)
                 if j == -1:
-                    raise ValueError(f"Unclosed environment variable placeholder in: {s}")
+                    raise ValueError(f"Unclosed environment variable placeholder in: {s[i+2:i+5]}")
                 placeholder = s[i + 2 : j]
                 if ":" in placeholder:
                     var_name, default_val = placeholder.split(":", 1)
