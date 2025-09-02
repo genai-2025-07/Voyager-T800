@@ -61,6 +61,7 @@ Note:
 import logging
 import os
 import uuid
+from pathlib import Path
 
 from contextvars import ContextVar
 from logging.config import dictConfig
@@ -72,7 +73,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 
 request_id_ctx_var: ContextVar[str | None] = ContextVar('request_id', default=None)
-
+formatter_str = '%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'
 
 class ServiceFilter(logging.Filter):
     """
@@ -141,26 +142,52 @@ def get_request_id(default: str = '-') -> str:
 def setup_logger():
     """
     Initializes the application logger using a YAML configuration file.
-
-    - Loads the logging configuration from a file specified by the LOGGING_CONFIG_FILE environment variable.
-    - Falls back to `logger.yaml` in the current directory if not specified.
-    - Optionally overrides the root logger level using the LOG_LEVEL environment variable.
-
-    Raises:
-        FileNotFoundError: If the logging configuration file is not found.
+    Robust to missing YAML: falls back to a minimal file+console logging config.
     """
-    base_dir = os.path.dirname(__file__)
-    config_path = os.path.join(base_dir, os.getenv('LOGGING_CONFIG_FILE', 'logger.yaml'))
+    base_dir = Path(__file__).parent  # app/config/logger
+    config_path = base_dir / os.getenv('LOGGING_CONFIG_FILE', 'logger.yaml')
 
     log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+    log_dir_env = os.getenv('LOG_DIR', './logs')
+    log_dir = Path(log_dir_env)
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.isfile(config_path):
-        raise FileNotFoundError(f'Logger config not found at: {config_path}')
+    # If config file does not exist — fall back to basic config that writes to file+console
+    if not config_path.is_file():
+        # minimal fallback that still attaches ServiceFilter
+        root_logger = logging.getLogger()
+        root_logger.setLevel(getattr(logging, log_level, logging.INFO))
 
+        # console handler
+        ch = logging.StreamHandler()
+        ch.setLevel(getattr(logging, log_level, logging.INFO))
+        ch.setFormatter(logging.Formatter(formatter_str))
+        root_logger.addHandler(ch)
+
+        # file handler
+        fh = logging.FileHandler(str(log_dir / 'app.log'))
+        fh.setLevel(getattr(logging, log_level, logging.INFO))
+        fh.setFormatter(logging.Formatter(formatter_str))
+        root_logger.addHandler(fh)
+
+        # add ServiceFilter so `service` and `request_id` fields exist
+        root_logger.addFilter(ServiceFilter())
+        return
+
+    # load YAML config, and if it includes a 'file' handler, ensure filename is inside LOG_DIR
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
+    # override root level if present
     if 'root' in config:
         config['root']['level'] = log_level
+
+    # ensure handlers.file.filename points to LOG_DIR if a file handler exists
+    if isinstance(config, dict) and 'handlers' in config:
+        handlers = config['handlers']
+        # If you declared a handler named 'file' in YAML, replace its filename with LOG_DIR
+        if 'file' in handlers:
+            filename = handlers['file'].get('filename', 'app.log')
+            handlers['file']['filename'] = str(Path(log_dir) / filename)
 
     dictConfig(config)

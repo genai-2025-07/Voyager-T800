@@ -1,5 +1,7 @@
 # Weaviate  Database Schema Documentation
 
+v1.2: last updated (Aug 27 2025)
+
 ## Overview
 
 This document describes the vector database schema, indexing strategies, and design decisions for a tourism attraction management system built on Weaviate. 
@@ -11,36 +13,48 @@ This document describes the vector database schema, indexing strategies, and des
 The main class that stores all place-related data with unified schema for attractions, restaurants, cafes, etc.
 
 #### Properties
+| Property                         |           Type | Storage / Example                               | Tokenization / Notes & intent                  |
+| -------------------------------- | -------------: | ----------------------------------------------- | ---------------------------------------------- |
+| `name`                           |           text | `"Café Example"`                                | `word` — searchable place name                 |
+| `city`                           |           text | `"Kyiv"`                                        | plain text, useful for coarse filters          |
+| `address`                        |           text | `"123 Main St, Kyiv, Ukraine"`                  | human-readable `formatted_address`             |
+| `postal_code`                    |           text | `"01001"`                                       | parsed from address components                 |
+| `administrative_area_level_1`    |           text | `"Kyiv"`                                        | first-order admin area (state/region)          |
+| `administrative_area_level_2`    |           text | `"Kyiv City"`                                   | second-order area (county/district)            |
+| `sublocality_level_1`            |           text | `"Podil"`                                       | neighborhood / sublocality                     |
+| `coordinates`                    | geoCoordinates | `{ "latitude": 50.4501, "longitude": 30.5234 }` | **geo** — for spatial queries in future        |
+| `place_id`                       |           text | `"ChIJ..."`                                     | external unique id, `word` tokenization        |
+| `phone_number`                   |           text | `"+380-44-123-4567"`                            | international format                           |
+| `maps_url`                       |           text | `"https://maps.google.com/..."`                 | direct link to maps place page                 |
+| `opening_hours`                  |         object | (see nested structure below)                    | nested object — structured weekly schedule     |
+| `price_level`                    |            int | `2`                                             | numeric (0..4) from Places API                 |
+| `rating`                         |         number | `4.6`                                           | float (0.0–5.0)                                |
+| `reviews`                        |      object\[] | see nested `reviews` structure below            | array of review objects (nested)               |
+| `tags`                           |        text\[] | `["food","point_of_interest","park"]`           | `word` tokenization — from `types`             |
+| `wheelchair_accessible_entrance` |        boolean | `true`                                          | place details boolean                          |
+| `serves_beer`                    |        boolean | `true`                                          | service/feature booleans                       |
+| `serves_breakfast`               |        boolean | `false`                                         | —                                              |
+| `serves_brunch`                  |        boolean | `true`                                          | —                                              |
+| `serves_dinner`                  |        boolean | `true`                                          | —                                              |
+| `serves_lunch`                   |        boolean | `true`                                          | —                                              |
+| `serves_vegetarian_food`         |        boolean | `true`                                          | —                                              |
+| `serves_wine`                    |        boolean | `true`                                          | —                                              |
+| `takeout`                        |        boolean | `true`                                          | —                                              |
+| `last_updated`                   |           date | `"2025-08-20T22:05:00+03:00"`                   | stored as `date` — when DB record last changed |
 
-| Property                         |           Type | Storage / Example (Weaviate-style)                                | Tokenization / Notes                            |
-| -------------------------------- | -------------: | ----------------------------------------------------------------- | ----------------------------------------------- |
-| `name`                           |           text | `"Café Example"`                                                  | `word` — searchable place name                  |
-| `description`                    |           text | long text                                                         | `word` — full-text description                  |
-| `chunk_id`                       |           text | `"page_001_chunk_03"`                                             | -                                               |
-| `address`                        |           text | `"123 Main St, Kyiv, Ukraine"`                                    | - (human-readable formatted\_address)           |
-| `postal_code`                    |           text | `"01001"`                                                         | - (from address\_components)                    |
-| `administrative_area_level_1`    |           text | `"Kyiv"`                                                          | A first-order civil entity below the country level. Within the United States, these administrative levels are states.-                                               |
-| `administrative_area_level_2`    |           text | `"Kyiv City"`                                                     | A second-order civil entity below the country level. Within the United States, these administrative levels are counties. Not all nations exhibit these administrative levels.                                               |
-| `sublocality_level_1`            |           text | `"Podil"`                                                         | A first-order civil entity below a locality.                                                |
-| `coordinates`                    | geoCoordinates | `{ "latitude": 50.4501, "longitude": 30.5234 }`                   | geo — for geo queries (in future)                           |
-| `place_id`                       |           text | `"ChIJ…"`                                                         | unique external id                              |
-| `phone_number`                   |           text | `"+380-44-123-4567"`                                              | international\_phone\_number                    |
-| `maps_url`                       |           text | `"https://maps.google.com/..."`                                   | link to google maps place page -                                               |
-| `opening_hours`                  |         object | see detailed structure below                                      | structured weekly object (see below)            |
-| `price_level`                    |            int | `2`                                                               | numeric from Google Places (0..4)               |
-| `rating`                         |         number | `4.6`                                                             | float (0.0–5.0)                                 |
-| `reviews`                        |      object\[] | see `reviews` structure below                                     | array of review objects (not just text)         |
-| `tags`                           |        text\[] | `["establishment", "food", "park", "point_of_interest", "store"]` | from `types`                                    |
-| `wheelchair_accessible_entrance` |        boolean | `true`                                                            | from place details                              |
-| `serves_beer`                    |        boolean | `true`                                                            |                                                 |
-| `serves_breakfast`               |        boolean | `false`                                                           |                                                 |
-| `serves_brunch`                  |        boolean | `true`                                                            |                                                 |
-| `serves_dinner`                  |        boolean | `true`                                                            |                                                 |
-| `serves_lunch`                   |        boolean | `true`                                                            |                                                 |
-| `serves_vegetarian_food`         |        boolean | `true`                                                            |                                                 |
-| `serves_wine`                    |        boolean | `true`                                                            |                                                 |
-| `takeout`                        |        boolean | `true`                                                            |                                                 |
-| `last_updated`                   |       dateTime | `"2025-08-20T22:05:00+03:00"`                                     | when the DB record was last updated             |
+### Secondary Class: `AttractionChunk`
+| Property                      |       Type | Storage / Example                     | Tokenization / Notes                                         |
+| ----------------------------- | ---------: | ------------------------------------- | ------------------------------------------------------------ |
+| `chunk_text`                  |       text | `"…denormalized wiki paragraph…"`     | `word` — text used to build vectors / full-text chunk search |
+| `fromAttraction`              | Attraction | Reference to an `Attraction` instance | Weaviate reference: links chunk → parent Attraction          |
+| `name`                        |       text | `"Café Example"`                      | `word` — denormalized for quick filtering / display          |
+| `city`                        |       text | `"Kyiv"`                              | denormalized metadata for fast filtering                     |
+| `administrative_area_level_1` |       text | `"Kyiv"`                              | denormalized                                                 |
+| `administrative_area_level_2` |       text | `"Kyiv City"`                         | denormalized                                                 |
+| `tags`                        |    text\[] | `["establishment","food"]`            | `word` tokenization — denormalized tag set                   |
+| `rating`                      |     number | `4.6`                                 | denormalized top-level rating                                |
+| `place_id`                    |       text | `"ChIJ..."`                           | denormalized external id                                     |
+
 
 ## opening_hours object structure
 ```json
@@ -82,7 +96,6 @@ The main class that stores all place-related data with unified schema for attrac
 |----------------------------------|:---------:|------------------------------------------------------|----------------|
 | `name`                           | Yes       | `text` — non-empty, max length **200**               | Trim whitespace; reject empty strings. |
 | `description`                    | Yes        | `text` — max length **5000**                         | Allow rich text but limit size. |
-| `chunk_id`                       | Yes       | `text` — pattern `^[a-zA-Z0-9_\-]+$`, max **100**    | Unique per document chunk. |
 | `address`                        | No        | `text` — max length **300**                          | — |
 | `postal_code`                    | No        | `text` — max length **12**   | — |
 | `administrative_area_level_*`    | No        | `text` — max length **100**                          | — |
