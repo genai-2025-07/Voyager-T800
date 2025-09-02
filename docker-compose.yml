@@ -189,6 +189,8 @@ services:
     image: semitechnologies/weaviate:1.32.3
     container_name: weaviate
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - weaviate_data:${PERSISTENCE_DATA_PATH}
     ports:
