@@ -38,6 +38,8 @@ class ItineraryParserTemplate:
             duration_days: int
             transportation: str
             itinerary: List[ItineraryDay]
+            language: str  # AI should detect this
+            session_summary: str   # AI should generate this
         
         self.parser = PydanticOutputParser(pydantic_object=SimpleTravelItinerary)
         self.system_message = SystemMessagePromptTemplate.from_template(

@@ -106,7 +106,8 @@ class TravelItinerary(BaseModel):
     transportation: TransportationType = Field(description='Main transportation method')
     itinerary: List[ItineraryDay] = Field(description='Day-by-day itinerary', min_items=1)
     metadata: RequestMetadata = Field(description='Metadata about the parsing request')
-
+    session_summary: Optional[str] = Field(description='Summary of the parsing session', default=None)
+    language: Optional[str] = Field(description='Detected or specified language of the request', default=None)
     @validator('duration_days')
     def duration_positive(cls, v):
         if not isinstance(v, int):

@@ -6,6 +6,8 @@ from enum import Enum
 
 from app.models.llms.itinerary import ItineraryDay, TravelItinerary, RequestMetadata, TransportationType
 
+from langdetect import detect
+
 
 class ParsingError(Exception):
     """Base exception for parsing errors"""
@@ -25,6 +27,7 @@ class ParsingConfig:
     default_last_day_guess: int = 3
     min_activity_length: int = 3
     min_destination_length: int = 2
+
 @dataclass
 class ParsingPatterns:
     """Container for all regex patterns used in parsing"""
@@ -359,7 +362,10 @@ class ManualItineraryParser:
             if not itinerary_days:
                 itinerary_days = self._create_fallback_itinerary(lines, destination)
             
-            # Create metadata
+            detected_language = self._detect_language(text)
+            
+            session_summary = f"Trip to {destination or 'Unknown destination'}"
+            
             metadata = RequestMetadata(
                 original_request=text,
                 parser_used='manual'
@@ -368,13 +374,42 @@ class ManualItineraryParser:
             return TravelItinerary(
                 destination=destination or "Unknown",
                 duration_days=len(itinerary_days),
-                transportation=transportation.value,  # Convert enum to string
+                transportation=transportation,  # Enum тепер підтримується безпосередньо
                 itinerary=itinerary_days,
-                metadata=metadata
+                metadata=metadata,
+                session_summary=session_summary,
+                language=detected_language
             )
         except Exception as e:
             self._log(f"Error during parsing: {e}")
             raise ParsingError(f"Failed to parse itinerary: {e}") from e
+    
+
+    def _detect_language(self, text: str) -> str:
+        """Detect language using langdetect library or fallback to simple detection"""
+        try:
+            lang_code = detect(text)
+            if lang_code == 'uk':
+                 return 'uk'
+            elif lang_code == 'en':
+                return 'en'
+            else:
+                return lang_code
+        except:  # Catch any langdetect errors or import issues
+            # Fallback to simple detection
+            ukrainian_keywords = ['день', 'поїздка', 'подорож']
+            english_keywords = ['day', 'trip', 'travel']
+        
+            text_lower = text.lower()
+            ukrainian_count = sum(1 for word in ukrainian_keywords if word in text_lower)
+            english_count = sum(1 for word in english_keywords if word in text_lower)
+        
+            if ukrainian_count > english_count:
+                return 'uk'
+            elif english_count > ukrainian_count:
+                return 'en'
+            else:
+                return 'auto'
     
     def _split_into_lines(self, text: str) -> List[str]:
         """Split text into non-empty lines"""

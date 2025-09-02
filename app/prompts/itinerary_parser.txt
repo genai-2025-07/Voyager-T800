@@ -10,7 +10,8 @@ Guidelines:
 - If accommodation is mentioned, include it
 - Keep activities practical and realistic (max 10 per day)
 - Transportation options: "driving", "walking", "cycling", "public_transit", "flight", "mixed"
-
+- Include session_summary: a short title (2–6 words) summarizing the trip, similar to a chat name.short title (2–6 words) summarizing the trip, similar to a chat name.
+- Include a language field: detect the language of the input description (use ISO codes like "en", "uk", "fr").
 Output ONLY clean JSON without markdown formatting or additional text.
 
 {format_instructions}
