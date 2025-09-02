@@ -33,7 +33,7 @@ class ConfigLoader:
         settings (Settings | None): Validated configuration settings
     """
 
-    def __init__(self, config_path: str | None = None, project_root: str | None = None):
+    def __init__(self, project_root: str, config_path: str | None = None):
         """
         Initialize the ConfigLoader with optional override configuration path.
 
@@ -42,19 +42,19 @@ class ConfigLoader:
                 If None, will check VOYAGER_CONFIG environment variable,
                 then fall back to environment-based file (dev.yaml/prod.yaml)
                 based on APP_ENV or app.env setting.
-            project_root (str | None): Path to project root.
-                If None, will fall back to second parent folder.
+            project_root str: Path to project root.
 
         Raises:
             FileNotFoundError: If base configuration file is not found
             ValueError: If configuration files contain invalid YAML or structure
         """
-        # Load .env early to populate environment for expansion
-        load_dotenv(override=False)
 
-        self.project_root = project_root or Path(__file__).resolve().parents[2]
+        self.project_root = project_root
         self.config_dir = self.project_root / "app" / "config"
         self.base_config_path = self.config_dir / "default.yaml"
+        # Load .env early to populate environment for expansion
+        dotenv_path = os.path.join(self.project_root, '.env')
+        load_dotenv(dotenv_path, override=False)
 
         env_override = os.getenv("VOYAGER_CONFIG")
         self.override_path = Path(config_path) if config_path else (Path(env_override) if env_override else None)
