@@ -5,7 +5,7 @@ CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
 
 def test_health_check(client_wrapper):
     response = client_wrapper.health_check()
-    assert response.is_ready is True
+    assert response is True
 
 
 def test_disconnect_and_reconnect():
@@ -14,7 +14,7 @@ def test_disconnect_and_reconnect():
     wrapper.disconnect()
     wrapper.connect()
     response = wrapper.health_check()
-    assert response.is_ready is True
+    assert response is True
     wrapper.disconnect()
 
 

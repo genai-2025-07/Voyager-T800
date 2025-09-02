@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from app.services.weaviate.weaviate_client import WeaviateClientWrapper,load_config_from_yaml
+from app.services.weaviate.weaviate_client import WeaviateClientWrapper, load_config_from_yaml
 from app.services.weaviate.dataloader import DataLoader
 from app.services.weaviate.attraction_db_manager import AttractionDBManager
 from app.services.weaviate.schema_manager import SchemaManager, parse_weaviate_schema_config
@@ -9,11 +9,6 @@ from weaviate.classes.query import Filter
 from weaviate.classes.query import MetadataQuery
 
 from app.config.logger.logger import setup_logger
-
-from dotenv import load_dotenv
-
-# load environment from same folder as this file (app/services/weaviate/.env)
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
@@ -25,14 +20,9 @@ def main():
     client_wrapper = WeaviateClientWrapper(CONNECTION_CONFIG)
     try:
         client_wrapper.connect()
-        try:
-            client_wrapper.connect()
-        except Exception as e:
-            logger.error(f"Unable to connect to Weaviate: {e}")
-            return
 
         health = client_wrapper.health_check()
-        if not health.is_ready:
+        if not health:
             logger.error("Weaviate health check failed; not ready.")
             return
 
@@ -107,7 +97,6 @@ def main():
                 logger.info(f"Fetched chunks:  \n {fetched_chunks}")
             else:
                 logger.warning(f"Unable to fetch chunks for  attraction with UUID {attraction_uuid}")
-
 
         attraction_filter = Filter.by_property("city").equal("Lviv")
         attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter, limit=50)

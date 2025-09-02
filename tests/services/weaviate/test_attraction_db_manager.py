@@ -30,7 +30,7 @@ class TestAttractionDBManagerIntegration:
 
         # Act 1: Create the attraction
         batch_insert_attractions_res = db_manager.batch_insert_attractions_with_chunks(attraction_no_chunks_list)
-        attraction_uuid = batch_insert_attractions_res[0]["attraction_uuid"]
+        attraction_uuid = batch_insert_attractions_res["results"][0]["attraction_uuid"]
         # Assert 1: Attraction was created successfully
         assert isinstance(attraction_uuid, str)
 
@@ -80,7 +80,7 @@ class TestAttractionDBManagerIntegration:
         attraction_with_chunks = attraction_with_chunks_list[0]
         # When: Creating attraction with chunks
         result = db_manager.batch_insert_attractions_with_chunks(attraction_with_chunks_list)
-        attraction_uuid = result[0]["attraction_uuid"]
+        attraction_uuid = result["results"][0]["attraction_uuid"]
         
         assert isinstance(attraction_uuid, str)
 
@@ -116,8 +116,8 @@ class TestAttractionDBManagerIntegration:
         db_manager = db_manager_with_schema
         # When: Creating with no chunks
         result = db_manager.batch_insert_attractions_with_chunks(attraction_no_chunks_list)
-        attraction_uuid = result[0]["attraction_uuid"]
-        chunk_uuids = result[0]["chunk_uuids"]
+        attraction_uuid = result["results"][0]["attraction_uuid"]
+        chunk_uuids = result["results"][0]["chunk_uuids"]
 
         # Then: Should still create attraction successfully
 
@@ -259,7 +259,7 @@ class TestAttractionDBManagerIntegration:
         result = db_manager.batch_insert_attractions_with_chunks(
             attraction_with_chunks_list
         )
-        attraction_uuid = result[0]["attraction_uuid"]
+        attraction_uuid = result["results"][0]["attraction_uuid"]
 
         expected_chunk_count = len(attraction_with_chunks_list[0].chunks)
 

@@ -1,11 +1,12 @@
 import yaml
 from pydantic import ValidationError
+from typing import Optional, Dict
 
 import weaviate
 import weaviate.classes as wvc
 from app.services.weaviate.data_models.schema_models import SchemaConfigModel, Property
 
-
+# TODO: move to centralized config
 def parse_weaviate_schema_config(yaml_path: str) -> SchemaConfigModel:
     """
     Parse a Weaviate schema YAML config and return a validated Pydantic object.
@@ -126,33 +127,48 @@ class SchemaManager:
             inverted_index_config=inverted_index_config,
         )
 
-    def update_collection(self, schema_config: SchemaConfigModel):
+    def update_collection(
+        self,
+        schema_config: SchemaConfigModel,
+        *,
+        description: Optional[str] = None,
+        inverted_index_overrides: Optional[Dict[str, bool]] = None,
+    ):
         """
         Update mutable settings of a collection in Weaviate from a validated Pydantic schema config.
 
-        Only mutable fields (description, invertedIndexConfig) will be updated.
-        Properties, vectorizer, and vectorIndexType cannot be updated after creation.
-
-        :param schema_config: A validated SchemaConfigModel instance.
-        :return: The updated collection object.
+        Optional arguments:
+          - description: override description to set (defaults to schema_config.description)
+          - inverted_index_overrides: dict with keys 'index_timestamps', 'index_null_state', 'index_property_length'
+            to override values from schema_config.invertedIndexConfig.
         """
         collection = self.client.collections.get(schema_config.name)
 
         update_kwargs = {}
 
-        # Description is mutable
-        if schema_config.description is not None:
-            update_kwargs["description"] = schema_config.description
+        # Description is mutable; prefer explicit arg, then schema_config
+        desc_value = description if description is not None else schema_config.description
+        if desc_value is not None:
+            update_kwargs["description"] = desc_value
 
-        # Inverted index config is mutable
-        if schema_config.invertedIndexConfig:
-            update_kwargs["inverted_index_config"] = wvc.config.Reconfigure.inverted_index(
+        # Inverted index config is mutable; allow overrides via argument
+        inv_cfg = None
+        if inverted_index_overrides is not None:
+            # use explicit overrides (caller can supply partial dict)
+            inv_cfg = wvc.config.Reconfigure.inverted_index(
+                index_timestamps=bool(inverted_index_overrides.get("index_timestamps", False)),
+                index_null_state=bool(inverted_index_overrides.get("index_null_state", False)),
+                index_property_length=bool(inverted_index_overrides.get("index_property_length", False)),
+            )
+        elif schema_config.invertedIndexConfig:
+            inv_cfg = wvc.config.Reconfigure.inverted_index(
                 index_timestamps=schema_config.invertedIndexConfig.indexTimestamps,
                 index_null_state=schema_config.invertedIndexConfig.indexNullState,
                 index_property_length=schema_config.invertedIndexConfig.indexPropertyLength,
             )
 
-        # Properties, vectorizer, and vectorIndexType are NOT mutable and will be ignored.
+        if inv_cfg:
+            update_kwargs["inverted_index_config"] = inv_cfg
 
         if not update_kwargs:
             raise ValueError("No mutable fields provided for update.")

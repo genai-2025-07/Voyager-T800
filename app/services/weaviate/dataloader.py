@@ -20,11 +20,6 @@ from app.services.weaviate.data_models.attraction_models import (
 
 from app.config.logger.logger import setup_logger
 
-from dotenv import load_dotenv
-
-# load environment from same folder as this file (app/services/weaviate/.env)
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
 

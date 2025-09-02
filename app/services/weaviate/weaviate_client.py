@@ -20,13 +20,8 @@ class LocalConnectionParams(BaseModel):
     grpc_port: int = Field(..., description="Port for Weaviate gRPC endpoint")
     grpc_secure: bool = Field(..., description="Use TLS for gRPC if true")
 
-class HealthCheckResponse(BaseModel):
-    """
-    Simple health-check response model.
-    """
-    is_ready: bool = Field(..., description="Whether the Weaviate HTTP endpoint reports ready")
 
-
+# TODO: move to centralized config
 def load_config_from_yaml(path: str) -> LocalConnectionParams:
     """Load YAML file and parse into LocalConnectionParams (raises on invalid schema)."""
     if not os.path.exists(path):
@@ -68,9 +63,8 @@ class WeaviateClientWrapper:
             self.client.close()
             self.client = None
 
-    def health_check(self) -> HealthCheckResponse:
+    def health_check(self) -> bool:
         if not self.client:
             raise RuntimeError("Client not connected")
-        is_ready = self.client.is_ready()
-        return HealthCheckResponse(is_ready=is_ready)
+        return self.client.is_ready()
 
