@@ -187,10 +187,10 @@ class PromptManager:
                     f"Only alphanumeric characters, hyphens, and underscores are allowed."
                 )
         
-        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', name):
             raise ValueError(
                 f"Filename contains invalid characters. Only alphanumeric characters, "
-                f"hyphens (-), and underscores (_) are allowed. Got: '{name}'"
+                f"hyphens (-), underscores (_), periods (.), and dashes (-) are allowed. Got: '{name}'"
             )
         
         if len(name) > 100:

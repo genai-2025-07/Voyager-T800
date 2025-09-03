@@ -3,7 +3,7 @@ import argparse
 import sys
 from typing import Optional
 
-from .integration import ItineraryGenerator, save_to_session_history, save_conversation_to_file
+from .integration import ItineraryGenerator, CLISessionHistory
 
 class VoyagerCLI:
     """
@@ -16,8 +16,9 @@ class VoyagerCLI:
             args: Arguments passed to the CLI.
         """
         self.generator = ItineraryGenerator()
-        self.session_history = []
+        self.session_history = CLISessionHistory()
         self.args = args
+        # For demo purposes, I will save the history by default
         self.args.save_history = True
         self.command_handlers = {
             'quit': lambda: "exit",
@@ -55,9 +56,9 @@ class VoyagerCLI:
         This method is called when the user exits with save_history enabled.
         It saves the current session history to a file and displays a farewell message.
         """
-        if self.session_history:
+        if self.session_history.session_history:
             print("💾 Saving conversation before exit...")
-            save_conversation_to_file(self.session_history)
+            self.session_history.save_conversation_to_file()
         print("👋 Thank you for using Voyager T800!")
 
     def _exit_without_saving(self):
@@ -261,7 +262,7 @@ class VoyagerCLI:
         and provides an interactive interface for users to select and view specific
         itineraries. If no history exists, it displays an appropriate message.
         """
-        if not self.session_history:
+        if not self.session_history.session_history:
             print("📭 No itineraries in current session yet.")
             return
         
@@ -275,8 +276,8 @@ class VoyagerCLI:
         This method formats and displays the session history as a numbered list,
         showing timestamps and truncated user inputs for each itinerary entry.
         """
-        print(f"\n📚 Current Session History ({len(self.session_history)} itineraries):")
-        for i, entry in enumerate(self.session_history, 1):
+        print(f"\n📚 Current Session History ({len(self.session_history.session_history)} itineraries):")
+        for i, entry in enumerate(self.session_history.session_history, 1):
             truncated_input = entry['user_input'][:50] + "..." if len(entry['user_input']) > 50 else entry['user_input']
             print(f"{i}. {entry['timestamp']} - {truncated_input}")
     
@@ -299,7 +300,7 @@ class VoyagerCLI:
         
         while attempt < max_attempts:
             try:
-                print(f"\n💡 Type a number (1-{len(self.session_history)}) to view that itinerary, or 'q' to exit")
+                print(f"\n💡 Type a number (1-{len(self.session_history.session_history)}) to view that itinerary, or 'q' to exit")
                 user_choice = input(f"\n🔍 Your choice (attempt {attempt + 1}/{max_attempts}): ").strip()
                 
                 if user_choice.lower() in ['q', 'quit', 'exit', '']:
@@ -313,7 +314,7 @@ class VoyagerCLI:
                 
                 index = int(user_choice) - 1
                 if not self._is_valid_history_index(index):
-                    print(f"❌ Please enter a number between 1 and {len(self.session_history)}.")
+                    print(f"❌ Please enter a number between 1 and {len(self.session_history.session_history)}.")
                     attempt += 1
                     continue
                 
@@ -343,7 +344,7 @@ class VoyagerCLI:
         Returns:
             bool: True if index is valid, False otherwise
         """
-        return 0 <= index < len(self.session_history)
+        return 0 <= index < len(self.session_history.session_history)
     
     def _show_itinerary(self, index: int):
         """
@@ -356,7 +357,7 @@ class VoyagerCLI:
         Args:
             index: The index of the itinerary to display in session_history
         """
-        entry = self.session_history[index]
+        entry = self.session_history.session_history[index]
         
         print(f"\n📋 Itinerary #{index + 1} from Session History")
         print("=" * 60)
@@ -587,7 +588,7 @@ class VoyagerCLI:
         message to the user.
         """
         if self.session_history:
-            save_conversation_to_file(self.session_history)
+            self.session_history.save_conversation_to_file()
             print("💾 Conversation saved to file.")
         else:
             print("📭 No itineraries to save in current session.")
@@ -615,9 +616,7 @@ class VoyagerCLI:
 
             if self.args.save_history:
                 preferences = self.generator.parse_travel_request(user_input)
-                self.session_history = save_to_session_history(
-                    self.session_history, user_input, itinerary, preferences
-                )
+                self.session_history.save_to_session_history(user_input, itinerary, preferences)
             
         except (ValueError, RuntimeError) as e:
             print(f"❌ Error generating itinerary: {str(e)}")
@@ -642,9 +641,7 @@ class VoyagerCLI:
             itinerary = self.generator.generate_enhanced_itinerary(user_input)
             
             preferences = self.generator.parse_travel_request(user_input)
-            self.session_history = save_to_session_history(
-                self.session_history, user_input, itinerary, preferences
-            )
+            self.session_history.save_to_session_history(user_input, itinerary, preferences)
             return itinerary
             
         except Exception as e:
@@ -689,7 +686,7 @@ def start_cli():
                 print("=" * 50)
                 
                 if args.save_history and cli.session_history:
-                    save_conversation_to_file(cli.session_history)
+                    cli.session_history.save_conversation_to_file()
             else:
                 print("❌ Failed to generate itinerary")
                 sys.exit(1)
