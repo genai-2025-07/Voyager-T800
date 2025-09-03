@@ -1,11 +1,15 @@
-from moto import mock_aws
+from datetime import UTC, datetime
+
 import boto3
 import pytest
-from datetime import datetime, timezone
+
+from moto import mock_aws
+
 from data_layer.dynamodb_client import DynamoDBClient, SessionMetadata
 
 
-TABLE_NAME = "session_metadata"
+TABLE_NAME = 'session_metadata'
+
 
 @pytest.fixture
 def dynamodb_table():
@@ -25,18 +29,18 @@ def dynamodb_table():
         retrieve items.
     """
     with mock_aws():
-        dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
+        dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
         table = dynamodb.create_table(
             TableName=TABLE_NAME,
             KeySchema=[
-                {"AttributeName": "user_id", "KeyType": "HASH"},
-                {"AttributeName": "session_id", "KeyType": "RANGE"}
+                {'AttributeName': 'user_id', 'KeyType': 'HASH'},
+                {'AttributeName': 'session_id', 'KeyType': 'RANGE'},
             ],
             AttributeDefinitions=[
-                {"AttributeName":"user_id", "AttributeType":"S"},
-                {"AttributeName":"session_id", "AttributeType":"S"},
+                {'AttributeName': 'user_id', 'AttributeType': 'S'},
+                {'AttributeName': 'session_id', 'AttributeType': 'S'},
             ],
-            BillingMode="PAY_PER_REQUEST"
+            BillingMode='PAY_PER_REQUEST',
         )
         table.wait_until_exists()
         yield table
@@ -48,40 +52,39 @@ def sample_messages():
     Pytest fixture that creates list of sample messages.
     """
     return [
-            {
-            "message_id": "msg_001",
-            "sender": "user",
-            "timestamp": "2025-08-26T18:25:00+03:00",
-            "content": "Plan a trip to Lviv for 1 day",
-            "metadata": {
-                "language": "en",
-                "message_type": "text"}
-            },
-            {
-                "message_id": "msg_002",
-                "sender": "assistant",
-                "timestamp": "2025-08-26T18:25:01+03:00",
-                "trip_data": {
-                    "destination": "Amsterdam",
-                    "duration_days": 1,
-                    "transportation": "public_transit",
-                    "itinerary": [
-                                {
-                                    "day": 1,
-                                    "location": "Amsterdam",
-                                    "activities": [
-                                        "Visit to the Van Gogh Museum",
-                                        "Canal Walk",
-                                        "Dinner at a Restaurant near Dam Square"],
-                                    "accommodation": None,
-                                    "budget_estimate": None
-                                },],
+        {
+            'message_id': 'msg_001',
+            'sender': 'user',
+            'timestamp': '2025-08-26T18:25:00+03:00',
+            'content': 'Plan a trip to Lviv for 1 day',
+            'metadata': {'language': 'en', 'message_type': 'text'},
+        },
+        {
+            'message_id': 'msg_002',
+            'sender': 'assistant',
+            'timestamp': '2025-08-26T18:25:01+03:00',
+            'trip_data': {
+                'destination': 'Amsterdam',
+                'duration_days': 1,
+                'transportation': 'public_transit',
+                'itinerary': [
+                    {
+                        'day': 1,
+                        'location': 'Amsterdam',
+                        'activities': [
+                            'Visit to the Van Gogh Museum',
+                            'Canal Walk',
+                            'Dinner at a Restaurant near Dam Square',
+                        ],
+                        'accommodation': None,
+                        'budget_estimate': None,
                     },
-                "metadata":{
-                    "language": "en",
-                    "message_type": "text"}
-            }
-         ]
+                ],
+            },
+            'metadata': {'language': 'en', 'message_type': 'text'},
+        },
+    ]
+
 
 @pytest.mark.unit
 def test_put_item(dynamodb_table, sample_messages):
@@ -100,24 +103,26 @@ def test_put_item(dynamodb_table, sample_messages):
         - The item should be retrievable from the table with correct data.
     """
 
-    obj= DynamoDBClient(dynamodb_table)
+    obj = DynamoDBClient(dynamodb_table)
 
-    sample_item=SessionMetadata(user_id="u123", 
-                                session_id="s456", 
-                                session_summary="Test session", 
-                                started_at=datetime.now(timezone.utc).isoformat(), 
-                                messages=sample_messages)
-    
+    sample_item = SessionMetadata(
+        user_id='u123',
+        session_id='s456',
+        session_summary='Test session',
+        started_at=datetime.now(UTC).isoformat(),
+        messages=sample_messages,
+    )
+
     result = obj.put_item(sample_item)
     assert result == 200
 
     response = dynamodb_table.scan()
-    items = response.get("Items", [])
+    items = response.get('Items', [])
 
-    assert len(items) > 0, f"Table contains {len(items)} item(s)"
-    assert items[0]['user_id']==sample_item.user_id
-    assert items[0]['session_id']==sample_item.session_id
-    
+    assert len(items) > 0, f'Table contains {len(items)} item(s)'
+    assert items[0]['user_id'] == sample_item.user_id
+    assert items[0]['session_id'] == sample_item.session_id
+
 
 @pytest.mark.unit
 def test_get_item(dynamodb_table, sample_messages):
@@ -139,14 +144,14 @@ def test_get_item(dynamodb_table, sample_messages):
             * The same `messages` list that was inserted.
     """
 
-    obj= DynamoDBClient(dynamodb_table)
+    obj = DynamoDBClient(dynamodb_table)
 
     sample_item = SessionMetadata(
-        user_id="u789", 
-        session_id="s012", 
-        session_summary="Another test session", 
-        started_at=datetime.now(timezone.utc).isoformat(), 
-        messages=sample_messages
+        user_id='u789',
+        session_id='s012',
+        session_summary='Another test session',
+        started_at=datetime.now(UTC).isoformat(),
+        messages=sample_messages,
     )
 
     put_result = obj.put_item(sample_item)
@@ -155,8 +160,8 @@ def test_get_item(dynamodb_table, sample_messages):
     item = obj.get_item(sample_item)
     assert item is not None
 
-    assert item["user_id"] == sample_item.user_id
-    assert item["session_id"] == sample_item.session_id
-    assert item["session_summary"] == sample_item.session_summary
-    assert item["started_at"] == sample_item.started_at
-    assert item["messages"] == sample_item.messages
+    assert item['user_id'] == sample_item.user_id
+    assert item['session_id'] == sample_item.session_id
+    assert item['session_summary'] == sample_item.session_summary
+    assert item['started_at'] == sample_item.started_at
+    assert item['messages'] == sample_item.messages
