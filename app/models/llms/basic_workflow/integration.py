@@ -2,15 +2,23 @@
 # Standard library
 import os
 import time
-import json
-import datetime
+import yaml
+from datetime import datetime
 from typing import Dict
 from enum import Enum
 from contextlib import contextmanager
+import re
+import pytz
+import uuid
+
+from app.utils.provide_json_itineraries import ProvideJsonItineraries, Message, Role, MessageType, DataToCreateItinerary
+import logging
+logger = logging.getLogger(__name__)
 
 # Third-party libraries
 from openai import OpenAI
 from dotenv import load_dotenv
+from num2words import num2words
 
 @contextmanager
 def timer(operation_name: str):
@@ -48,19 +56,19 @@ class ItineraryGenerator:
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.config_folder_path = os.getenv('CONFIG_FOLDER_PATH')
-        self.days_config = self._load_config("days_mapping.json")
-        self.preferences_config = self._load_config("preferences_mapping.json")
-        self.destinations_config = self._load_config("destinations_mapping.json")
+        self.days_config = self._load_config("days_mapping.yaml")
+        self.preferences_config = self._load_config("preferences_mapping.yaml")
+        self.destinations_config = self._load_config("destinations_mapping.yaml")
         self._validate_configs()
         
     def _validate_configs(self):
-        if not hasattr(self.destinations_config, 'get') or 'ukrainian_destinations' not in self.destinations_config:
+        if 'ukrainian_destinations' not in self.destinations_config:
             raise RuntimeError("destinations_mapping.json must contain 'ukrainian_destinations' section")
         
-        if not hasattr(self.preferences_config, 'get') or 'default_preferences' not in self.preferences_config:
+        if 'default_preferences' not in self.preferences_config:
             raise RuntimeError("preferences_mapping.json must contain 'default_preferences' section")
         
-        if not hasattr(self.days_config, 'get') or 'default_duration' not in self.days_config:
+        if 'default_duration' not in self.days_config:
             raise RuntimeError("days_mapping.json must contain 'default_duration' section")
     
     def _load_config(self, config_file: str) -> dict:
@@ -70,11 +78,11 @@ class ItineraryGenerator:
             
             config_path = os.path.join(self.config_folder_path, config_file)
             with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                return yaml.safe_load(f)
         except FileNotFoundError as e:
             raise RuntimeError(f"Configuration file not found: {config_file}")
-        except json.JSONDecodeError as e:
-            raise RuntimeError(f"Invalid JSON in configuration file: {config_file}")
+        except yaml.YAMLError as e:
+            raise RuntimeError(f"Invalid YAML in configuration file: {config_file}")
         except Exception as e:
             raise RuntimeError(f"Failed to load configuration {config_file}: {e}")
     
@@ -129,7 +137,6 @@ class ItineraryGenerator:
         with timer("itinerary generation"):
             try:
                 system_prompt = self._create_system_prompt()
-            
 
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -168,9 +175,6 @@ class ItineraryGenerator:
                     raise RuntimeError(f"OpenAI API error: {error_message}")
 
     def get_days(self, user_input_lower: str) -> str:
-        import re
-        from num2words import num2words
-        
         day_pattern = self.days_config["patterns"]["day_pattern"]
         week_pattern = self.days_config["patterns"]["week_pattern"]
         written_numbers = self.days_config["written_numbers"]
@@ -209,7 +213,7 @@ class ItineraryGenerator:
         
         return default_duration
 
-    def get_destinations(self, user_input_lower: str) -> str:
+    def extract_destination_from_text(self, user_input_lower: str) -> str:
         """
         Extract destination information from user input.
         
@@ -258,7 +262,7 @@ class ItineraryGenerator:
         
         preferences['duration'] = self.get_days(user_input_lower)
         
-        preferences['destination'] = self.get_destinations(user_input_lower)
+        preferences['destination'] = self.extract_destination_from_text(user_input_lower)
         
         # User can specify a list of interests, so we need to parse them
         interests_found = []
@@ -280,10 +284,12 @@ class ItineraryGenerator:
             if keyword in user_input_lower:
                 try:
                     budget_list = [b for b in Budget if b.value == budget_value]
-                    if 'Luxury' in budget_list and 'Budget-friendly' in budget_list:
+                    if any(b.value == 'Luxury' for b in budget_list) and any(b.value == 'Budget-friendly' for b in budget_list):
                         preferences['budget'] = 'Moderate'
-                    else:
+                    if budget_list:
                         preferences['budget'] = budget_list[0]
+                    else:
+                        preferences['budget'] = budget_value
                 except StopIteration:
                     preferences['budget'] = budget_value
                 budget_found = True
@@ -336,56 +342,86 @@ class ItineraryGenerator:
             
             return self.generate_itinerary(detailed_prompt)
 
+class CLISessionHistory:
+    def __init__(self):
+        self.session_history = []
+        self.session_id = self.generate_session_id()
+        self.started_at = self.generate_iso_timestamp()
+        # In my demo I will use Kiev timezone
+        self.timezone_offset = self.generate_timezone_with_pytz('Europe/Kiev')
 
-def save_to_session_history(session_history: list, user_input: str, itinerary: str, preferences: Dict[str, str]):
-    session_entry = {
-        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'user_input': user_input,
-        'preferences': preferences,
-        'itinerary': itinerary
-    }
-    session_history.append(session_entry)
-    return session_history
+    def save_to_session_history(self, user_input: str, itinerary: str, preferences: Dict[str, str]):
+        session_entry = {
+            'timestamp': self.generate_iso_timestamp(),
+            'user_input': user_input,
+            'preferences': preferences,
+            'itinerary': itinerary
+        }
+        self.session_history += [session_entry]
 
-def save_conversation_to_file(session_history: list):
-    try:
-        history_dir = os.getenv('HISTORY_FOLDER_DIRECTORY')
-        if not history_dir:
-            raise ValueError("HISTORY_FOLDER_DIRECTORY environment variable is not set. Please add it to your .env file.")
+    def generate_iso_timestamp(self):
+        """Generate ISO timestamp in format: YYYY-MM-DDTHH:MM:SS+HH:MM"""
+        # Get current time
+        now = datetime.now()
         
-        if not os.path.exists(history_dir):
-            os.makedirs(history_dir)
+        # Remove microseconds
+        now = now.replace(microsecond=0)
         
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"conversation_{timestamp}.txt"
-        filepath = os.path.join(history_dir, filename)
+        # Add timezone
+        tz = pytz.timezone('Europe/Kiev')  # UTC+3
+        now_with_tz = tz.localize(now)
         
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write("Voyager T800 - Complete Conversation Session\n")
-            f.write("=" * 60 + "\n\n")
-            f.write(f"Session Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("=" * 60 + "\n\n")
+        # Convert to ISO format
+        return now_with_tz.isoformat()
+
+    def generate_session_id(self):
+        """Generate a unique session_id"""
+        return str(uuid.uuid4())
+
+    def generate_timezone_with_pytz(self, timezone: str):
+        """Generate the current timezone with pytz"""
+        # Get the current local time
+        local_tz = pytz.timezone(timezone)  # UTC+3
+        now = datetime.now()
+        
+        # Localize the time
+        local_time = local_tz.localize(now)
+        
+        # Get the offset
+        offset = local_time.strftime('%z')
+        
+        # Format as +03:00
+        return f"{offset[:3]}:{offset[3:]}"
+
+    def save_conversation_to_file(self):
+        try:
+            history_dir = os.getenv('HISTORY_FOLDER_DIRECTORY')
+            if not history_dir:
+                raise ValueError("HISTORY_FOLDER_DIRECTORY environment variable is not set. Please add it to your .env file.")
             
-            for i, entry in enumerate(session_history, 1):
-                f.write(f"ITINERARY #{i}\n")
-                f.write("-" * 40 + "\n")
-                f.write(f"Time: {entry['timestamp']}\n")
-                f.write(f"User Request: {entry['user_input']}\n\n")
-                f.write("Travel Preferences:\n")
-                for key, value in entry['preferences'].items():
-                    f.write(f"- {key}: {value}\n")
-                f.write("\n" + "-" * 40 + "\n")
-                f.write(entry['itinerary'])
-                f.write("\n\n" + "=" * 60 + "\n\n")
-        
-        return filepath
-        
-    except PermissionError as e:
-        return None
-    except OSError as e:
-        return None
-    except UnicodeEncodeError as e:
-        return None
-    except Exception as e:
-        return None
+            if not os.path.exists(history_dir):
+                os.makedirs(history_dir)
+            
+            timestamp = self.generate_iso_timestamp()
+            filename = f"conversation_{timestamp}.json"
+            filepath = os.path.join(history_dir, filename)
+            provide_json_itineraries = ProvideJsonItineraries()
+            messages = []
+            for session in self.session_history:
+                messages.append(Message(text=session['user_input'], sender=Role.USER, message_type=MessageType.TEXT))
+                messages.append(Message(text=session['itinerary'], sender=Role.ASSISTANT, message_type=MessageType.TEXT))
+            
+            # Until we have no authorization and a large number of users instead of user_id I will use a 
+            user_data = DataToCreateItinerary(
+                user_id="user_message_id",
+                session_id=self.session_id,
+                started_at=self.started_at,
+                timezone_offset=self.timezone_offset
+            )
+            session_history_json = provide_json_itineraries.provide_json_itinerary(messages, user_data)
+            provide_json_itineraries.save_itinerary_from_dict(session_history_json, filepath)
+            return filepath
+        except (PermissionError, OSError, UnicodeEncodeError, Exception) as e:
+            logger.error(f"Failed to save conversation to file: {e}")
+            return None
 
