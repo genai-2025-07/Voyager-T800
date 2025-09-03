@@ -2,7 +2,7 @@ from moto import mock_aws
 import boto3
 import pytest
 from datetime import datetime, timezone
-from data_layer.dynamodb_client import SessionMetadata, put_item, get_item
+from data_layer.dynamodb_client import DynamoDBClient, SessionMetadata
 
 
 TABLE_NAME = "session_metadata"
@@ -40,6 +40,7 @@ def dynamodb_table():
         )
         table.wait_until_exists()
         yield table
+
 
 @pytest.fixture
 def sample_messages():
@@ -98,20 +99,25 @@ def test_put_item(dynamodb_table, sample_messages):
         - `put_item` should return True after successful insertion.
         - The item should be retrievable from the table with correct data.
     """
+
+    obj= DynamoDBClient(dynamodb_table)
+
     sample_item=SessionMetadata(user_id="u123", 
                                 session_id="s456", 
                                 session_summary="Test session", 
                                 started_at=datetime.now(timezone.utc).isoformat(), 
                                 messages=sample_messages)
     
-    result = put_item(dynamodb_table, sample_item)
-    assert result is 200
+    result = obj.put_item(sample_item)
+    assert result == 200
 
     response = dynamodb_table.scan()
     items = response.get("Items", [])
 
-    assert len(items) > 0  
-    print(f"Table contains {len(items)} item(s)")
+    assert len(items) > 0, f"Table contains {len(items)} item(s)"
+    assert items[0]['user_id']==sample_item.user_id
+    assert items[0]['session_id']==sample_item.session_id
+    
 
 @pytest.mark.unit
 def test_get_item(dynamodb_table, sample_messages):
@@ -132,6 +138,9 @@ def test_get_item(dynamodb_table, sample_messages):
             * Correct `started_at` timestamp.
             * The same `messages` list that was inserted.
     """
+
+    obj= DynamoDBClient(dynamodb_table)
+
     sample_item = SessionMetadata(
         user_id="u789", 
         session_id="s012", 
@@ -140,19 +149,11 @@ def test_get_item(dynamodb_table, sample_messages):
         messages=sample_messages
     )
 
-    put_result = put_item(dynamodb_table, sample_item)
-    assert put_result is 200
+    put_result = obj.put_item(sample_item)
+    assert put_result == 200
 
-    item = get_item(dynamodb_table, sample_item)
+    item = obj.get_item(sample_item)
     assert item is not None
-    
-    print(f"\n📋 Retrieved Item Details:")
-    print(f"   user_id: {item.get('user_id', 'NOT_FOUND')}")
-    print(f"   session_id: {item.get('session_id', 'NOT_FOUND')}")
-    print(f"   session_summary: {item.get('session_summary', 'NOT_FOUND')}")
-    print(f"   started_at: {item.get('started_at', 'NOT_FOUND')}")
-    print(f"   messages count: {len(item.get('messages', []))}")
-    print(f"   messages: {item.get('messages', [])}")
 
     assert item["user_id"] == sample_item.user_id
     assert item["session_id"] == sample_item.session_id
