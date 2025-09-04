@@ -1,0 +1,145 @@
+{
+  "postal_code": "01001",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Shevchenkivs'kyi district",
+  "address": "Volodymyrska St, 24, Kyiv, Ukraine, 01001",
+  "phone_number": "+380 44 278 2620",
+  "place_id": "ChIJXzle44jO1EARNKSlXc90N8Y",
+  "url": "https://maps.google.com/?cid=14283013177207006260",
+  "coordinates": {
+    "lat": 50.4529022,
+    "lng": 30.5142035
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Eric W",
+      "author_url": "https://www.google.com/maps/contrib/107820184520309069565/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJoEfKbD1gM577V5rpdGT35oOQgJIRzuZH1ZYRN5R97sRf_JMI=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "I visited just before the start of war, so my review is based on my experience at that time.\n\nAnother beautiful historic religious building in Kyiv. Definitely going to visit again when things return to normal.",
+      "time": 1698580547,
+      "translated": false
+    },
+    {
+      "author_name": "Daniel Haman",
+      "author_url": "https://www.google.com/maps/contrib/110510820011515896481/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUGmaMDfcwUTBmhyDd-eiLFNjwMlaYvG_eUtwTa-348j2B7je4y=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "2 years ago",
+      "text": "Orthodox cathedral from 11st with golden dome and bell tower separated from the church. Metropolit's residence and the museum are part of the cathedral complex. Cathedral is inscribed on the World Heritage List along with the Kyiv Cave Monastery complex. Place to visit while in the city.",
+      "time": 1668513710,
+      "translated": false
+    },
+    {
+      "author_name": "Kateryna Dubyna",
+      "author_url": "https://www.google.com/maps/contrib/106883986822238854833/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVUXAyI4h1i_Mt_VOsUavWhJOjZ49qPXnjG_iVEFym8e7UtmcE=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "I travel a lot so I've seen many beautiful cathedrals. But still St. Sofia impressed me to the bottom of my heart. Amazing antient place with gorgeous wall-paintings.",
+      "time": 1620533669,
+      "translated": false
+    },
+    {
+      "author_name": "Nataliia Yefimenko",
+      "author_url": "https://www.google.com/maps/contrib/107500670040650308844/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocKrn6XcI-011sM8dyXgkxK-9yqUy4P0o48jpxo0yg5Pe1hweCcJ=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "2 years ago",
+      "text": "Tramendous historical place to visit, built in the 11th century. Several buildings with excibitions and fresco on the religious topics. I would advise to explore it with the guided tour and buy souvenirs.\nAs I was born in this city, I have visited it many times. Attached are 2 old historical photos that I liked and my photos :)",
+      "time": 1688904551,
+      "translated": false
+    },
+    {
+      "author_name": "Axel",
+      "author_url": "https://www.google.com/maps/contrib/118096862633195721051/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXwxMa8V3VxhAaR8TydS7hO32XoCKhFjPXxcZlmX03srXZjDAY3sA=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "The Cathedral of St. Sophia in Kyiv, also known as Sophia of Kyiv, is a masterpiece of Byzantine architecture and a symbol of Ukrainian history and culture. Built between 1017 and 1037 during the reign of Grand Prince Yaroslav the Wise, it served as the spiritual and political center of the medieval Kyivan Rus' empire. The cathedral's stunning interior is adorned with intricate mosaics and frescoes, showcasing the artistic achievements of the period and attracting visitors from around the world to marvel at its beauty and significance.",
+      "time": 1714328873,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "church",
+    "establishment",
+    "museum",
+    "place_of_worship",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.149456+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ]
+    }
+  }
+}

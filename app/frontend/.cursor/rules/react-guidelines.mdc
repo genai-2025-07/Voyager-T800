@@ -1,0 +1,16 @@
+---
+@general-frontend-principles.mdc
+description: "Architectural principles for a React frontend. We choose React for structure, scalability, and a robust ecosystem."
+globs: app/frontend/**/*.tsx, app/frontend/**/*.jsx
+---
+
+### **Core Principle: Build a Robust and Maintainable UI**
+If we choose React, it's because we need more structure and long-term maintainability than a simple script can provide. Every technology choice must support the goal of creating a predictable, scalable, and bug-resistant user interface.
+
+- **Guideline: Guarantee Type Safety.** JavaScript's dynamic typing is a common source of runtime errors. We eliminate this entire class of bugs by using **TypeScript** for all new code. Type safety is non-negotiable.
+
+- **Guideline: Manage Data Fetching Declaratively.** Imperative data fetching with `useEffect` is prone to errors and race conditions. We need a more robust solution for managing the lifecycle of server state.
+    - *Implementation:* We use a dedicated data-fetching library like **SWR** or **React Query**. This allows us to declare our data needs and let the library handle the complexities of caching, revalidation, and error handling, leading to a more resilient UI.
+
+- **Guideline: Enforce Visual Consistency.** A fragmented visual style makes an application feel unprofessional and is hard to maintain. We need a systematic approach to styling.
+    - *Implementation:* We use **Tailwind CSS** as our single source of truth for styling. This utility-first framework provides a constrained design system that ensures consistency while co-locating styles with their components for better maintainability.

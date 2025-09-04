@@ -1,0 +1,92 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Shevchenkivs'kyi district",
+  "address": "Ihorivska St, 1/8, Kyiv, Ukraine, 02000",
+  "phone_number": "+380 44 254 6560",
+  "place_id": "ChIJi6vIBUHO1EARj0wbwSjOIZM",
+  "url": "https://maps.google.com/?cid=10601981672240663695",
+  "coordinates": {
+    "lat": 50.4577176,
+    "lng": 30.5235093
+  },
+  "rating": 4.6,
+  "reviews": [
+    {
+      "author_name": "Nil M",
+      "author_url": "https://www.google.com/maps/contrib/107805789076630025230/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWtkKpsK2l-3jPIHso8F5VIi6t7Wpba-86_CGyA1IvthVY7b1eA=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "5 months ago",
+      "text": "The Kyiv Funicular was a great experience! It didn’t take much time to enter, and everything was well-organized. The ride was smooth, and the funicular was very clean. The best part was the amazing view as it went up. You can take great photos, especially if you stand next to the window facing the river—the scenery is stunning!\n\nWhen you arrive at the top, there is a board displaying the history of the funicular, which is interesting to read. The area also has a big park where you can walk and visit beautiful churches. Along the way, artists and painters perform live, adding a vibrant and energetic atmosphere to the experience. It’s a must-visit spot in Kyiv!",
+      "time": 1741559711,
+      "translated": false
+    },
+    {
+      "author_name": "H",
+      "author_url": "https://www.google.com/maps/contrib/105134905536108709474/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVryFivKbnw47t8jQ65dYI_Rj0JIZwqRofTlPR8c_BGugeXDiU=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "It was such a nostalgic ride. We took it twice to see the view from both ends of the wagon. The seats are very comfortable. The ride is pretty frequent you don't wait for too long for the next ride.",
+      "time": 1634024544,
+      "translated": false
+    },
+    {
+      "author_name": "Arman Khachatryan",
+      "author_url": "https://www.google.com/maps/contrib/105464204001903165121/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVgKxxfb7J16309M0Ctn0AtB5LaIuj2MfSQ-klcChR9mYlZt8Shxg=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "The 1905 wooden cars still have their original brass fittings, polished daily. Mechanics maintain the counterbalance system using ledgers from the 1920s. At the midpoint, look for the hidden stairway used by engineers during the 1941 siege.",
+      "time": 1749546576,
+      "translated": false
+    },
+    {
+      "author_name": "Gino Canessa",
+      "author_url": "https://www.google.com/maps/contrib/107706857518823907870/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVtP21tPUnJlXnMK9tOhN-qq1Gxpa7XRD1OaHSXXCI0fL5YPsv88Q=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 3,
+      "relative_time_description": "4 years ago",
+      "text": "Small and cramp a bit with too many people, it's more public transportation than a tourist attraction. There isn't A/C in case you wonder. Cute thing though. There is a small café with sandwiches and bevs at the bottom and at the top the park with a huge playground, kiosks and a public restroom.",
+      "time": 1598986262,
+      "translated": false
+    },
+    {
+      "author_name": "Geoff Banks",
+      "author_url": "https://www.google.com/maps/contrib/110893093429839416979/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVouEl1KuoNFrYadr76DLLb7rhQXugkcu2K1_6EfK00bDSqR_AG=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "5 years ago",
+      "text": "This is a very ornate station and a really easy way up the hill, so if you're passing it's worth popping in and having a look even if you aren't going up the hill. I've added a couple of views of the waterfront area across the road opposite and if you head left at the top station there is a lovely park with more great views over the river",
+      "time": 1573372022,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}
