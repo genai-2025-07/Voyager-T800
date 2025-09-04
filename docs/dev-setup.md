@@ -212,7 +212,27 @@ pipx --version
 - **`Ctrl+Shift+F` / `Cmd+Shift+F`**: Search through project files
 - **`Ctrl+/` / `Cmd+/`**: Toggle line comments
 
-### 4.2 Testing AI Functionality
+### 4.2 Cursor rules
+
+We use Cursor's "Project Rules" feature to ensure code consistency, enforce best practices, and speed up development.
+
+#### Why We Use It
+
+*   **Context-Aware AI:** The AI has deep, built-in knowledge of our project structure, coding standards, and security requirements.
+*   **Consistency:** The AI helps ensure that all code—whether written by a senior developer or a new contributor—adheres to the same patterns.
+*   **Velocity:** Automate boilerplate for things like FastAPI endpoints, LangChain chains, and tests.
+
+Cursor will automatically detect and load all the project rules located in the `.cursor/rules` directories.
+
+#### **How It Works in Practice**
+
+*   **While you code:** When you are editing a file (e.g., in `app/api/`), the AI automatically has the context of our API best practices. When you ask it to generate code or "chat with your files," its suggestions will already follow our standards.
+*   **When you need specific help:** You can explicitly ask for guidance from our rulebook. In the chat panel, type `@` to see a list of available rules and select one. For example:
+    > `@testing-guidelines Please write a pytest test for this function, making sure to mock the external service.`
+
+The AI will then use the detailed instructions from that rule to generate a high-quality, compliant test case.
+
+### 4.3 Testing AI Functionality
 
 Create a test file and try:
 ```python

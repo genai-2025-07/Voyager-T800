@@ -1,0 +1,144 @@
+{
+  "postal_code": "01013",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Pechers'kyi district",
+  "address": "Vydubyts'ka St, 40, Kyiv, Ukraine, 01013",
+  "phone_number": "+380 44 285 3581",
+  "place_id": "ChIJjYu1wmTP1EAR69q-zuFElAE",
+  "url": "https://maps.google.com/?cid=113791627218049771",
+  "coordinates": {
+    "lat": 50.41690819999999,
+    "lng": 30.5681479
+  },
+  "rating": 4.9,
+  "reviews": [
+    {
+      "author_name": "Arman Khachatryan",
+      "author_url": "https://www.google.com/maps/contrib/105464204001903165121/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVgKxxfb7J16309M0Ctn0AtB5LaIuj2MfSQ-klcChR9mYlZt8Shxg=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "This riverside complex's 11th-century refectory has walls three meters thick - cool in summer, warm in winter. The tilted bell tower (a victim of landslides) still rings with a distinctive off-key tone. Monks maintain beehives whose honey tastes of linden blossoms from the grounds.",
+      "time": 1749546490,
+      "translated": false
+    },
+    {
+      "author_name": "Fynn Jackson",
+      "author_url": "https://www.google.com/maps/contrib/107847464741423939167/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXRrTTtk5YikIYQcKWee-QUiCF9kDjjUiMaCDwX5eed1NMJMcCgdQ=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Favorite place in Kiev. Less tourists, beautiful rose gardens and greate feelings all around this one. A definite must see. Note it takes about 15 minutes walk from the botanical garden entrance. You'll receive a map after purchasing a ticket with directions. Enjoy!",
+      "time": 1560786936,
+      "translated": false
+    },
+    {
+      "author_name": "Olena Korbut",
+      "author_url": "https://www.google.com/maps/contrib/101414639666891150354/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVVAd1mZNc9dEErjpL774arrTe8kb4Dj2Wuexcw0RHojMQ279I=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "It is one of my favorite places in the city. It has very beautiful territory with a lot of different plants. Like a botanical garden. I feel comfortable and peaceful there.❤🙏",
+      "time": 1635333744,
+      "translated": false
+    },
+    {
+      "author_name": "halil durmaz (Khalil)",
+      "author_url": "https://www.google.com/maps/contrib/107099411873275152073/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUKal9y41pCaVwWN0JUclKHoLT9POjzpWWtP0_C7WoH_oMF01W2=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "Peaceful and quiet place .inside big park area and beside botanic park .you must see in Kiev .",
+      "time": 1623437368,
+      "translated": false
+    },
+    {
+      "author_name": "Kate",
+      "author_url": "https://www.google.com/maps/contrib/106290155887636885386/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWaptYJFr0iKPWWWSi2LL7rqiFYMTJfHgqr8F9lASbQbn0rGCKNdw=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "8 years ago",
+      "text": "Fantastic place! One of the oldest monasteries in Kyiv. It's very beautiful and visitor friendly. The territory is well looked after with lots of flowers. The atmosphere is amazing there! I love the feeling of inner piece there...",
+      "time": 1493585835,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "church",
+    "establishment",
+    "place_of_worship",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.695517+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "07:30",
+          "end": "18:30"
+        }
+      ]
+    }
+  }
+}

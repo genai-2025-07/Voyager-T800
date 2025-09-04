@@ -1,0 +1,146 @@
+{
+  "postal_code": "79008",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Stavropihiiska St, L'viv, L'vivs'ka oblast, Ukraine, 79008",
+  "phone_number": "+380 322 355 656",
+  "place_id": "ChIJhcL4BG3dOkcRGdQx_yC34kA",
+  "url": "https://maps.google.com/?cid=4675500715512288281",
+  "coordinates": {
+    "lat": 49.84267939999999,
+    "lng": 24.0324147
+  },
+  "rating": 4.6,
+  "reviews": [
+    {
+      "author_name": "Iryna Vlizko",
+      "author_url": "https://www.google.com/maps/contrib/104961187580116461216/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVVYKgIpL3000ZRcOyQirS0fTpwhAUIiqNIr7cH6C8ylIf2-tE=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "4 months ago",
+      "text": "I really liked this place. I was there alone, and it was a bit scary going down to the dungeon, haha. But overall, the experience was great.",
+      "time": 1744662491,
+      "translated": false
+    },
+    {
+      "author_name": "Stephen Psallidas",
+      "author_url": "https://www.google.com/maps/contrib/112694468359267636834/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIXvDZHHcNfTShwLJoJ0j_a2nG-jhNvALIP0u59KMPnmJi08w=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 4,
+      "relative_time_description": "10 months ago",
+      "text": "(Entry fee 60 UAH in Oct 2024)\nWorth a visit into this atmospheric old building, not just to see the old pharmacy stuff but the balcony, interior courtyard and small cellar. Knocked a star off as there is little interpretation, and almost none in English. Be aware there are lots of stairs.",
+      "time": 1728317835,
+      "translated": false
+    },
+    {
+      "author_name": "Marcel Jost",
+      "author_url": "https://www.google.com/maps/contrib/117102202295399246870/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIJZLN7b3WUAWfE8sDN8HYHNcJfNfWB0_EiCyLiCVnferHTUpM=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "9 months ago",
+      "text": "We visited the Pharmacymuseum without expecting much and were really surprised how interesting and big it was. We were expecting just like 3 rooms filled with old medicine, but this museum shows you way more than just this. You are being guided through the whole building including cellar and courtyard, filled with old relicts of medicine. Definitely the most exciting museum we visited in Lviv.",
+      "time": 1731576900,
+      "translated": false
+    },
+    {
+      "author_name": "Dr. Ashish Chandrakar",
+      "author_url": "https://www.google.com/maps/contrib/111284010929646087570/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWmdca833KcuY7trBbTOf3AjqxEzgI86gDn6_HNAke3vzA8H89d=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 4,
+      "relative_time_description": "7 years ago",
+      "text": "Very attractive place must visit but should always have a guid otherwise won’t be able to understand any thing. Must visit and explore the historic pharmacy museum know an important & interesting history of medicine which we use to take nowadays. For me it is very interesting to know all about those and I hope you will be too. They have all those antique items which were use in past.",
+      "time": 1517176152,
+      "translated": false
+    },
+    {
+      "author_name": "Olya Є.",
+      "author_url": "https://www.google.com/maps/contrib/103586153879567100991/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWeUvDMxyNLPZaKIfNMaXKp6l1NKsj9JYna89zQmRvkohFXLjqMSA=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "5 years ago",
+      "text": "One of the most interesting museums in Lviv. But only of you visit it with guide. Museum's dungeon (especially secret room of alchemist) is very impressive. Children liked this place too))",
+      "time": 1566225635,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "health",
+    "museum",
+    "pharmacy",
+    "point_of_interest",
+    "store",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.886375+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ]
+    }
+  }
+}

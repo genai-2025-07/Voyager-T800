@@ -1,0 +1,17 @@
+---
+description: "Our documentation principles. We treat documentation as a core product for our team and future selves."
+alwaysApply: true
+---
+
+### **Principle 1: Documentation's Purpose is to Transfer Knowledge**
+The primary goal of our documentation is to reduce the cognitive load on our teammates and accelerate onboarding. It should be an empathy-driven exercise.
+
+- **Guideline: Write for the Newcomer.** Assume your audience is an intelligent developer who has zero context on this specific project. Explain the "why" behind architectural decisions, not just the "what."
+- **Guideline: Clarity Over Brevity.** Avoid jargon and acronyms where possible. A clear, slightly longer explanation is always better than a short, ambiguous one.
+
+### **Principle 2: Documentation Must Live with the Code**
+Outdated documentation is actively harmful. The only way to ensure our docs are accurate is to make them an integral part of our development workflow.
+
+- **Guideline: Docs are Code.** All documentation is written in Markdown and version-controlled in the same repository as the code it describes.
+- **Guideline: Update Docs in the Same PR.** A pull request that changes a feature's behavior is not complete until it also updates the corresponding documentation.
+- **Guideline: Use Version-Controlled Diagrams.** We use **Mermaid.js** syntax for all diagrams. This allows our architectural diagrams to be reviewed, diffed, and versioned just like our source code.

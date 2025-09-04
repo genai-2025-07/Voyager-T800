@@ -1,0 +1,141 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Universytetska St, 1, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "",
+  "place_id": "ChIJ1YHuCHHdOkcRWCAuOD4r0pw",
+  "url": "https://maps.google.com/?cid=11300141961256509528",
+  "coordinates": {
+    "lat": 49.8396857,
+    "lng": 24.0211988
+  },
+  "rating": 4.7,
+  "reviews": [
+    {
+      "author_name": "neşe arikan",
+      "author_url": "https://www.google.com/maps/contrib/110450399863592476516/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWtbJiNP4kRlZhIMRZ2oluwqYlIOiLW7sJgJ8xBloLn_BmlwB98=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "He was a political radical, and a founder of the socialist and nationalist movement in western Ukraine. In addition to his own literary work, he also translated the works of such renowned figures as William Shakespeare, Lord Byron, Pedro Calderón de la Barca, Dante Alighieri, Victor Hugo, Adam Mickiewicz, Johann Wolfgang von Goethe and Friedrich Schiller into Ukrainian. His translations appeared on the stage of the Ruska Besida Theatre. Along with Taras Shevchenko, he has had a tremendous impact on modern literary and political thought in Ukraine",
+      "time": 1629196034,
+      "translated": false
+    },
+    {
+      "author_name": "G L L",
+      "author_url": "https://www.google.com/maps/contrib/113589704458383213727/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJmNfucYi8OYjI1lEi7kJWHeVjtPXvy5gLAtPZG5-AKa2Lo-w=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 4,
+      "relative_time_description": "6 years ago",
+      "text": "Massive statue. Nothing in area tells you who he was. Had to rely on the internet to discover Ivan Yakovych Franko was a Ukrainian poet, writer, social and literary critic, journalist, interpreter, economist, political activist, doctor of philosophy, ethnographer, and author. So a lasting impression he made.",
+      "time": 1562699598,
+      "translated": false
+    },
+    {
+      "author_name": "Fulvio Flamini",
+      "author_url": "https://www.google.com/maps/contrib/107649595673005066575/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXEIlYMsBvtLb4svC9A1K73fVBOwu7O1yj6QBQbOaVb7Svr_VQl0w=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "8 years ago",
+      "text": "Feel the power of Ukraine.",
+      "time": 1483090708,
+      "translated": false
+    },
+    {
+      "author_name": "Roman Denus",
+      "author_url": "https://www.google.com/maps/contrib/108790369125826795552/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjW4eWPP4sz22LrbsXECrG8Za8UjfLT8HFOQspR315xlmV94X3QR=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "A wonderful monument and a wonderful park. 👍",
+      "time": 1563030642,
+      "translated": false
+    },
+    {
+      "author_name": "Berty Paranavithana",
+      "author_url": "https://www.google.com/maps/contrib/105829799173963771588/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXBl8kGL30FzRmTfm4J7hkDiubTBrKQVLfTdLMhe2loQgZFzqxm=s128-c0x00000000-cc-rp-mo-ba2",
+      "rating": 4,
+      "relative_time_description": "5 years ago",
+      "text": "I had this place",
+      "time": 1566609797,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.757614+03:00",
+    "weekly": {
+      "Saturday": [
+        {
+          "start": "00:00",
+          "end": "23:59"
+        }
+      ],
+      "Monday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "21:00"
+        }
+      ]
+    }
+  }
+}

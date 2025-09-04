@@ -1,0 +1,142 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Svobody Ave, 28, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "+380 322 554 960",
+  "place_id": "ChIJiWq8-XLdOkcRH8_-tOw_ePk",
+  "url": "https://maps.google.com/?cid=17976188198530764575",
+  "coordinates": {
+    "lat": 49.8440167,
+    "lng": 24.0262123
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Valeria Nazarova",
+      "author_url": "https://www.google.com/maps/contrib/103925902368931021963/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVNlqNWyrR-BepivVBKSuuDsJs-Xo5iTpxXzGIbEVVY2tk1RG6T=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "4 weeks ago",
+      "text": "We visited on a rainy day — the building looked absolutely beautiful and magical in the rain.",
+      "time": 1752691757,
+      "translated": false
+    },
+    {
+      "author_name": "Stephen Psallidas",
+      "author_url": "https://www.google.com/maps/contrib/112694468359267636834/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIXvDZHHcNfTShwLJoJ0j_a2nG-jhNvALIP0u59KMPnmJi08w=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "10 months ago",
+      "text": "A beautiful and historic opera house, with an ornate marble interior, a classic theatre with balconies, and the only 'sloping' stage I have ever seen. They put on high quality operas, with very professional casts and costumes even in wartime. Of course almost all of them are in Ukrainian or Italian, but it's still worth a visit for the experience. The price is around 500-600 UAH for a seat in the 'stalls'. If it's a midweek performance you can usually get a ticket just before the show from the box office, no need to book online.",
+      "time": 1728591851,
+      "translated": false
+    },
+    {
+      "author_name": "Cheryl Russow",
+      "author_url": "https://www.google.com/maps/contrib/118298995649371157358/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWrjeu-I3wxXtgp3uuzefQ4bx8mojM09HiQ3l-UG4zKlL8EkTwUoA=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "a week ago",
+      "text": "We were able to go in an watch auditions, but there were no shows the week we were there. It is beautiful. You can hear the singers several blocks away. Long before you see the building.",
+      "time": 1754099514,
+      "translated": false
+    },
+    {
+      "author_name": "Emrullah",
+      "author_url": "https://www.google.com/maps/contrib/107519620017988664030/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWT1mVJNaeUyKGa2Y35_JKLqcDXaFJZ12Shw4OKB1XGO9amAeNZ=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "7 months ago",
+      "text": "Liviv is second great city in Ukraine . I really like the streets here and the vibe . Lviv National Opera is right in the center of the liviv and amazıng monument here . You can just walk without taking picture of it.",
+      "time": 1735760368,
+      "translated": false
+    },
+    {
+      "author_name": "Dr. Christy Regi",
+      "author_url": "https://www.google.com/maps/contrib/104272146383248530493/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUyWlCJ4VlLnPSVRiGHMuZO_aLtYNV4CjJHXP4o88hJkDdu2P4M=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 4,
+      "relative_time_description": "a year ago",
+      "text": "We just visited the place .. didn't enter inside.\n\nThe place itself is very beautiful and calm right in the middle of road .. giving an extreme importance to the architecture.\n\nCaptured a ton of photos on front of the building. With its majestic beauty behind .\n\nThere are lots of places to sit and walk around.\n\nThere are photographers who will take splendid photos for you to keep as a memory.",
+      "time": 1712071380,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.873286+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "09:00",
+          "end": "21:00"
+        }
+      ]
+    }
+  }
+}
