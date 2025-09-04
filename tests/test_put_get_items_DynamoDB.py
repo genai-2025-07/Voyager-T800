@@ -85,6 +85,15 @@ def sample_messages():
         },
     ]
 
+@pytest.fixture
+def inserted_item(dynamodb_table):
+    item={
+        "user_id":"u789",
+        "session_id":"s012"
+    }
+    dynamodb_table.put_item(Item=item)
+    return item
+
 
 @pytest.mark.unit
 def test_put_item(dynamodb_table, sample_messages):
@@ -125,7 +134,7 @@ def test_put_item(dynamodb_table, sample_messages):
 
 
 @pytest.mark.unit
-def test_get_item(dynamodb_table, sample_messages):
+def test_get_item(dynamodb_table, inserted_item):
     """
     Unit test for verifying retrieval of items from the DynamoDB table.
 
@@ -146,22 +155,36 @@ def test_get_item(dynamodb_table, sample_messages):
 
     obj = DynamoDBClient(dynamodb_table)
 
-    sample_item = SessionMetadata(
-        user_id='u789',
-        session_id='s012',
-        session_summary='Another test session',
-        started_at=datetime.now(UTC).isoformat(),
-        messages=sample_messages,
+    user_id_test=inserted_item['user_id']
+    session_id_test=inserted_item['session_id']
+    
+    retrieved_item = obj.get_item(user_id_test, session_id_test)
+
+    assert retrieved_item is not None
+    assert retrieved_item['user_id'] == user_id_test
+    assert retrieved_item['session_id'] == session_id_test
+
+
+@pytest.mark.unit
+def test_get_item_not_found(dynamodb_table):
+    """
+    Unit test for verifying that get_item returns None when item is not found.
+
+    This test ensures that:
+      1. The `get_item` function returns None when the requested item doesn't exist.
+      2. No KeyError is raised when accessing non-existent items.
+
+    Assertions:
+        - `get_item` should return None for non-existent user_id/session_id combinations.
+    """
+    obj = DynamoDBClient(dynamodb_table)
+    nonexistent = SessionMetadata(
+        user_id='not_found',
+        session_id='s999',
+        session_summary='',
+        started_at='',
+        messages=[]
     )
-
-    put_result = obj.put_item(sample_item)
-    assert put_result == 200
-
-    item = obj.get_item(sample_item)
-    assert item is not None
-
-    assert item['user_id'] == sample_item.user_id
-    assert item['session_id'] == sample_item.session_id
-    assert item['session_summary'] == sample_item.session_summary
-    assert item['started_at'] == sample_item.started_at
-    assert item['messages'] == sample_item.messages
+    
+    assert obj.get_item(nonexistent.user_id, nonexistent.session_id) is None
+    

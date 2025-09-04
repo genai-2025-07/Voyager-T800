@@ -39,10 +39,10 @@ Depends on who has sent specific message, there are different fields in it:
 **Example item**
 
 {
-    "user_id" = "u123",
-    "session_id = "s456",
-    "summary = "Test session",
-    "started_at" = "2025-08-28T12:34:56Z",
+    "user_id" : "u123",
+    "session_id : "s456",
+    "session_summary : "Test session",
+    "started_at" : "2025-08-28T12:34:56Z",
     "messages": [
         {
             "message_id": "msg_001",
@@ -56,7 +56,7 @@ Depends on who has sent specific message, there are different fields in it:
             {
                 "message_id": "msg_002",
                 "sender": "assistant",
-                "timestamp": "2025-08-28T12:35:12Z"",
+                "timestamp": "2025-08-28T12:35:12Z",
                 "trip_data": {
                     "destination": "Amsterdam",
                     "duration_days": 1,

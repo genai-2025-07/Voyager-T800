@@ -53,13 +53,14 @@ class DynamoDBClient:
             table_name: The DynamoDB table name. Defaults to environment variable DYNAMODB_TABLE.
             region_name: The AWS region. Defaults to environment variable AWS_REGION.
         """
-        if table is None:
+        if table is not None:
+            self.table = table
+      
+        else:
             self.region_name = os.getenv('AWS_REGION', 'us-east-2')
             self.table_name = os.getenv('DYNAMODB_TABLE', 'session_metadata')
-
             self.dynamodb = boto3.resource('dynamodb', region_name=self.region_name)
-            table = self.dynamodb.Table(self.table_name)
-        self.table = table
+            self.table = self.dynamodb.Table(self.table_name)
 
     def put_item(self, session_metadata: SessionMetadata) -> int:
         """
@@ -84,12 +85,12 @@ class DynamoDBClient:
                     'messages': session_metadata.messages,
                 }
             )
-            return response['ResponseMetadata']['HTTPStatusCode']
+            return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
         except ClientError as e:
-            logger.error(f'Error putting item: {e.response["Error"]["Message"]}')
+            logger.error(f'Failed to put item into DynamoDB')
             raise
 
-    def get_item(self, session_metadata: SessionMetadata) -> dict:
+    def get_item(self, user_id:str, session_id:str) -> dict:
         """
         Returns an item from table, using unique identifier of user and session.
 
@@ -104,9 +105,13 @@ class DynamoDBClient:
         """
         try:
             response = self.table.get_item(
-                Key={'user_id': session_metadata.user_id, 'session_id': session_metadata.session_id}
+                Key={'user_id': user_id, 'session_id': session_id}
             )
-            return response['Item']
+            item = response.get('Item')
+            if item is not None:
+                return item
+            else:
+                return None
         except ClientError as e:
             logger.error(f'Error getting item: {e.response["Error"]["Message"]}')
             raise
@@ -172,8 +177,10 @@ class DynamoDBClient:
         Returns:
             dict: Dictionary containing the query results.
         """
-        return self.query_table(
-            query_params=QueryParams(key_condition_expression='user_id = :user_id'),
-            ExpressionAttributeValues={':user_id': user_id},
-            Limit=limit,
-        )
+        params = {
+            'query_params': QueryParams(key_condition_expression='user_id = :user_id'),
+            'ExpressionAttributeValues': {':user_id': user_id}
+        }
+        if limit is not None:
+            params['Limit'] = limit
+        return self.query_table(**params)
