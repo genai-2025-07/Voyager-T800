@@ -1,123 +1,65 @@
-import logging
-from pathlib import Path
 
-from app.services.weaviate.weaviate_client import WeaviateClientWrapper, load_config_from_yaml
-from app.services.weaviate.dataloader import DataLoader
-from app.services.weaviate.attraction_db_manager import AttractionDBManager
-from app.services.weaviate.schema_manager import SchemaManager, parse_weaviate_schema_config
+import logging
+
 from weaviate.classes.query import Filter
 from weaviate.classes.query import MetadataQuery
 
 from app.config.logger.logger import setup_logger
+from app.services.weaviate.weaviate_setup import setup_complete_database
+
 
 setup_logger()
-logger = logging.getLogger('app.services.weaviate.test')
-
-CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
+logger = logging.getLogger('app.services.weaviate.db_setup')
 
 def main():
-    # 2. Connect to Weaviate using our client wrapper
-    client_wrapper = WeaviateClientWrapper(CONNECTION_CONFIG)
+    """Example usage of the refactored setup."""
     try:
-        client_wrapper.connect()
-
-        health = client_wrapper.health_check()
-        if not health:
-            logger.error("Weaviate health check failed; not ready.")
-            return
-
-        logger.info("Connected to Weaviate!")
-
-        # 3. CREATE SCHEMAS FIRST
-        schema_manager = SchemaManager(client_wrapper.client)
+        # For complete setup including data population
+        db_manager, client_wrapper, insertion_results = setup_complete_database()
         
-        # Parse and create Attraction schema
-        try:
-            attraction_schema_path = Path("app/config/attraction_class_schema.yaml")
-            attraction_schema = parse_weaviate_schema_config(str(attraction_schema_path))
-            
-            try:
-                existing_collection = schema_manager.get_collection(attraction_schema.name)
-                logger.info(f"Attraction collection already exists {existing_collection}")
-            except Exception:
-                logger.info("Creating Attraction collection...")
-                schema_manager.create_collection(attraction_schema)
-                logger.info("Attraction collection created successfully!")
+        if db_manager and client_wrapper:
+            logger.info("Database setup completed successfully!")
+            # Use db_manager for queries here
+            logger.info(f"Inserted Groups: {insertion_results}")
+            for res_group in insertion_results:
+                attraction_uuid = res_group["attraction_uuid"]
+
+                fetched = db_manager.get_attraction(attraction_uuid)
+                fetched_chunks = db_manager.get_chunks_by_attraction(attraction_uuid)
+                if fetched:
+                    logger.info(f"Fetched Attraction: {fetched.get('name')} \n {fetched}")
+                else:
+                    logger.warning(f"Unable to fetch attraction with UUID {attraction_uuid}")
+                if fetched_chunks:
+                    logger.info(f"Fetched chunks:  \n {fetched_chunks}")
+                else:
+                    logger.warning(f"Unable to fetch chunks for  attraction with UUID {attraction_uuid}")
+
+            attraction_filter = Filter.by_property("city").equal("Lviv")
+            attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter, limit=50)
+            logger.info(f"Attraction filtering results {attraction_filtering_res}")
+            attraction_filter_1 = Filter.by_property("city").equal("Kyiv")
+            attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter_1, limit=50)
+            logger.info(f"Attraction filtering results {attraction_filtering_res}")
+
+            keyword = "descent"
+            attr_keyword_res = db_manager.keyword_search_attractions(
+                query=keyword, limit=50, return_metadata=MetadataQuery.full())
+            logger.info(f"Attraction keyword search result results {attr_keyword_res}")
                 
-        except Exception as e:
-            logger.error(f"Failed to create Attraction schema: {e}")
-            return
-
-        # Create the Chunk schema if it exists
-        try:
-            chunk_schema_path = Path("app/config/attraction_chunk_class_schema.yaml")
-            if chunk_schema_path.exists():
-                chunk_schema = parse_weaviate_schema_config(str(chunk_schema_path))
-                try:
-                    existing_collection = schema_manager.get_collection(chunk_schema.name)
-                    logger.info(f"Chunk collection already exists {existing_collection}")
-                except Exception:
-                    logger.info("Creating Chunk collection...")
-                    schema_manager.create_collection(chunk_schema)
-                    logger.info("Chunk collection created successfully!")
-        except Exception as e:
-            logger.warning(f"Could not create Chunk schema (optional): {e}")
-
-        # 4. Load embeddings and metadata from disk
-        embeddings_dir = Path("data/embeddings")
-        metadata_file = Path("data/attractions_metadata.csv")
-        loader = DataLoader(embeddings_dir, metadata_file)
-        grouped_attractions = loader.load_all()
-        
-        logger.info(f"Loaded {len(grouped_attractions)} attraction groups (from embeddings and metadata)")
-
-        if not grouped_attractions:
-            logger.error("No attraction data loaded; cannot proceed with insertions.")
-            return
-
-        # 5. Use the AttractionDBManager to insert attractions and their chunks.
-        db_manager = AttractionDBManager(client_wrapper.client)
-        try: 
-            attraction_with_chunks_result = db_manager.batch_insert_attractions_with_chunks(
-                grouped_attractions)["results"]
-        except Exception as insert_e:
-            logger.exception(f"Error processing groups: {insert_e}")
-
-        logger.info(f"Inserted Groups: {attraction_with_chunks_result}")
-        for res_group in attraction_with_chunks_result:
-            attraction_uuid = res_group["attraction_uuid"]
-
-            fetched = db_manager.get_attraction(attraction_uuid)
-            fetched_chunks = db_manager.get_chunks_by_attraction(attraction_uuid)
-            if fetched:
-                logger.info(f"Fetched Attraction: {fetched.get('name')} \n {fetched}")
-            else:
-                logger.warning(f"Unable to fetch attraction with UUID {attraction_uuid}")
-            if fetched_chunks:
-                logger.info(f"Fetched chunks:  \n {fetched_chunks}")
-            else:
-                logger.warning(f"Unable to fetch chunks for  attraction with UUID {attraction_uuid}")
-
-        attraction_filter = Filter.by_property("city").equal("Lviv")
-        attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter, limit=50)
-        logger.info(f"Attraction filtering results {attraction_filtering_res}")
-        attraction_filter_1 = Filter.by_property("city").equal("Kyiv")
-        attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter_1, limit=50)
-        logger.info(f"Attraction filtering results {attraction_filtering_res}")
-
-        keyword = "descent"
-        attr_keyword_res = db_manager.keyword_search_attractions(
-            query=keyword, limit=50, return_metadata=MetadataQuery.full())
-        logger.info(f"Attraction keyword search result results {attr_keyword_res}")
+            chunks_keyword_res = db_manager.keyword_search_chunks(
+                query=keyword, limit=50, return_metadata=MetadataQuery.full())
+            logger.info(f"chunk keyword search result results {chunks_keyword_res}")
+        else:
+            logger.error("Database setup failed!")
             
-        chunks_keyword_res = db_manager.keyword_search_chunks(
-            query=keyword, limit=50, return_metadata=MetadataQuery.full())
-        logger.info(f"chunk keyword search result results {chunks_keyword_res}")
     except Exception as e:
-        logger.exception(f"An error occurred: {e}")
+        logger.exception(f"Error in main: {e}")
+    
     finally:
         client_wrapper.disconnect()
-        logger.info("Disconnected from Weaviate.")
+
 
 if __name__ == "__main__":
     main()
+

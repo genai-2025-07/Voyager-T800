@@ -68,8 +68,6 @@ def attraction_from_weaviate_properties(props):
     # At this point: props may include nested dicts for 'coordinates', 'opening_hours', 'reviews'
     # Pydantic v2 will construct nested models from those dicts, so we can pass props directly.
     parsed_properties = None
-    logger.info("--------------------------props------------------------------")
-    logger.info(props)
     try:
         parsed_properties = AttractionModel(**props)
     except ValidationError as ve:
