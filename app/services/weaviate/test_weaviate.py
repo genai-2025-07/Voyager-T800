@@ -101,7 +101,6 @@ def main():
         attraction_filter = Filter.by_property("city").equal("Lviv")
         attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter, limit=50)
         logger.info(f"Attraction filtering results {attraction_filtering_res}")
-
         attraction_filter_1 = Filter.by_property("city").equal("Kyiv")
         attraction_filtering_res = db_manager.filter_attractions(filters=attraction_filter_1, limit=50)
         logger.info(f"Attraction filtering results {attraction_filtering_res}")

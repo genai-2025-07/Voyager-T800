@@ -1,9 +1,8 @@
 import logging
-from typing import List, Optional
 import weaviate
 
 from app.services.weaviate.data_models.attraction_models import (
-    AttractionWithChunks
+    AttractionWithChunks, AttractionModel, ChunkBase, CoordinatesModel
 )
 from weaviate.classes.query import Filter
 from weaviate.classes.query import MetadataQuery
@@ -11,6 +10,7 @@ from weaviate.util import generate_uuid5
 from weaviate.collections.classes.internal import (
     QueryReturn
 )
+from datetime import datetime
 from app.config.logger.logger import setup_logger
 from dotenv import load_dotenv
 
@@ -18,6 +18,65 @@ load_dotenv()
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.attraction_db_manager')
 
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, field_validator, ValidationError
+
+class WeaviateMetadata(BaseModel):
+    distance: Optional[float] = None
+    score: Optional[float] = None
+    creation_time: Optional[Union[datetime, str]] = None  # Use datetime if you want stricter typing
+    last_update_time: Optional[Union[datetime, str]] = None
+    certainty: Optional[float] = None
+    explain_score: Optional[str] = None
+    is_consistent: Optional[str] = None
+    rerank_score: Optional[float] = None
+
+
+class WeaviateObject(BaseModel):
+    uuid: Optional[str] = None
+    properties: Union[ChunkBase, AttractionModel]
+    references: Optional[Dict[str, Any]] = None
+    vector: Optional[Dict[str, Any]] = None
+    metadata: Optional[WeaviateMetadata] = None
+
+    @field_validator("uuid", mode="before")
+    def validate_uuid(cls, v):
+        return str(v)
+
+class WeaviateQueryResponse(BaseModel):
+    objects: List[WeaviateObject]
+
+def attraction_from_weaviate_properties(props):
+    # Normalize last_updated if it's a string (try ISO first, then date-only)
+    lu = props.get("last_updated")
+    if isinstance(lu, str):
+        parsed = None
+        # try ISO datetime (including offset / microseconds)
+        try:
+            parsed = datetime.fromisoformat(lu)
+        except Exception:
+            # try date only YYYY-MM-DD
+            try:
+                parsed = datetime.strptime(lu, "%Y-%m-%d")
+            except Exception:
+                parsed = None
+        if parsed is not None:
+            props["last_updated"] = parsed
+
+    props["coordinates"] = CoordinatesModel(longitude=props["coordinates"].longitude,
+                                            latitude=props["coordinates"].latitude)
+    # At this point: props may include nested dicts for 'coordinates', 'opening_hours', 'reviews'
+    # Pydantic v2 will construct nested models from those dicts, so we can pass props directly.
+    parsed_properties = None
+    logger.info("--------------------------props------------------------------")
+    logger.info(props)
+    try:
+        parsed_properties = AttractionModel(**props)
+    except ValidationError as ve:
+        # Log the error, but continue — return raw properties as fallback
+        logger.exception("Failed to parse AttractionModel from Weaviate properties (uuid=%s): %s", getattr(props, "uuid", None), ve)
+        parsed_properties = props
+    return parsed_properties
 
 class AttractionDBManager:
     """
@@ -208,12 +267,23 @@ class AttractionDBManager:
         """
         Vector search for chunks using a query vector.
         """
-        return self.chunk_collection.query.near_vector(
+        response = self.chunk_collection.query.near_vector(
             near_vector=query_vector,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(distance=True),
         )
+        objects = [
+            WeaviateObject(
+                uuid=o.uuid,
+                properties=ChunkBase(**o.properties) if o.properties else None,
+                references=getattr(o, "references", None),
+                vector=getattr(o, "vector", None),
+                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
+            )
+            for o in response.objects
+        ]
+        return WeaviateQueryResponse(objects=objects)
 
     def keyword_search_chunks(
         self,
@@ -226,13 +296,24 @@ class AttractionDBManager:
         """
         Keyword (BM25) search for chunks using a query string.
         """
-        return self.chunk_collection.query.bm25(
+        response = self.chunk_collection.query.bm25(
             query=query,
             query_properties=query_properties,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
+        objects = [
+            WeaviateObject(
+                uuid=o.uuid,
+                properties=ChunkBase(**o.properties) if o.properties else None,
+                references=getattr(o, "references", None),
+                vector=getattr(o, "vector", None),
+                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
+            )
+            for o in response.objects
+        ]
+        return WeaviateQueryResponse(objects=objects)
 
     def hybrid_search_chunks(
         self,
@@ -248,7 +329,7 @@ class AttractionDBManager:
         Hybrid search for chunks using a query string (combines vector and keyword search).
 
         """
-        return self.chunk_collection.query.hybrid(
+        response = self.chunk_collection.query.hybrid(
             query=query,
             vector=vector,
             query_properties=query_properties,
@@ -257,6 +338,17 @@ class AttractionDBManager:
             alpha=alpha,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
+        objects = [
+            WeaviateObject(
+                uuid=o.uuid,
+                properties=ChunkBase(**o.properties) if o.properties else None,
+                references=getattr(o, "references", None),
+                vector=getattr(o, "vector", None),
+                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
+            )
+            for o in response.objects
+        ]
+        return WeaviateQueryResponse(objects=objects)
         
     def filter_attractions(
         self,
@@ -267,11 +359,22 @@ class AttractionDBManager:
         """
         Filter attractions using Weaviate filters.
         """
-        return self.attraction_collection.query.fetch_objects(
+        response = self.attraction_collection.query.fetch_objects(
             filters=filters,
             limit=limit,
             return_metadata=return_metadata
         )
+        objects = [
+                WeaviateObject(
+                    uuid=o.uuid,
+                    properties=attraction_from_weaviate_properties(o.properties)if o.properties else None,
+                    references=getattr(o, "references", None),
+                    vector=getattr(o, "vector", None),
+                    metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
+                )
+                for o in response.objects
+            ]
+        return WeaviateQueryResponse(objects=objects)
 
     def keyword_search_attractions(
         self,
@@ -284,10 +387,21 @@ class AttractionDBManager:
         """
         Keyword (BM25) search for attractions using a query string.
         """
-        return self.attraction_collection.query.bm25(
+        response = self.attraction_collection.query.bm25(
             query=query,
             query_properties=query_properties,
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
+        objects = [
+                WeaviateObject(
+                    uuid=o.uuid,
+                    properties=attraction_from_weaviate_properties(o.properties)if o.properties else None,
+                    references=getattr(o, "references", None),
+                    vector=getattr(o, "vector", None),
+                    metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
+                )
+                for o in response.objects
+        ]
+        return WeaviateQueryResponse(objects=objects)

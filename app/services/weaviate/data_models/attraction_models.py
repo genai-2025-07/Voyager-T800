@@ -7,11 +7,8 @@ import re
 from enum import Enum
 from urllib.parse import urlparse
 
-
-class ChunkData(BaseModel):
-    chunk_text: str
-    embedding: List[float]
-
+class ChunkBase(BaseModel):
+    chunk_text: str = Field(..., description="Text of the chunk")
     name: str = Field(..., description="Name of the attraction.")
     city: str = Field(..., description="Name of the city where attraction is located.")
     administrative_area_level_1: Optional[str] = Field(None, description="State/Province")
@@ -20,8 +17,11 @@ class ChunkData(BaseModel):
     rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
     place_id: str = Field(..., description="Google Places ID")
 
+
+class ChunkData(ChunkBase):
+    embedding: List[float] = Field(..., description="Embdedding of the chunk")
+
     def to_weaviate_properties(self) -> Dict[str, Any]:
-        """Convert chunk data to Weaviate properties format"""
         return {
             "chunk_text": self.chunk_text,
             "name": self.name,
@@ -357,7 +357,7 @@ class AttractionModel(BaseModel):
     place_id: str = Field(..., description="Google Places ID")
     phone_number: Optional[str] = Field(None, description="Contact phone number (normalized)")
     maps_url: str = Field(..., description="Maps / website URL (maps_url)")
-    opening_hours: OpeningHoursModel = Field(None, description="Opening hours structure")
+    opening_hours: Optional[OpeningHoursModel] = Field(None, description="Opening hours structure")
     price_level: Optional[int] = Field(None, description="Price level (0-4)")
     rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
     reviews: List[ReviewModel] = Field(default_factory=list, description="List of reviews")
