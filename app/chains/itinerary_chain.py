@@ -7,6 +7,8 @@ import os
 import time
 from app.utils.read_prompt_from_file import load_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
+from app.services.weaviate.weaviate_setup import setup_complete_database
+from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from dotenv import load_dotenv
 import logging
@@ -38,6 +40,11 @@ llm = ChatGroq(
 )
 
 try:
+    db_manager, client_wrapper, result = setup_complete_database()
+except Exception as e:
+    logging.error(f"ERROR setting up database: {e}")
+
+try:
     itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
     summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
@@ -64,8 +71,10 @@ try:
 except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
-# Initialize RAG Prototype and retriever
-retriever = get_rag_retriever()
+# Initialize RAG and retriever
+retriever = setup_rag_retriever(
+    db=db_manager
+)
 
 # Chain where we will pass the last message from the chat history
 chain = RunnablePassthrough.assign(
@@ -155,7 +164,7 @@ runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
     # Always return the same memory object for session history
     # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history= get_session_memory,
+    get_session_history=get_session_memory,
     input_messages_key="user_input",
     history_messages_key="chat_history"
 )
@@ -203,9 +212,9 @@ def main():
             user_input = input("\nQuery ('q' to quit): ")
             if user_input.lower() == 'q':
                 break
-            elif user_input.lower() == 'mem':
-                print(f"\n\nMemory: {memory.buffer}")
-                continue
+            # elif user_input.lower() == 'mem':
+            #     print(f"\n\nMemory: {memory.buffer}")
+            #     continue
 
             print("\n\nAnswer: ", end='')
 
