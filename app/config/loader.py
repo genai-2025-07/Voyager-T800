@@ -242,6 +242,8 @@ class ConfigLoader:
                 var_name = var_name.strip()
                 env_val = os.getenv(var_name)
                 if env_val is None:
+                    if (default_val is None or default_val == ""):
+                        raise ValueError(f"Environment variable {var_name} not set")
                     if default_val is not None:
                         env_val = default_val
                     else:
