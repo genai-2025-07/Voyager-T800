@@ -54,13 +54,6 @@ class EmbeddingSettings(BaseConfigModel): # Assuming BaseConfigModel for extra="
     supported_extensions: set[str] = Field(default_factory=lambda: {'.txt', '.json'}, description="Supported input file extensions.")
 
 
-class Settings(BaseConfigModel):
-    app: AppSettings = Field(default_factory=AppSettings)
-    model: ModelSettings = Field(default_factory=ModelSettings)
-    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
-    logging_config_file: Optional[str] = Field(default=None)
-
-
 class ChromaSettings(BaseConfigModel):
     persist_directory: str = Field(...)
     collection: str = Field(...)
