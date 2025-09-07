@@ -183,8 +183,7 @@ def validate_arguments(args: argparse.Namespace) -> bool:
     # Config file
     if config_file_path:
         config_file = Path(config_file_path)
-        valid = validate_path(config_file, 'file')
-        valid = validate_extensions(config_file, ['yaml'])
+        valid = validate_path(config_file, 'file') and validate_extensions(config_file, ['yaml'])
 
     # Input directory
     if not input_dir.exists() or not input_dir.is_dir():
