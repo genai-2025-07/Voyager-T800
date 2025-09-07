@@ -134,7 +134,9 @@ class ConfigLoader:
 
         This method performs a deep merge where:
         - If both values are dictionaries, they are recursively merged
-        - If the override value is not a dictionary, it completely replaces the base value
+        - If both values are lists, they are merged (extend)
+        - If both values are sets, they are merged (union)
+        - If the override value is not a dictionary/list/set, it completely replaces the base value
         - All values are deep-copied to avoid modifying the original dictionaries
 
         Args:
@@ -151,8 +153,16 @@ class ConfigLoader:
         """
         result = deepcopy(base_dict)
         for key, override_value in (override_dict or {}).items():
-            if key in result and isinstance(result[key], dict) and isinstance(override_value, dict):
-                result[key] = self._recursive_merge(result[key], override_value)
+            if key in result:
+                base_value = result[key]
+                if isinstance(base_value, dict) and isinstance(override_value, dict):
+                    result[key] = self._recursive_merge(base_value, override_value)
+                elif isinstance(base_value, list) and isinstance(override_value, list):
+                    result[key].extend(deepcopy(override_value))
+                elif isinstance(base_value, set) and isinstance(override_value, set):
+                    result[key] = base_value.union(deepcopy(override_value))
+                else:
+                    result[key] = deepcopy(override_value)
             else:
                 result[key] = deepcopy(override_value)
         return result
