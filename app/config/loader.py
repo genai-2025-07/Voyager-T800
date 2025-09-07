@@ -183,6 +183,8 @@ class ConfigLoader:
                 return {k: expand(v) for k, v in value.items()}
             if isinstance(value, list):
                 return [expand(v) for v in value]
+            if isinstance(value, set):
+                return {expand(v) for v in value}
             return value
 
         self._raw_config = expand(self._raw_config)
