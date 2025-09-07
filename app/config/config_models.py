@@ -51,7 +51,7 @@ class EmbeddingSettings(BaseConfigModel): # Assuming BaseConfigModel for extra="
     retry_max_wait: float = Field(..., ge=0.0, description="Maximum wait time between retries (seconds).")
     chunking_method: Literal["sliding", "paragraph"] = Field(..., description="Method for data chunking: 'sliding' or 'paragraph'.")
     cleaning_version: str = Field(..., description="Data cleaning configuration version.")
-    supported_extensions: set[str] = Field(default_factory=lambda: {'.txt', '.json'}, description="Supported input file extensions.")
+    supported_extensions: list[str] = Field(default_factory=lambda: ['.txt', '.json'], description="Supported input file extensions.")
 
 
 class ChromaSettings(BaseConfigModel):
