@@ -1,0 +1,47 @@
+class: AttractionChunk
+description: "Chunks of wiki text for each attraction, with denormalized metadata for efficient filtering"
+vectorizer: "none"
+vectorIndexType: "dynamic"
+vectorIndexConfig:
+  distance: "cosine"
+  dynamic:
+    threshold: 10000
+properties:
+  - name: chunk_text
+    dataType:
+      - text
+    tokenization: word
+  - name: fromAttraction
+    dataType:
+      - Attraction
+  - name: name
+    dataType:
+      - text
+    tokenization: word
+  - name: city
+    dataType:
+      - text
+    tokenization: word
+  - name: administrative_area_level_1
+    dataType:
+      - text
+    tokenization: word
+  - name: administrative_area_level_2
+    dataType:
+      - text
+    tokenization: word
+  - name: tags
+    dataType:
+      - text[]
+    tokenization: word
+  - name: rating
+    dataType:
+      - number
+  - name: place_id
+    dataType:
+      - text
+    tokenization: word
+invertedIndexConfig:
+  indexTimestamps: true
+  indexNullState: true
+  indexPropertyLength: true
