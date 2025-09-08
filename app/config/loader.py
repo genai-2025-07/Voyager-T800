@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict
@@ -210,7 +211,7 @@ class ConfigLoader:
 
     def _expand_string(self, s: str) -> str:
         """
-        Expand environment variable placeholders in a single string.
+        Expand environment variable placeholders in a single string using regular expressions.
 
         This method parses a string and replaces environment variable placeholders
         with their corresponding values from the environment. It supports two formats:
@@ -224,45 +225,27 @@ class ConfigLoader:
             str: The string with all placeholders replaced by their values.
 
         Raises:
-            ValueError: If a placeholder is malformed (unclosed braces) or references
-                       an undefined environment variable without a default value.
-
-        Examples:
-            >>> _expand_string("${HOME}/config")
-            "/home/user/config"
-            >>> _expand_string("${API_URL:https://default.com}")
-            "https://default.com"  # if API_URL is not set
-            >>> _expand_string("${REQUIRED_VAR}")
-            ValueError: Environment variable 'REQUIRED_VAR' is not defined...
+            ValueError: If a placeholder references an undefined environment variable
+                        without a default value.
         """
-        # Support ${VAR} and default syntax ${VAR:default}
-        result = ""
-        i = 0
-        while i < len(s):
-            if s[i] == "$" and i + 1 < len(s) and s[i + 1] == "{":
-                j = s.find("}", i + 2)
-                if j == -1:
-                    raise ValueError(f"Unclosed environment variable placeholder in: {s[i+2:i+5]}")
-                placeholder = s[i + 2 : j]
-                if ":" in placeholder:
-                    var_name, default_val = placeholder.split(":", 1)
+        pattern = re.compile(r"\$\{([^}:]+)(?::([^\}]+))?\}")
+
+        def replace_match(match: re.Match) -> str:
+            var_name = match.group(1).strip()
+            default_val = match.group(2) # This will be None if no default was provided
+
+            env_val = os.getenv(var_name)
+
+            if env_val is None:
+                if default_val is not None:
+                    return default_val
                 else:
-                    var_name, default_val = placeholder, None
-                var_name = var_name.strip()
-                env_val = os.getenv(var_name)
-                if env_val is None:
-                    if (default_val is None or default_val == ""):
-                        raise ValueError(f"Environment variable {var_name} not set")
-                    if default_val is not None:
-                        env_val = default_val
-                    else:
-                        raise ValueError(f"Environment variable '{var_name}' is not defined for placeholder ${{{placeholder}}}")
-                result += env_val
-                i = j + 1
-            else:
-                result += s[i]
-                i += 1
-        return result
+                    raise ValueError(
+                        f"Environment variable '{var_name}' is not defined for placeholder ${{{match.group(0)[2:-1]}}}"
+                    )
+            return env_val
+
+        return pattern.sub(replace_match, s)
 
     def _validate_and_expose(self) -> None:
         """
