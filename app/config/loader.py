@@ -121,6 +121,9 @@ class ConfigLoader:
                 candidate = self.config_dir / f"{app_env}.yaml"
                 if candidate.exists():
                     self.override_path = candidate
+                else:
+                    raise FileNotFoundError(f"Config file not found: {candidate}")
+
 
         if self.override_path:
             override_data = self._load_yaml_file(self.override_path)
