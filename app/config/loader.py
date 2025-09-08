@@ -116,7 +116,13 @@ class ConfigLoader:
 
         if self.override_path is None:
             # Environment-based convenience: if APP_ENV is set to dev/prod, try that file
-            app_env = os.getenv("APP_ENV") or base.get("app", {}).get("env")
+            app_env_from_os = os.getenv("APP_ENV")
+            # Attempt to get 'app.env' from base config and expand it if it's a placeholder
+            app_env_from_base_raw = base.get("app", {}).get("env")
+            app_env_from_base_expanded = self._expand_string(app_env_from_base_raw) if isinstance(app_env_from_base_raw, str) else app_env_from_base_raw
+
+            app_env = app_env_from_os or app_env_from_base_expanded
+
             if app_env:
                 candidate = self.config_dir / f"{app_env}.yaml"
                 if candidate.exists():
