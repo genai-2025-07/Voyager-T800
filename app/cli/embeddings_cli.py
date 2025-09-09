@@ -239,7 +239,7 @@ def run_embedding_pipeline(args: argparse.Namespace) -> bool:
     """Run the embedding pipeline with the given arguments."""
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
-    config_loader = ConfigLoader(args.config)
+    config_loader = ConfigLoader(project_root=Path(__file__).resolve().parents[1], config_path=args.config)
     settings = config_loader.get_settings()
     SUPPORTED_EXTENSIONS = settings.embedding.supported_extensions
 

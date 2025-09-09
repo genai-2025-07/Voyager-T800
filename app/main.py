@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -13,7 +14,7 @@ setup_logger()
 app = FastAPI()
 app.add_middleware(RequestIDMiddleware)
 logger = logging.getLogger(__name__)
-config_loader = ConfigLoader()
+config_loader = ConfigLoader(project_root=Path(__file__).resolve().parents[1])
 settings = config_loader.get_settings()
 model = settings.model.openai.model_name
 

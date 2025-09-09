@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 import yaml
 from dotenv import load_dotenv
+from pydantic import ValidationError
 
 from app.config.config_models import Settings
 
@@ -50,7 +51,9 @@ class ConfigLoader:
             ValueError: If configuration files contain invalid YAML or structure
         """
 
-        self.project_root = project_root
+        self.project_root = Path(project_root)
+        if not self.project_root.exists():
+            raise FileNotFoundError(f"Project root not found: {self.project_root}")
         self.config_dir = self.project_root / "app" / "config"
         self.base_config_path = self.config_dir / "default.yaml"
         # Load .env early to populate environment for expansion
@@ -144,9 +147,7 @@ class ConfigLoader:
 
         This method performs a deep merge where:
         - If both values are dictionaries, they are recursively merged
-        - If both values are lists, they are merged (extend)
-        - If both values are sets, they are merged (union)
-        - If the override value is not a dictionary/list/set, it completely replaces the base value
+        - If the override value is not a dictionary, it completely replaces the base value
         - All values are deep-copied to avoid modifying the original dictionaries
 
         Args:
@@ -163,16 +164,8 @@ class ConfigLoader:
         """
         result = deepcopy(base_dict)
         for key, override_value in (override_dict or {}).items():
-            if key in result:
-                base_value = result[key]
-                if isinstance(base_value, dict) and isinstance(override_value, dict):
-                    result[key] = self._recursive_merge(base_value, override_value)
-                elif isinstance(base_value, list) and isinstance(override_value, list):
-                    result[key].extend(deepcopy(override_value))
-                elif isinstance(base_value, set) and isinstance(override_value, set):
-                    result[key] = base_value.union(deepcopy(override_value))
-                else:
-                    result[key] = deepcopy(override_value)
+            if key in result and isinstance(result[key], dict) and isinstance(override_value, dict):
+                result[key] = self._recursive_merge(result[key], override_value)
             else:
                 result[key] = deepcopy(override_value)
         return result
@@ -203,8 +196,6 @@ class ConfigLoader:
                 return {k: expand(v) for k, v in value.items()}
             if isinstance(value, list):
                 return [expand(v) for v in value]
-            if isinstance(value, set):
-                return {expand(v) for v in value}
             return value
 
         self._raw_config = expand(self._raw_config)
@@ -241,7 +232,7 @@ class ConfigLoader:
                     return default_val
                 else:
                     raise ValueError(
-                        f"Environment variable '{var_name}' is not defined for placeholder ${{{match.group(0)[2:-1]}}}"
+                        f"Environment variable '{str(var_name)}' is not defined for placeholder ${{{match.group(0)[2:-1]}}}"
                     )
             return env_val
 
@@ -261,7 +252,13 @@ class ConfigLoader:
             pydantic.ValidationError: If the configuration data does not match
                                      the expected schema or field constraints.
         """
-        self.settings = Settings(**self._raw_config)
+        try:
+            self.settings = Settings(**self._raw_config)
+        except ValidationError as e:
+            error_message = ""
+            for error in e.errors():
+                error_message += f"type:{error['type']} loc:{error['loc']} msg:{error['msg']} input:{error['input']}\n"
+            raise ValueError(f"Validation error: {error_message}")
 
     def get_settings(self) -> Settings:
         """

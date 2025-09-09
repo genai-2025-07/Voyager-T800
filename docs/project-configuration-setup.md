@@ -28,6 +28,10 @@ logging_config_file: null
 #### **2. Environment-Specific Overrides (Optional)**
 
 For different deployment environments (e.g., `dev`, `prod`), there are corresponding YAML files (e.g., `app/config/dev.yaml`, `app/config/prod.yaml`). These files only need to contain the settings that differ from `default.yaml`.
+> **Important!**
+>
+> If some setting values is instance of list or set the override will completely replace the base (default) value.
+
 
 Example `app/config/prod.yaml`:
 
