@@ -2,10 +2,10 @@ import logging
 import weaviate
 
 from app.services.weaviate.data_models.attraction_models import (
-    AttractionWithChunks, AttractionModel, ChunkBase, CoordinatesModel
+    AttractionWithChunks, AttractionModel, ChunkBase,
+    CoordinatesModel, PropertyValidator, SearchResultAttractionModel
 )
-from weaviate.classes.query import Filter
-from weaviate.classes.query import MetadataQuery
+from weaviate.classes.query import Filter, QueryReference, MetadataQuery
 from weaviate.util import generate_uuid5
 from weaviate.collections.classes.internal import (
     QueryReturn
@@ -18,7 +18,7 @@ load_dotenv()
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.attraction_db_manager')
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Type
 from pydantic import BaseModel, field_validator, ValidationError
 
 class WeaviateMetadata(BaseModel):
@@ -35,7 +35,7 @@ class WeaviateMetadata(BaseModel):
 class WeaviateObject(BaseModel):
     uuid: Optional[str] = None
     properties: Union[ChunkBase, AttractionModel]
-    references: Optional[Dict[str, Any]] = None
+    references: Optional[SearchResultAttractionModel] = None
     vector: Optional[Dict[str, Any]] = None
     metadata: Optional[WeaviateMetadata] = None
 
@@ -76,6 +76,7 @@ def attraction_from_weaviate_properties(props):
         parsed_properties = props
     return parsed_properties
 
+
 class AttractionDBManager:
     """
     CRUD manager for Attraction and Chunk data in Weaviate v4.
@@ -87,6 +88,133 @@ class AttractionDBManager:
         self.client = client
         self.attraction_collection = client.collections.get(attraction_collection_name)
         self.chunk_collection = client.collections.get(chunk_collection_name)
+        self.prop_validator = PropertyValidator(logger=logger)
+
+    def _parse_last_updated_if_string(self, props: dict, key: str = "last_updated"):
+        """Normalize last_updated into datetime if it's an ISO/date string."""
+        if key not in props:
+            return
+        lu = props.get(key)
+        if isinstance(lu, str):
+            parsed = None
+            try:
+                parsed = datetime.fromisoformat(lu)
+            except Exception:
+                try:
+                    parsed = datetime.strptime(lu, "%Y-%m-%d")
+                except Exception:
+                    parsed = None
+            if parsed is not None:
+                props[key] = parsed
+
+    def _ensure_coordinates_model(self, props: dict, coord_key: str = "coordinates"):
+        """Ensure coordinates is a CoordinatesModel instance (recreate from existing object/dict)."""
+        if coord_key not in props:
+            return
+        c = props[coord_key]
+        # Accept either a model-like object with attributes or a dict
+        try:
+            lon = getattr(c, "longitude", None) if not isinstance(c, dict) else c.get("longitude")
+            lat = getattr(c, "latitude", None) if not isinstance(c, dict) else c.get("latitude")
+            props[coord_key] = CoordinatesModel(longitude=lon, latitude=lat)
+        except Exception:
+            # leave as-is; downstream validation will catch it
+            logger.debug("Failed to coerce coordinates to CoordinatesModel: %s", c)
+
+    def _parse_properties_to_model(self, props: dict, model_cls: Optional[Type[BaseModel]]):
+        """
+        Try to parse `props` into the provided pydantic model class. On validation error,
+        logs the exception and returns raw props as fallback (same behaviour as before).
+        """
+        if not model_cls:
+            return props
+        try:
+            return model_cls(**props)
+        except ValidationError as ve:
+            # preserve original behavior: log and fallback to raw props
+            logger.exception("Failed to parse %s from Weaviate properties: %s", model_cls.__name__, ve)
+            return props
+
+    def _metadata_from_obj(self, o) -> Optional[WeaviateMetadata]:
+        if not getattr(o, "metadata", None):
+            return None
+        # weaviate metadata is usually an object with attributes; convert to dict if needed
+        md = getattr(o, "metadata")
+        try:
+            return WeaviateMetadata(**md.__dict__)
+        except Exception:
+            # safest fallback: try to treat it as dict
+            try:
+                return WeaviateMetadata(**dict(md))
+            except Exception:
+                logger.debug("Unable to convert metadata to WeaviateMetadata: %s", md)
+                return None
+
+    def _build_return_references(self, return_attraction_properties: Optional[List[str]]):
+        """
+        Validate and build QueryReference list (or None) for returning attraction properties
+        attached by 'fromAttraction' link.
+        """
+        if not return_attraction_properties:
+            return None
+
+        invalid = self.prop_validator.validate_attraction_properties(return_attraction_properties)
+        if invalid:
+            logger.error(f"Invalid attraction properties in search: {invalid}")
+            return_attraction_properties = [p for p in return_attraction_properties if p not in invalid]
+            if not return_attraction_properties:
+                return None
+
+        return [
+            QueryReference(
+                link_on="fromAttraction",
+                return_properties=return_attraction_properties
+            )
+        ]
+
+    def _objects_from_response(
+        self,
+        response,
+        properties_model_cls: Optional[Type[BaseModel]] = None,
+        properties_postprocess: Optional[callable] = None,
+    ) -> List[WeaviateObject]:
+        """
+        Convert a weaviate response (with .objects) into a list of WeaviateObject instances.
+        properties_model_cls: Pydantic model class to try to construct from each object's properties
+        properties_postprocess: optional callable(props_dict) that will be run before model construction
+        """
+        objs = []
+        for o in getattr(response, "objects", []) or []:
+            raw_props = o.properties or {}
+            # allow last_updated normalization + coords coercion if caller wants
+            if properties_postprocess:
+                try:
+                    properties_postprocess(raw_props)
+                except Exception as ex:
+                    logger.debug("Error in properties_postprocess: %s", ex)
+
+            parsed_props = None
+            if properties_model_cls:
+                parsed_props = self._parse_properties_to_model(raw_props, properties_model_cls)
+            else:
+                parsed_props = raw_props
+
+            # references: try to unpack into SearchResultAttractionModel when present
+            references_parsed = self._unpack_references(getattr(o, "references", None))
+
+            metadata_obj = self._metadata_from_obj(o)
+
+            # construct WeaviateObject exactly as before
+            objs.append(
+                WeaviateObject(
+                    uuid=str(getattr(o, "uuid", None)),
+                    properties=parsed_props,
+                    references=references_parsed,
+                    vector=getattr(o, "vector", None),
+                    metadata=metadata_obj
+                )
+            )
+        return objs
 
     def _prepare_objects(self, items: list[AttractionWithChunks]):
         objects_to_add = []
@@ -174,6 +302,42 @@ class AttractionDBManager:
             for i, error_obj in enumerate(failed, 1):
                 logger.error(f"Failed object {i}: {error_obj}")
 
+    def _unpack_references(self, refs):
+        """
+        Convert references returned by weaviate into SearchResultAttractionModel when possible.
+        This reuses date/coordinate normalization logic similar to attraction_from_weaviate_properties.
+        """
+        if not refs:
+            return None
+
+        # The existing logic expected a dict of reference lists keyed by property (e.g. "fromAttraction")
+        for k, v in refs.items():
+            if k != "fromAttraction":
+                logger.error(f"Unknown type of reference in returned from search: {k}")
+                continue
+            else:
+                if len(v.objects) != 1:
+                    logger.error(f"More than one or 0 references returned from search {v.objects}")
+                    # fallback: return raw
+                    return None
+                ref_obj = v.objects[0]
+                attraction_props = ref_obj.properties or {}
+                attraction_uuid = str(ref_obj.uuid)
+
+                # reuse date normalization
+                self._parse_last_updated_if_string(attraction_props, "last_updated")
+                # ensure coordinates
+                self._ensure_coordinates_model(attraction_props, "coordinates")
+
+                try:
+                    return SearchResultAttractionModel(**attraction_props)
+                except ValidationError as ve:
+                    logger.exception(
+                        "Failed to parse SearchResultAttractionModel from Weaviate properties (uuid=%s): %s",
+                        attraction_uuid, ve
+                    )
+                    return attraction_props
+
     def batch_insert_attractions_with_chunks(
             self,
             items: list[AttractionWithChunks],
@@ -194,7 +358,7 @@ class AttractionDBManager:
             self.attraction_collection.batch.wait_for_vector_indexing()
         self._handle_batch_errors()
         return {"results": results, "skipped": skipped}
-    
+
     def get_attraction(self, uuid: str) -> Optional[dict]:
         """
         Fetch an attraction by UUID.
@@ -208,7 +372,7 @@ class AttractionDBManager:
         """
         response = self.chunk_collection.query.fetch_objects(
             filters=Filter.by_ref("fromAttraction").by_id().equal(attraction_uuid),
-            limit=1000  # Adjust as needed
+            limit=1000
         )
         return [obj.properties for obj in response.objects]
 
@@ -237,11 +401,9 @@ class AttractionDBManager:
         Delete an attraction and all its linked chunks by UUID.
         """
         try:
-            # Delete all chunks linked to this attraction
             self.chunk_collection.data.delete_many(
                 where=Filter.by_ref("fromAttraction").by_id().equal(uuid)
             )
-            # Delete the attraction itself
             self.attraction_collection.data.delete_by_id(uuid)
         except Exception as e:
             logger.error(f"Failed to delete attraction {uuid} and its chunks: {e}")
@@ -260,27 +422,28 @@ class AttractionDBManager:
         query_vector: list,
         limit: int = 10,
         filters: Optional[Filter] = None,
-        return_metadata: Optional[MetadataQuery] = None
-    ) -> QueryReturn:
+        return_metadata: Optional[MetadataQuery] = None,
+        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+    ):
         """
         Vector search for chunks using a query vector.
         """
+        return_references = self._build_return_references(return_attraction_properties)
+
         response = self.chunk_collection.query.near_vector(
             near_vector=query_vector,
             limit=limit,
             filters=filters,
-            return_metadata=return_metadata or MetadataQuery(distance=True),
+            return_metadata=return_metadata,
+            return_references=return_references
         )
-        objects = [
-            WeaviateObject(
-                uuid=o.uuid,
-                properties=ChunkBase(**o.properties) if o.properties else None,
-                references=getattr(o, "references", None),
-                vector=getattr(o, "vector", None),
-                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
-            )
-            for o in response.objects
-        ]
+
+        # ChunkBase is the model we want for chunk properties
+        objects = self._objects_from_response(
+            response,
+            properties_model_cls=ChunkBase,
+            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
+        )
         return WeaviateQueryResponse(objects=objects)
 
     def keyword_search_chunks(
@@ -290,27 +453,32 @@ class AttractionDBManager:
         limit: int = 10,
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None,
+        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
     ) -> QueryReturn:
         """
         Keyword (BM25) search for chunks using a query string.
         """
+        return_references = self._build_return_references(return_attraction_properties)
+
+        if query_properties:
+            invalid = self.prop_validator.validate_chunk_query_properties(query_properties)
+            if invalid:
+                logger.error(f"Invalid attraction properties in keyword search: {invalid}")
+                query_properties = [p for p in query_properties if p not in invalid]
+
         response = self.chunk_collection.query.bm25(
             query=query,
             query_properties=query_properties,
             limit=limit,
             filters=filters,
-            return_metadata=return_metadata or MetadataQuery(score=True)
+            return_metadata=return_metadata or MetadataQuery(score=True),
+            return_references=return_references
         )
-        objects = [
-            WeaviateObject(
-                uuid=o.uuid,
-                properties=ChunkBase(**o.properties) if o.properties else None,
-                references=getattr(o, "references", None),
-                vector=getattr(o, "vector", None),
-                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
-            )
-            for o in response.objects
-        ]
+        objects = self._objects_from_response(
+            response,
+            properties_model_cls=ChunkBase,
+            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
+        )
         return WeaviateQueryResponse(objects=objects)
 
     def hybrid_search_chunks(
@@ -321,12 +489,20 @@ class AttractionDBManager:
         limit: int = 10,
         filters: Optional[Filter] = None,
         alpha: float = 0.75,
-        return_metadata: Optional[MetadataQuery] = None
+        return_metadata: Optional[MetadataQuery] = None,
+        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
     ) -> QueryReturn:
         """
         Hybrid search for chunks using a query string (combines vector and keyword search).
-
         """
+        return_references = self._build_return_references(return_attraction_properties)
+
+        if query_properties:
+            invalid = self.prop_validator.validate_chunk_query_properties(query_properties)
+            if invalid:
+                logger.error(f"Invalid attraction properties in hybrid search: {invalid}")
+                query_properties = [p for p in query_properties if p not in invalid]
+
         response = self.chunk_collection.query.hybrid(
             query=query,
             vector=vector,
@@ -334,20 +510,17 @@ class AttractionDBManager:
             limit=limit,
             filters=filters,
             alpha=alpha,
-            return_metadata=return_metadata or MetadataQuery(score=True)
+            return_metadata=return_metadata or MetadataQuery(score=True),
+            return_references=return_references
         )
-        objects = [
-            WeaviateObject(
-                uuid=o.uuid,
-                properties=ChunkBase(**o.properties) if o.properties else None,
-                references=getattr(o, "references", None),
-                vector=getattr(o, "vector", None),
-                metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
-            )
-            for o in response.objects
-        ]
+
+        objects = self._objects_from_response(
+            response,
+            properties_model_cls=ChunkBase,
+            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
+        )
         return WeaviateQueryResponse(objects=objects)
-        
+
     def filter_attractions(
         self,
         filters: Filter,
@@ -362,16 +535,27 @@ class AttractionDBManager:
             limit=limit,
             return_metadata=return_metadata
         )
-        objects = [
-                WeaviateObject(
-                    uuid=o.uuid,
-                    properties=attraction_from_weaviate_properties(o.properties)if o.properties else None,
-                    references=getattr(o, "references", None),
-                    vector=getattr(o, "vector", None),
-                    metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
-                )
-                for o in response.objects
-            ]
+
+        # for attractions we want the attraction_from_weaviate_properties logic
+        def postprocess(p):
+            self._parse_last_updated_if_string(p, "last_updated")
+            self._ensure_coordinates_model(p, "coordinates")
+
+        objects = self._objects_from_response(
+            response,
+            properties_model_cls=None,  # we will run custom parsing below for attractions
+            properties_postprocess=postprocess
+        )
+
+        # convert any raw props into AttractionModel where possible (maintain original behavior)
+        for wo in objects:
+            if wo.properties and not isinstance(wo.properties, AttractionModel):
+                try:
+                    wo.properties = attraction_from_weaviate_properties(wo.properties)
+                except Exception:
+                    # attraction_from_weaviate_properties logs on its own
+                    pass
+
         return WeaviateQueryResponse(objects=objects)
 
     def keyword_search_attractions(
@@ -385,6 +569,12 @@ class AttractionDBManager:
         """
         Keyword (BM25) search for attractions using a query string.
         """
+        if query_properties:
+            invalid = self.prop_validator.validate_attraction_query_properties(query_properties)
+            if invalid:
+                logger.error(f"Invalid attraction properties in attraction keyword search: {invalid}")
+                query_properties = [p for p in query_properties if p not in invalid]
+
         response = self.attraction_collection.query.bm25(
             query=query,
             query_properties=query_properties,
@@ -392,14 +582,20 @@ class AttractionDBManager:
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True)
         )
-        objects = [
-                WeaviateObject(
-                    uuid=o.uuid,
-                    properties=attraction_from_weaviate_properties(o.properties)if o.properties else None,
-                    references=getattr(o, "references", None),
-                    vector=getattr(o, "vector", None),
-                    metadata=WeaviateMetadata(**o.metadata.__dict__) if o.metadata else None
-                )
-                for o in response.objects
-        ]
+
+        # same postprocess for attractions
+        def postprocess(p):
+            self._parse_last_updated_if_string(p, "last_updated")
+            self._ensure_coordinates_model(p, "coordinates")
+
+        objects = self._objects_from_response(response, properties_model_cls=None, properties_postprocess=postprocess)
+
+        # convert any raw props into AttractionModel where possible (maintain original behavior)
+        for wo in objects:
+            if wo.properties and not isinstance(wo.properties, AttractionModel):
+                try:
+                    wo.properties = attraction_from_weaviate_properties(wo.properties)
+                except Exception:
+                    pass
+
         return WeaviateQueryResponse(objects=objects)
