@@ -10,6 +10,7 @@ from weaviate.util import generate_uuid5
 from weaviate.collections.classes.internal import (
     QueryReturn
 )
+from weaviate.classes.data import GeoCoordinate
 from datetime import datetime
 from app.config.logger.logger import setup_logger
 from dotenv import load_dotenv
@@ -24,7 +25,7 @@ from pydantic import BaseModel, field_validator, ValidationError
 class WeaviateMetadata(BaseModel):
     distance: Optional[float] = None
     score: Optional[float] = None
-    creation_time: Optional[Union[datetime, str]] = None  # Use datetime if you want stricter typing
+    creation_time: Optional[Union[datetime, str]] = None
     last_update_time: Optional[Union[datetime, str]] = None
     certainty: Optional[float] = None
     explain_score: Optional[str] = None
@@ -46,36 +47,6 @@ class WeaviateObject(BaseModel):
 class WeaviateQueryResponse(BaseModel):
     objects: List[WeaviateObject]
 
-def attraction_from_weaviate_properties(props):
-    # Normalize last_updated if it's a string (try ISO first, then date-only)
-    lu = props.get("last_updated")
-    if isinstance(lu, str):
-        parsed = None
-        # try ISO datetime (including offset / microseconds)
-        try:
-            parsed = datetime.fromisoformat(lu)
-        except Exception:
-            # try date only YYYY-MM-DD
-            try:
-                parsed = datetime.strptime(lu, "%Y-%m-%d")
-            except Exception:
-                parsed = None
-        if parsed is not None:
-            props["last_updated"] = parsed
-
-    props["coordinates"] = CoordinatesModel(longitude=props["coordinates"].longitude,
-                                            latitude=props["coordinates"].latitude)
-    # At this point: props may include nested dicts for 'coordinates', 'opening_hours', 'reviews'
-    # Pydantic v2 will construct nested models from those dicts, so we can pass props directly.
-    parsed_properties = None
-    try:
-        parsed_properties = AttractionModel(**props)
-    except ValidationError as ve:
-        # Log the error, but continue — return raw properties as fallback
-        logger.exception("Failed to parse AttractionModel from Weaviate properties (uuid=%s): %s", getattr(props, "uuid", None), ve)
-        parsed_properties = props
-    return parsed_properties
-
 
 class AttractionDBManager:
     """
@@ -90,36 +61,20 @@ class AttractionDBManager:
         self.chunk_collection = client.collections.get(chunk_collection_name)
         self.prop_validator = PropertyValidator(logger=logger)
 
-    def _parse_last_updated_if_string(self, props: dict, key: str = "last_updated"):
-        """Normalize last_updated into datetime if it's an ISO/date string."""
-        if key not in props:
-            return
-        lu = props.get(key)
-        if isinstance(lu, str):
-            parsed = None
-            try:
-                parsed = datetime.fromisoformat(lu)
-            except Exception:
-                try:
-                    parsed = datetime.strptime(lu, "%Y-%m-%d")
-                except Exception:
-                    parsed = None
-            if parsed is not None:
-                props[key] = parsed
-
     def _ensure_coordinates_model(self, props: dict, coord_key: str = "coordinates"):
-        """Ensure coordinates is a CoordinatesModel instance (recreate from existing object/dict)."""
+        """Ensure coordinates is a CoordinatesModel instance (recreate from existing GeoCoordinate object)."""
         if coord_key not in props:
             return
         c = props[coord_key]
-        # Accept either a model-like object with attributes or a dict
         try:
-            lon = getattr(c, "longitude", None) if not isinstance(c, dict) else c.get("longitude")
-            lat = getattr(c, "latitude", None) if not isinstance(c, dict) else c.get("latitude")
-            props[coord_key] = CoordinatesModel(longitude=lon, latitude=lat)
+            assert isinstance(c, GeoCoordinate) is True
         except Exception:
             # leave as-is; downstream validation will catch it
-            logger.debug("Failed to coerce coordinates to CoordinatesModel: %s", c)
+            logger.error("Failed to coerce coordinates to CoordinatesModel, unsuported input type: %s", c)
+        
+        lon = getattr(c, "longitude", None)
+        lat = getattr(c, "latitude", None)
+        props[coord_key] = CoordinatesModel(longitude=lon, latitude=lat)
 
     def _parse_properties_to_model(self, props: dict, model_cls: Optional[Type[BaseModel]]):
         """
@@ -131,24 +86,18 @@ class AttractionDBManager:
         try:
             return model_cls(**props)
         except ValidationError as ve:
-            # preserve original behavior: log and fallback to raw props
-            logger.exception("Failed to parse %s from Weaviate properties: %s", model_cls.__name__, ve)
+            logger.error("Failed to parse %s from Weaviate properties: %s", model_cls.__name__, ve)
             return props
 
     def _metadata_from_obj(self, o) -> Optional[WeaviateMetadata]:
         if not getattr(o, "metadata", None):
             return None
-        # weaviate metadata is usually an object with attributes; convert to dict if needed
         md = getattr(o, "metadata")
         try:
             return WeaviateMetadata(**md.__dict__)
         except Exception:
-            # safest fallback: try to treat it as dict
-            try:
-                return WeaviateMetadata(**dict(md))
-            except Exception:
-                logger.debug("Unable to convert metadata to WeaviateMetadata: %s", md)
-                return None
+            logger.error("Unable to convert metadata to WeaviateMetadata: %s", md)
+            return None
 
     def _build_return_references(self, return_attraction_properties: Optional[List[str]]):
         """
@@ -186,12 +135,12 @@ class AttractionDBManager:
         objs = []
         for o in getattr(response, "objects", []) or []:
             raw_props = o.properties or {}
-            # allow last_updated normalization + coords coercion if caller wants
+            # allow coords coercion
             if properties_postprocess:
                 try:
                     properties_postprocess(raw_props)
                 except Exception as ex:
-                    logger.debug("Error in properties_postprocess: %s", ex)
+                    logger.error("Error in properties_postprocess: %s", ex)
 
             parsed_props = None
             if properties_model_cls:
@@ -305,12 +254,11 @@ class AttractionDBManager:
     def _unpack_references(self, refs):
         """
         Convert references returned by weaviate into SearchResultAttractionModel when possible.
-        This reuses date/coordinate normalization logic similar to attraction_from_weaviate_properties.
         """
         if not refs:
             return None
 
-        # The existing logic expected a dict of reference lists keyed by property (e.g. "fromAttraction")
+        # The existing logic expects a dict of reference lists keyed by property (e.g. "fromAttraction")
         for k, v in refs.items():
             if k != "fromAttraction":
                 logger.error(f"Unknown type of reference in returned from search: {k}")
@@ -323,16 +271,13 @@ class AttractionDBManager:
                 ref_obj = v.objects[0]
                 attraction_props = ref_obj.properties or {}
                 attraction_uuid = str(ref_obj.uuid)
-
-                # reuse date normalization
-                self._parse_last_updated_if_string(attraction_props, "last_updated")
                 # ensure coordinates
                 self._ensure_coordinates_model(attraction_props, "coordinates")
 
                 try:
                     return SearchResultAttractionModel(**attraction_props)
                 except ValidationError as ve:
-                    logger.exception(
+                    logger.error(
                         "Failed to parse SearchResultAttractionModel from Weaviate properties (uuid=%s): %s",
                         attraction_uuid, ve
                     )
@@ -442,7 +387,6 @@ class AttractionDBManager:
         objects = self._objects_from_response(
             response,
             properties_model_cls=ChunkBase,
-            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
         )
         return WeaviateQueryResponse(objects=objects)
 
@@ -477,7 +421,6 @@ class AttractionDBManager:
         objects = self._objects_from_response(
             response,
             properties_model_cls=ChunkBase,
-            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
         )
         return WeaviateQueryResponse(objects=objects)
 
@@ -517,7 +460,6 @@ class AttractionDBManager:
         objects = self._objects_from_response(
             response,
             properties_model_cls=ChunkBase,
-            properties_postprocess=lambda p: self._parse_last_updated_if_string(p, "last_updated")
         )
         return WeaviateQueryResponse(objects=objects)
 
@@ -536,25 +478,14 @@ class AttractionDBManager:
             return_metadata=return_metadata
         )
 
-        # for attractions we want the attraction_from_weaviate_properties logic
         def postprocess(p):
-            self._parse_last_updated_if_string(p, "last_updated")
             self._ensure_coordinates_model(p, "coordinates")
 
         objects = self._objects_from_response(
             response,
-            properties_model_cls=None,  # we will run custom parsing below for attractions
+            properties_model_cls=AttractionModel,  # we will run custom parsing below for attractions
             properties_postprocess=postprocess
         )
-
-        # convert any raw props into AttractionModel where possible (maintain original behavior)
-        for wo in objects:
-            if wo.properties and not isinstance(wo.properties, AttractionModel):
-                try:
-                    wo.properties = attraction_from_weaviate_properties(wo.properties)
-                except Exception:
-                    # attraction_from_weaviate_properties logs on its own
-                    pass
 
         return WeaviateQueryResponse(objects=objects)
 
@@ -585,17 +516,8 @@ class AttractionDBManager:
 
         # same postprocess for attractions
         def postprocess(p):
-            self._parse_last_updated_if_string(p, "last_updated")
             self._ensure_coordinates_model(p, "coordinates")
 
-        objects = self._objects_from_response(response, properties_model_cls=None, properties_postprocess=postprocess)
-
-        # convert any raw props into AttractionModel where possible (maintain original behavior)
-        for wo in objects:
-            if wo.properties and not isinstance(wo.properties, AttractionModel):
-                try:
-                    wo.properties = attraction_from_weaviate_properties(wo.properties)
-                except Exception:
-                    pass
+        objects = self._objects_from_response(response, properties_model_cls=AttractionModel, properties_postprocess=postprocess)
 
         return WeaviateQueryResponse(objects=objects)

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Optional, Tuple, Dict, Any
 
 from app.services.weaviate.weaviate_client import WeaviateClientWrapper, load_config_from_yaml
 from app.services.weaviate.dataloader import DataLoader
@@ -10,23 +11,6 @@ from app.config.logger.logger import setup_logger
 
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
-
-CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
-
-import logging
-from pathlib import Path
-from typing import Optional, Tuple, Dict, Any
-
-from app.services.weaviate.weaviate_client import WeaviateClientWrapper, load_config_from_yaml
-from app.services.weaviate.dataloader import DataLoader
-from app.services.weaviate.attraction_db_manager import AttractionDBManager
-from app.services.weaviate.schema_manager import SchemaManager, parse_weaviate_schema_config
-
-
-from app.config.logger.logger import setup_logger
-
-setup_logger()
-logger = logging.getLogger('app.services.weaviate.db_setup')
 
 CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
 ATTRACTION_SCHEMA_PATH = "app/config/attraction_class_schema.yaml"
