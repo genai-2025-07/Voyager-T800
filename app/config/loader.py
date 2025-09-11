@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict
@@ -132,7 +133,7 @@ class ConfigLoader:
                 if candidate.exists():
                     self.override_path = candidate
                 else:
-                    raise FileNotFoundError(f"Config file not found: {candidate}")
+                    warnings.warn(f"Config file not found: {candidate}")
 
 
         if self.override_path:
@@ -257,8 +258,8 @@ class ConfigLoader:
         except ValidationError as e:
             error_message = ""
             for error in e.errors():
-                error_message += f"type:{error['type']} loc:{error['loc']} msg:{error['msg']} input:{error['input']}\n"
-            raise ValueError(f"Validation error: {error_message}")
+                error_message += f"error_type:{error['type']} error_location:{error['loc']} error_message:{error['msg']}\n"
+            raise ValueError(f"An error occurred while validating the configuration: {error_message}")
 
     def get_settings(self) -> Settings:
         """

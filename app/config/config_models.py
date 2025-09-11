@@ -36,8 +36,8 @@ class GroqSettings(BaseConfigModel):
 
 
 class ModelSettings(BaseConfigModel):
-    openai: OpenAISettings = Field(default_factory=OpenAISettings)
-    groq: GroqSettings = Field(default_factory=GroqSettings)
+    openai: Optional[OpenAISettings] = None
+    groq: Optional[GroqSettings] = None
 
 
 class EmbeddingSettings(BaseConfigModel): # Assuming BaseConfigModel for extra="forbid"
@@ -71,8 +71,8 @@ class WeaviateSettings(BaseConfigModel):
 
 class VectorDBSettings(BaseConfigModel):
     provider: Literal["chroma", "weaviate"] = Field(...)
-    chroma: ChromaSettings = Field(default_factory=ChromaSettings)
-    weaviate: WeaviateSettings = Field(default_factory=WeaviateSettings)
+    chroma: Optional[ChromaSettings] = None
+    weaviate: Optional[WeaviateSettings] = None
 
 
 class SummaryMemorySettings(BaseConfigModel):

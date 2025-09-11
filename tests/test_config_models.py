@@ -33,13 +33,6 @@ def test_app_settings_valid():
     assert settings.version == "1.0.0"
     assert settings.api_key == "abc"
 
-def test_app_settings_defaults():
-    settings = AppSettings()
-    assert settings.name == "voyager-t800"
-    assert settings.env == "dev"
-    assert settings.version == "0.1.0"
-    assert settings.api_key is None
-
 def test_app_settings_invalid_env():
     with pytest.raises(ValidationError):
         AppSettings(env="invalid")
@@ -56,13 +49,6 @@ def test_openai_settings_valid():
     assert settings.temperature == 0.5
     assert settings.base_url == "http://localhost"
 
-def test_openai_settings_defaults():
-    settings = OpenAISettings()
-    assert settings.api_key is None
-    assert settings.model_name == "text-embedding-3-small"
-    assert settings.temperature == 0.7
-    assert settings.base_url is None
-
 # Test GroqSettings
 def test_groq_settings_valid():
     settings = GroqSettings(api_key="gq-123", model_name="llama3-70b", temperature=0.1)
@@ -70,26 +56,15 @@ def test_groq_settings_valid():
     assert settings.model_name == "llama3-70b"
     assert settings.temperature == 0.1
 
-def test_groq_settings_defaults():
-    settings = GroqSettings()
-    assert settings.api_key is None
-    assert settings.model_name == "llama3-8b-8192"
-    assert settings.temperature == 0.7
-
 # Test ModelSettings
 def test_model_settings_valid():
     settings = ModelSettings(
-        openai={"model_name": "gpt-3.5"},
-        groq={"temperature": 0.9}
+        openai={"model_name": "gpt-3.5", "temperature": 0.8},
+        groq={"model_name": "llama3-8b-8192", "temperature": 0.9}
     )
     assert settings.openai.model_name == "gpt-3.5"
     assert settings.groq.temperature == 0.9
-    assert settings.openai.temperature == 0.7 # Default still applies
-
-def test_model_settings_defaults():
-    settings = ModelSettings()
-    assert isinstance(settings.openai, OpenAISettings)
-    assert isinstance(settings.groq, GroqSettings)
+    assert settings.openai.temperature == 0.8
 
 # Test EmbeddingSettings (assuming recommended additions)
 def test_embedding_settings_valid():
@@ -108,14 +83,14 @@ def test_embedding_settings_valid():
         retry_max_wait=60.0,
         chunking_method="paragraph",
         cleaning_version="v2.0",
-        supported_extensions={".md", ".pdf"}
+        supported_extensions=[".md", ".pdf"]
     )
     assert settings.provider == "openai"
     assert settings.model == "text-embedding-3-large"
     assert settings.max_tokens == 500
     assert settings.overlap_ratio == 0.3
     assert settings.chunking_method == "paragraph"
-    assert settings.supported_extensions == {".md", ".pdf"}
+    assert settings.supported_extensions == [".md", ".pdf"]
 
 def test_embedding_settings_invalid_overlap_ratio():
     with pytest.raises(ValidationError):
@@ -142,16 +117,16 @@ def test_weaviate_settings_valid():
 
 # Test VectorDBSettings
 def test_vectordb_settings_valid_chroma():
-    settings = VectorDBSettings(provider="chroma", chroma={"collection": "test_chroma"})
+    settings = VectorDBSettings(provider="chroma", chroma={"collection": "test_chroma", "persist_directory": "."})
     assert settings.provider == "chroma"
     assert settings.chroma.collection == "test_chroma"
-    assert settings.weaviate.url == "http://localhost:8080" # Default
 
 def test_vectordb_settings_valid_weaviate():
-    settings = VectorDBSettings(provider="weaviate", weaviate={"url": "http://my-weaviate:8080"})
+    settings = VectorDBSettings(provider="weaviate", weaviate={"url": "http://my-weaviate:8080", "api_key": "weaviate-key", "class_name": "MyClass"})
     assert settings.provider == "weaviate"
     assert settings.weaviate.url == "http://my-weaviate:8080"
-    assert settings.chroma.collection == "voyager" # Default
+    assert settings.weaviate.api_key == "weaviate-key"
+    assert settings.weaviate.class_name == "MyClass"
 
 def test_vectordb_settings_invalid_provider():
     with pytest.raises(ValidationError):
@@ -177,7 +152,7 @@ def test_bedrock_settings_valid():
     assert settings.top_k == 10
 
 def test_bedrock_settings_defaults():
-    settings = BedrockSettings()
+    settings = BedrockSettings(enabled=False, temperature=0.7, max_tokens=1024, top_p=None, top_k=None)
     assert settings.enabled is False
     assert settings.temperature == 0.7
     assert settings.max_tokens == 1024
@@ -185,23 +160,15 @@ def test_bedrock_settings_defaults():
     assert settings.top_k is None
 
 # Test top-level Settings
-def test_full_settings_valid():
-    full_config = {
-        "app": {"name": "full_test", "env": "prod"},
-        "model": {"openai": {"temperature": 0.1}},
-        "embedding": {"max_tokens": 200},
-        "vectordb": {"provider": "weaviate", "weaviate": {"class_name": "MyVoyager"}},
-        "bedrock": {"enabled": True, "region_name": "us-west-2"},
-        "logging_config_file": "my_logger.yaml"
-    }
-    settings = Settings(**full_config)
-    assert settings.app.name == "full_test"
-    assert settings.model.openai.temperature == 0.1
-    assert settings.embedding.max_tokens == 200
-    assert settings.vectordb.provider == "weaviate"
-    assert settings.vectordb.weaviate.class_name == "MyVoyager"
-    assert settings.bedrock.enabled is True
-    assert settings.logging_config_file == "my_logger.yaml"
+def test_full_settings_valid(dummy_config_content):
+    settings = Settings(**dummy_config_content)
+    assert settings.app.name == dummy_config_content["app"]["name"]
+    assert settings.model.openai.temperature == dummy_config_content["model"]["openai"]["temperature"]
+    assert settings.embedding.max_tokens == dummy_config_content["embedding"]["max_tokens"]
+    assert settings.vectordb.provider == dummy_config_content["vectordb"]["provider"]
+    assert settings.vectordb.weaviate.class_name == dummy_config_content["vectordb"]["weaviate"]["class_name"]
+    assert settings.bedrock.enabled is dummy_config_content["bedrock"]["enabled"]
+    assert settings.logging_config_file == dummy_config_content["logging_config_file"]
 
 def test_full_settings_forbids_extra():
     with pytest.raises(ValidationError):

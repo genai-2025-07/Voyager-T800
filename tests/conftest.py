@@ -52,3 +52,94 @@ def dummy_prompt_file(tmp_path: Path) -> Path:
     prompt_file = prompt_dir / "test_itinerary_prompt.txt"
     prompt_file.write_text("Hello {user_input} from {chat_history}")
     return prompt_file
+
+@pytest.fixture
+def dummy_config_content() -> Dict[str, Any]:
+    """Creates a dummy config file."""
+    return {
+        "app": {
+            "name": "voyager-t800",
+            "env": "dev",
+            "version": "0.1.0",
+            "api_key": None,
+        },
+        "model": {
+            "openai": {
+                "api_key": None,
+                "model_name": "text-embedding-3-small",
+                "temperature": 0.7,
+                "base_url": None,
+            },
+            "groq": {
+                "api_key": None,
+                "model_name": "llama3-8b-8192",
+                "temperature": 0.7,
+            },
+        },
+        "embedding": {
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "input_dir": "data/raw",
+            "output_dir": "data/embeddings",
+            "metadata_csv_path": "data/metadata.csv",
+            "max_tokens": 450,
+            "overlap_ratio": 0.2,
+            "batch_size": 64,
+            "polite_delay": 0.1,
+            "retry_attempts": 5,
+            "retry_min_wait": 1.0,
+            "retry_max_wait": 30.0,
+            "chunking_method": "sliding",
+            "cleaning_version": "v1.2",
+            "supported_extensions": [".txt", ".json"],
+        },
+        "vectordb": {
+            "provider": "chroma",
+            "chroma": {
+                "persist_directory": ".chroma",
+                "collection": "voyager",
+            },
+            "weaviate": {
+                "url": "http://localhost:8080",
+                "api_key": None,
+                "class_name": "voyager",
+            },
+        },
+        "bedrock": {
+            "enabled": False,
+            "region_name": None,
+            "profile_name": None,
+            "aws_access_key_id": None,
+            "aws_secret_access_key": None,
+            "aws_session_token": None,
+            "endpoint_url": None,
+            "model_id": None,
+            "temperature": 0.7,
+            "max_tokens": 1024,
+            "top_p": None,
+            "top_k": None,
+        },
+        "attraction_parser": {
+            "csv_file": "data/attractions_names_list.csv",
+            "debug_mode": False,
+            "output_dir": "data/raw",
+            "metadata_file": "data/metadata.csv",
+            "remove_non_latin": True,
+            "preserve_mixed_words": True,
+            "aggressive_filtering": False,
+            "use_see_also": False,
+            "wikipedia_api_url": "https://en.wikipedia.org/w/api.php",
+            "user_agent": "VoyagerT800AttractionsBot/1.0 (https://example.com/contact)",
+            "rate_limit_delay": 0.5,
+            "summary_max_length": 200,
+        },
+        "summary_memory": {
+            "summary_trigger_count": 2,
+            "max_token_limit": 1000,
+        },
+        "prompt": {
+            "itinerary_template_path": "app/prompts/test_itinerary_prompt.txt",
+            "summary_template_path": "app/prompts/test_summary_prompt.txt",
+        },
+        "logging_config_file": None,
+    }
