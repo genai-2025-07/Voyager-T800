@@ -14,10 +14,7 @@ from dotenv import load_dotenv
 import logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logger = logging.getLogger('app.chains.itinerary_chain')
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -25,7 +22,7 @@ load_dotenv()  # Load environment variables from .env file
 try:
     groq_key = os.getenv("GROQ_API_KEY")
 except Exception as e:
-    logging.error(f"ERROR exporting Groq API key: {e}")
+    logger.error(f"ERROR exporting Groq API key: {e}")
 
 # Initialize Groq LLM
 # Parameterize model name and temperature via environment variables for flexibility
@@ -42,13 +39,13 @@ llm = ChatGroq(
 try:
     db_manager, client_wrapper, result = setup_complete_database()
 except Exception as e:
-    logging.error(f"ERROR setting up database: {e}")
+    logger.error(f"ERROR setting up database: {e}")
 
 try:
     itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
     summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
-    logging.error(f"ERROR loading prompts: {e}")
+    logger.error(f"ERROR loading prompts: {e}")
 
 prompt = PromptTemplate(
     input_variables=["chat_history", "user_input", "context"],
@@ -98,14 +95,14 @@ def _cleanup_expired_sessions():
         expired_session_ids = []
         for s_id, entry in list(session_memories.items()):
             if not isinstance(entry, dict) or "last_access" not in entry:
-                logging.warning(f"Malformed session entry for {s_id}: {entry}")
+                logger.warning(f"Malformed session entry for {s_id}: {entry}")
                 continue
             if now - entry["last_access"] > ttl:
                 expired_session_ids.append(s_id)
         for s_id in list(expired_session_ids):
             del session_memories[s_id]
     except Exception as e:
-        logging.warning(f"Session cleanup failed: {e}")
+        logger.warning(f"Session cleanup failed: {e}")
 
 def get_session_memory(session_id:str):
     """
@@ -150,7 +147,7 @@ def get_session_memory(session_id:str):
             session_memories[session_id] = {"history": history, "last_access": time.time()}
             return session_memories[session_id]["history"]
         except Exception as e:
-            logging.error(f"Failed to initialize ConversationSummaryMemory: {e}")
+            logger.error(f"Failed to initialize ConversationSummaryMemory: {e}")
             raise
 
     if time.time() - entry["last_access"] > 10:
@@ -183,7 +180,7 @@ def stream_response(user_input, session_id="default_session"):
             print(content, end='', flush=True)
             time.sleep(0.025)  # Simulate a delay for streaming effect
     except Exception as e:
-        logging.error(f"ERROR: {e}")
+        logger.error(f"ERROR: {e}")
 
 def full_response(user_input, session_id="default_session"):
     """
@@ -198,7 +195,7 @@ def full_response(user_input, session_id="default_session"):
         response = result.content if hasattr(result, 'content') else str(result)
         print(response, end='', flush=True)
     except Exception as e:
-        logging.error(f"ERROR: {e}")
+        logger.error(f"ERROR: {e}")
 
 def main():
     """
@@ -228,7 +225,7 @@ def main():
             # Uncomment the line below to see the memory state after each query
             #print(f"\n\nMemory: {memory.buffer}")
     except KeyboardInterrupt:
-        logging.info("User interrupted the session.")
+        logger.info("User interrupted the session.")
 
 if __name__ == "__main__":
     main()

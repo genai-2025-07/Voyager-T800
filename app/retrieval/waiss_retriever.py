@@ -6,6 +6,9 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_openai import OpenAIEmbeddings
 from pydantic import ConfigDict
 from app.services.weaviate.attraction_db_manager import AttractionDBManager
+import logging
+
+logger = logging.getLogger('app.retrieval.waiss_retriever')
 
 
 class RAGAttractionRetriever(BaseRetriever):
@@ -25,15 +28,15 @@ class RAGAttractionRetriever(BaseRetriever):
         """
         Run retrieval using AttractionDBManager and convert results to LangChain Documents
         """
-        if self.mode == "similarity":
-            vector = self.embeddings.embed_query(query)
-            results = self.db.vector_search_chunks(vector, limit=self.limit)
-        elif self.mode == "keyword":
-            results = self.db.keyword_search_chunks(query, limit=self.limit)
-        elif self.mode == "hybrid":
-            vector = self.embeddings.embed_query(query)
-            results = self.db.hybrid_search_chunks(query, vector, limit=self.limit)
-        else:
+        search_methods = {
+            "similarity": lambda: self.db.vector_search_chunks(self.embeddings.embed_query(query), limit=self.limit),
+            "keyword": lambda: self.db.keyword_search_chunks(query, limit=self.limit),
+            "hybrid": lambda: self.db.hybrid_search_chunks(query, self.embeddings.embed_query(query), limit=self.limit)
+        }
+
+        try:
+            results = search_methods[self.mode]()
+        except KeyError:
             raise ValueError(f"Unknown retriever mode: {self.mode}")
 
         docs = []
@@ -53,6 +56,7 @@ class RAGAttractionRetriever(BaseRetriever):
                     }
                 )
             )
+        logger.info(f"Succesfully retrieved {len(docs)} documents.")
         return docs
 
 def setup_rag_retriever(
@@ -65,4 +69,10 @@ def setup_rag_retriever(
         model=os.getenv("EMBED_MODEL", "text-embedding-3-small"),
         openai_api_key=os.getenv("OPENAI_API_KEY")
     )
-    return RAGAttractionRetriever(db=db, embeddings=embeddings)
+    
+    try:
+        retriver = RAGAttractionRetriever(db=db, embeddings=embeddings)
+        logger.info("RAG retriever successfully set up.")
+        return retriver
+    except Exception as e:
+        logger.error(f"Failed to set up RAG retriever: {e}")
