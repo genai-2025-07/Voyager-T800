@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
 from app.config.loader import ConfigLoader
+from app.api.auth import router as auth_router
 
 
 load_dotenv()
@@ -32,4 +33,5 @@ model = settings.model.openai.model_name
 @app.get('/')
 async def root():
     logger.info('Root endpoint called')
-    return {'message': 'Hello World', 'model': model}
+    return {'message': 'Hello World'}
+app.include_router(auth_router)
