@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
+from app.api.auth import router as auth_router
 
 
 load_dotenv()
@@ -22,7 +23,9 @@ if missing_aws:
 app = FastAPI()
 app.add_middleware(RequestIDMiddleware)
 
+
 @app.get('/')
 async def root():
     logger.info('Root endpoint called')
     return {'message': 'Hello World'}
+app.include_router(auth_router)
