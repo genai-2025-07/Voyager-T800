@@ -66,12 +66,11 @@ class AttractionDBManager:
         if coord_key not in props:
             return
         c = props[coord_key]
-        try:
-            assert isinstance(c, GeoCoordinate) is True
-        except Exception:
-            # leave as-is; downstream validation will catch it
-            logger.error("Failed to coerce coordinates to CoordinatesModel, unsuported input type: %s", c)
-        
+
+        if not isinstance(c, GeoCoordinate):
+            logger.error("Failed to coerce coordinates to CoordinatesModel, unsupported input type: %s", c)
+            return
+
         lon = getattr(c, "longitude", None)
         lat = getattr(c, "latitude", None)
         props[coord_key] = CoordinatesModel(longitude=lon, latitude=lat)
@@ -369,7 +368,7 @@ class AttractionDBManager:
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None,
         return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
-    ):
+    ) -> WeaviateQueryResponse:
         """
         Vector search for chunks using a query vector.
         """
@@ -398,7 +397,7 @@ class AttractionDBManager:
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None,
         return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
-    ) -> QueryReturn:
+    ) -> WeaviateQueryResponse:
         """
         Keyword (BM25) search for chunks using a query string.
         """
@@ -434,7 +433,7 @@ class AttractionDBManager:
         alpha: float = 0.75,
         return_metadata: Optional[MetadataQuery] = None,
         return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
-    ) -> QueryReturn:
+    ) -> WeaviateQueryResponse:
         """
         Hybrid search for chunks using a query string (combines vector and keyword search).
         """
@@ -468,7 +467,7 @@ class AttractionDBManager:
         filters: Filter,
         limit: int = 10,
         return_metadata: Optional[MetadataQuery] = None
-    ) -> QueryReturn:
+    ) -> WeaviateQueryResponse:
         """
         Filter attractions using Weaviate filters.
         """
@@ -496,7 +495,7 @@ class AttractionDBManager:
         limit: int = 10,
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None
-    ) -> QueryReturn:
+    ) -> WeaviateQueryResponse:
         """
         Keyword (BM25) search for attractions using a query string.
         """
