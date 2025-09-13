@@ -5,7 +5,7 @@ import pytest
 
 from moto import mock_aws
 
-from data_layer.dynamodb_client import DynamoDBClient, SessionMetadata
+from app.data_layer.dynamodb_client import DynamoDBClient, SessionMetadata
 
 
 TABLE_NAME = 'session_metadata'
@@ -85,12 +85,10 @@ def sample_messages():
         },
     ]
 
+
 @pytest.fixture
 def inserted_item(dynamodb_table):
-    item={
-        "user_id":"u789",
-        "session_id":"s012"
-    }
+    item = {'user_id': 'u789', 'session_id': 's012'}
     dynamodb_table.put_item(Item=item)
     return item
 
@@ -155,9 +153,9 @@ def test_get_item(dynamodb_table, inserted_item):
 
     obj = DynamoDBClient(dynamodb_table)
 
-    user_id_test=inserted_item['user_id']
-    session_id_test=inserted_item['session_id']
-    
+    user_id_test = inserted_item['user_id']
+    session_id_test = inserted_item['session_id']
+
     retrieved_item = obj.get_item(user_id_test, session_id_test)
 
     assert retrieved_item is not None
@@ -179,12 +177,7 @@ def test_get_item_not_found(dynamodb_table):
     """
     obj = DynamoDBClient(dynamodb_table)
     nonexistent = SessionMetadata(
-        user_id='not_found',
-        session_id='s999',
-        session_summary='',
-        started_at='',
-        messages=[]
+        user_id='not_found', session_id='s999', session_summary='', started_at='', messages=[]
     )
-    
+
     assert obj.get_item(nonexistent.user_id, nonexistent.session_id) is None
-    

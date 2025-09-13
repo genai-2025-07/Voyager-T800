@@ -4,6 +4,8 @@
 # SERVICE OVERVIEW:
 # - api-dev: Development API with hot reload, source mounting, and debugging tools
 # - api: Production API optimized for performance and security
+# - streamlit-dev: Development Streamlit frontend with hot reload
+# - streamlit: Production Streamlit frontend
 # - dynamodb-local: Local DynamoDB instance for development and testing
 # - redis: Redis cache with authentication and data persistence
 # - weaviate-db: Vector database for AI-powered travel recommendations
@@ -12,7 +14,7 @@
 #
 # DEVELOPMENT ENVIRONMENT:
 #   Prerequisites:
-#     - Export AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#     - No AWS credentials needed (uses local DynamoDB)
 #     - Ensure .env file exists with development settings
 #   
 #   Startup:
@@ -20,7 +22,8 @@
 #   
 #   Default access:
 #     - API: http://localhost:8000
-#     - DynamoDB: http://localhost:8003
+#     - Streamlit: http://localhost:8501
+#     - DynamoDB: http://localhost:8003 (local)
 #     - Redis: localhost:6379
 #     - Weaviate: http://localhost:8090
 #
@@ -34,22 +37,26 @@
 #   
 #   Default access:
 #     - API: http://localhost:8001
-#     - DynamoDB: http://localhost:8003
+#     - Streamlit: http://localhost:8502
+#     - DynamoDB: AWS DynamoDB (cloud)
 #     - Redis: localhost:6379
 #     - Weaviate: http://localhost:8090
 #
 # ENVIRONMENT VARIABLES:
 # 
-# SHELL EXPORT (Required - Never in files):
+# SHELL EXPORT (Required for PRODUCTION only):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
-#   These must be exported in your shell before running docker compose
+#   These must be exported in your shell before running docker compose --profile prod
 #
 # .env/.prod.env FILES:
+#   - USE_LOCAL_DYNAMODB (true for dev, false for prod)
+#   - DYNAMODB_ENDPOINT_URL (for dev: http://dynamodb-local:8003)
 #   - DYNAMO_HOST_PORT, DYNAMO_CONTAINER_PORT
 #   - REDIS_HOST_PORT, REDIS_CONTAINER_PORT  
 #   - WEAVIATE_DB_HOST_PORT, WEAVIATE_DB_CONTAINER_PORT
 #   - HOST_PORT_DEV, CONTAINER_PORT_DEV
 #   - HOST_PORT_PROD, CONTAINER_PORT_PROD
+#   - STREAMLIT_HOST_PORT_DEV, STREAMLIT_HOST_PORT_PROD
 #   - GRPS_API_PORT, PERSISTENCE_DATA_PATH
 #
 # For detailed configuration and troubleshooting, see docs/docker-setup.md
@@ -70,13 +77,12 @@ services:
     env_file:
       - .prod.env
     environment:
-      # AWS credentials are passed ONLY from the host shell environment variables
+      # Production uses AWS DynamoDB - requires AWS credentials
+      - USE_LOCAL_DYNAMODB=false
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_REGION
     depends_on:
-      dynamodb-local:
-        condition: service_healthy
       redis:
         condition: service_healthy
       weaviate-db:
@@ -89,6 +95,30 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit-prod
+    ports:
+      - "${STREAMLIT_HOST_PORT_PROD:-8502}:8501"
+    env_file:
+      - .prod.env
+    environment:
+      - API_BASE_URL=http://api:8001
+      - STREAMLIT_ENV=prod
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles: ["prod"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   
   # ============================================================================
   # DEVELOPMENT CONFIGURATION
@@ -107,10 +137,10 @@ services:
       - ./app:/app/app
 
     environment:
-      # AWS credentials are passed ONLY from the host shell environment variables
-      - AWS_ACCESS_KEY_ID
-      - AWS_SECRET_ACCESS_KEY
-      - AWS_REGION
+      # Development uses local DynamoDB - no AWS credentials needed
+      - USE_LOCAL_DYNAMODB=true
+      - DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8003
+      - AWS_REGION=us-east-2
     depends_on:
       dynamodb-local:
         condition: service_healthy
@@ -127,6 +157,33 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+
+  streamlit-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit-dev
+    ports:
+      - "${STREAMLIT_HOST_PORT_DEV:-8501}:8501"
+    env_file:
+      - .env
+    environment:
+      - API_BASE_URL=http://api-dev:8000
+      - STREAMLIT_ENV=dev
+    volumes:
+      # Hot reload for development
+      - ./app/frontend:/app/frontend
+    depends_on:
+      api-dev:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles: ["dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   
   # ============================================================================
   # INFRASTRUCTURE SERVICES

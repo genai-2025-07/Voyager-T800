@@ -1,10 +1,11 @@
 import logging
-import os
 
 import boto3
 
 from botocore.exceptions import ClientError
 from pydantic import BaseModel
+
+from app.config.config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -55,11 +56,26 @@ class DynamoDBClient:
         """
         if table is not None:
             self.table = table
-      
         else:
-            self.region_name = os.getenv('AWS_REGION', 'us-east-2')
-            self.table_name = os.getenv('DYNAMODB_TABLE', 'session_metadata')
-            self.dynamodb = boto3.resource('dynamodb', region_name=self.region_name)
+            self.region_name = settings.aws_region
+            self.table_name = settings.dynamodb_table
+
+            use_local_dynamodb = settings.use_local_dynamodb
+
+            if use_local_dynamodb:
+                endpoint_url = settings.dynamodb_endpoint_url
+                self.dynamodb = boto3.resource(
+                    'dynamodb',
+                    region_name=self.region_name,
+                    endpoint_url=endpoint_url,
+                    aws_access_key_id='dummy',
+                    aws_secret_access_key='dummy',
+                )
+                logger.info(f'Using local DynamoDB at {endpoint_url}')
+            else:
+                self.dynamodb = boto3.resource('dynamodb', region_name=self.region_name)
+                logger.info(f'Using AWS DynamoDB in region {self.region_name}')
+
             self.table = self.dynamodb.Table(self.table_name)
 
     def put_item(self, session_metadata: SessionMetadata) -> int:
@@ -86,11 +102,11 @@ class DynamoDBClient:
                 }
             )
             return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
-        except ClientError as e:
-            logger.error(f'Failed to put item into DynamoDB')
+        except ClientError:
+            logger.error('Failed to put item into DynamoDB')
             raise
 
-    def get_item(self, user_id:str, session_id:str) -> dict:
+    def get_item(self, user_id: str, session_id: str) -> dict:
         """
         Returns an item from table, using unique identifier of user and session.
 
@@ -104,9 +120,7 @@ class DynamoDBClient:
             ClientError: If there's an error during the get operation.
         """
         try:
-            response = self.table.get_item(
-                Key={'user_id': user_id, 'session_id': session_id}
-            )
+            response = self.table.get_item(Key={'user_id': user_id, 'session_id': session_id})
             item = response.get('Item')
             if item is not None:
                 return item
@@ -179,7 +193,7 @@ class DynamoDBClient:
         """
         params = {
             'query_params': QueryParams(key_condition_expression='user_id = :user_id'),
-            'ExpressionAttributeValues': {':user_id': user_id}
+            'ExpressionAttributeValues': {':user_id': user_id},
         }
         if limit is not None:
             params['Limit'] = limit

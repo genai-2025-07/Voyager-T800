@@ -4,20 +4,14 @@ import time
 
 from dotenv import load_dotenv
 from langchain.memory import ConversationSummaryMemory
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
-from langchain.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_groq import ChatGroq
 
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from app.utils.read_prompt_from_file import load_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
-from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from dotenv import load_dotenv
-import logging
+from app.utils.read_prompt_from_file import load_prompt_from_file
 
 
 logger = logging.getLogger(__name__)
@@ -43,21 +37,18 @@ try:
 except Exception as e:
     logger.error(f'ERROR loading prompts: {e}')
 
-prompt = PromptTemplate(
-    input_variables=["chat_history", "user_input", "context"],
-    template=itinerary_template
-)
+prompt = PromptTemplate(input_variables=['chat_history', 'user_input', 'context'], template=itinerary_template)
 
 memory_prompt = PromptTemplate(input_variables=['summary', 'new_lines'], template=summary_template)
 
 # Configuration: expose token limit and session TTL via environment variables
 try:
-    MEMORY_MAX_TOKEN_LIMIT = int(os.getenv("SESSION_MEMORY_MAX_TOKEN_LIMIT", "1000"))
+    MEMORY_MAX_TOKEN_LIMIT = int(os.getenv('SESSION_MEMORY_MAX_TOKEN_LIMIT', '1000'))
 except Exception:
     MEMORY_MAX_TOKEN_LIMIT = 1000
 
 try:
-    SESSION_MEMORY_TTL_SECONDS = int(os.getenv("SESSION_MEMORY_TTL_SECONDS", "3600"))
+    SESSION_MEMORY_TTL_SECONDS = int(os.getenv('SESSION_MEMORY_TTL_SECONDS', '3600'))
 except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
@@ -65,12 +56,19 @@ except Exception:
 retriever = get_rag_retriever()
 
 # Chain where we will pass the last message from the chat history
-chain = RunnablePassthrough.assign(
-    chat_history=extract_chat_history_content,
-    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"])))  # Format retrieved documents with sources and city for context
-) | prompt | llm
+chain = (
+    RunnablePassthrough.assign(
+        chat_history=extract_chat_history_content,
+        context=RunnableLambda(
+            lambda x: format_docs(retriever.invoke(x['user_input']))
+        ),  # Format retrieved documents with sources and city for context
+    )
+    | prompt
+    | llm
+)
 
 session_memories = {}
+
 
 def _cleanup_expired_sessions():
     """
@@ -85,17 +83,18 @@ def _cleanup_expired_sessions():
         now = time.time()
         expired_session_ids = []
         for s_id, entry in list(session_memories.items()):
-            if not isinstance(entry, dict) or "last_access" not in entry:
-                logging.warning(f"Malformed session entry for {s_id}: {entry}")
+            if not isinstance(entry, dict) or 'last_access' not in entry:
+                logger.warning(f'Malformed session entry for {s_id}: {entry}')
                 continue
-            if now - entry["last_access"] > ttl:
+            if now - entry['last_access'] > ttl:
                 expired_session_ids.append(s_id)
         for s_id in list(expired_session_ids):
             del session_memories[s_id]
     except Exception as e:
-        logging.warning(f"Session cleanup failed: {e}")
+        logger.warning(f'Session cleanup failed: {e}')
 
-def get_session_memory(session_id:str):
+
+def get_session_memory(session_id: str):
     """
     Get or initialize conversation memory for a session.
 
@@ -114,37 +113,38 @@ def get_session_memory(session_id:str):
     _cleanup_expired_sessions()
 
     if llm is None:
-        raise RuntimeError(f"LLM client is not initialized (llm={llm}). Ensure 'llm' is configured before requesting session memory.")
+        raise RuntimeError(
+            f"LLM client is not initialized (llm={llm}). Ensure 'llm' is configured before requesting session memory."
+        )
     if memory_prompt is None:
-        raise RuntimeError("Memory prompt is not initialized (memory_prompt={memory_prompt}). Ensure 'memory_prompt' is configured before requesting session memory.")
+        raise RuntimeError(
+            "Memory prompt is not initialized (memory_prompt={memory_prompt}). Ensure 'memory_prompt' is configured before requesting session memory."
+        )
 
     entry = session_memories.get(session_id)
 
     if entry is not None and not isinstance(entry, dict):
-        raise TypeError("Session memory entry must be a dict, got type: {}".format(type(entry)))
-
+        raise TypeError(f'Session memory entry must be a dict, got type: {type(entry)}')
 
     if entry is None:
         try:
             session_summary_memory = ConversationSummaryMemory(
-            llm=llm,
-            prompt=memory_prompt,
-            max_token_limit=MEMORY_MAX_TOKEN_LIMIT
+                llm=llm, prompt=memory_prompt, max_token_limit=MEMORY_MAX_TOKEN_LIMIT
             )
             history = SummaryChatMessageHistory(session_summary_memory)
             if not isinstance(history, SummaryChatMessageHistory):
-                raise TypeError("Failed to initialize SummaryChatMessageHistory.")
+                raise TypeError('Failed to initialize SummaryChatMessageHistory.')
 
-            session_memories[session_id] = {"history": history, "last_access": time.time()}
-            return session_memories[session_id]["history"]
+            session_memories[session_id] = {'history': history, 'last_access': time.time()}
+            return session_memories[session_id]['history']
         except Exception as e:
-            logging.error(f"Failed to initialize ConversationSummaryMemory: {e}")
+            logger.error(f'Failed to initialize ConversationSummaryMemory: {e}')
             raise
 
-    if time.time() - entry["last_access"] > 10:
-        entry["last_access"] = time.time()
-        return entry["history"]
-    return entry["history"]    
+    if time.time() - entry['last_access'] > 10:
+        entry['last_access'] = time.time()
+        return entry['history']
+    return entry['history']
 
 
 # Wrapper for message history
@@ -152,9 +152,9 @@ runnable_with_history = RunnableWithMessageHistory(
     runnable=chain,
     # Always return the same memory object for session history
     # NOTE: If we need to handle multiple sessions, we can modify this to return different memory instances based on session_id
-    get_session_history= get_session_memory,
-    input_messages_key="user_input",
-    history_messages_key="chat_history"
+    get_session_history=get_session_memory,
+    input_messages_key='user_input',
+    history_messages_key='chat_history',
 )
 
 
@@ -162,6 +162,7 @@ def stream_response(user_input, session_id='default_session'):
     """
     Function to stream the response from the assistant (synchronous)
     """
+    full_response = ''
     try:
         for chunk in runnable_with_history.stream(
             {'user_input': user_input}, config={'configurable': {'session_id': session_id}}
@@ -169,7 +170,10 @@ def stream_response(user_input, session_id='default_session'):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
 
             print(content, end='', flush=True)
+            full_response += content
             time.sleep(0.025)  # Simulate a delay for streaming effect
+
+        return full_response
     except Exception as e:
         logger.error(f'ERROR: {e}')
 
@@ -203,7 +207,7 @@ def main():
             if user_input.lower() == 'q':
                 break
             elif user_input.lower() == 'mem':
-                print(f"\n\nMemory: {memory.buffer}")
+                print(f'\n\nMemory: {get_session_memory(session_id)}')
                 continue
 
             print('\n\nAnswer: ', end='')

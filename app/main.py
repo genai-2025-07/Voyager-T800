@@ -1,7 +1,6 @@
 import logging
 
 from contextlib import asynccontextmanager
-from os import getenv
 
 import uvicorn
 
@@ -12,18 +11,34 @@ from fastapi.responses import JSONResponse
 from app.api.routes import itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
+from app.data_layer.dynamodb_client import DynamoDBClient
 
 
 setup_logger()
 logger = logging.getLogger(__name__)
 
-# Fail fast if required AWS credentials are missing
-missing_aws = [v for v in ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION') if not getenv(v)]
-if missing_aws:
-    error_msg = f'Missing required AWS environment variables: {", ".join(missing_aws)}'
-    logger.error(error_msg)
-    logger.error('Application cannot start without AWS credentials. Please export them in the shell.')
-    raise RuntimeError(error_msg)
+# Global DynamoDB client instance
+dynamodb_client = None
+
+# Check if we should use local DynamoDB
+use_local_dynamodb = settings.use_local_dynamodb
+
+# Only require AWS credentials if not using local DynamoDB
+if not use_local_dynamodb:
+    missing_aws = []
+    if not settings.aws_access_key_id:
+        missing_aws.append('AWS_ACCESS_KEY_ID')
+    if not settings.aws_secret_access_key:
+        missing_aws.append('AWS_SECRET_ACCESS_KEY')
+
+    if missing_aws:
+        error_msg = f'Missing required AWS environment variables: {", ".join(missing_aws)}'
+        logger.error(error_msg)
+        logger.error('Application cannot start without AWS credentials. Please export them in the shell.')
+        logger.error('Alternatively, set USE_LOCAL_DYNAMODB=true to use local DynamoDB for development.')
+        raise RuntimeError(error_msg)
+else:
+    logger.info('Using local DynamoDB - AWS credentials not required')
 
 
 app = FastAPI()
@@ -33,16 +48,36 @@ app.add_middleware(RequestIDMiddleware)
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa ARG001
     """Application lifespan manager for startup and shutdown events."""
+    global dynamodb_client
 
-    # TODO: Initialize database connections
+    logger.info('Starting Voyager-T800 application...')
+
+    try:
+        # Initialize DynamoDB client
+        logger.info('Initializing DynamoDB client...')
+        dynamodb_client = DynamoDBClient()
+
+        # Test DynamoDB connection
+        table_name = dynamodb_client.table_name
+        logger.info(f'DynamoDB client initialized successfully. Table: {table_name}')
+
+        app.state.dynamodb_client = dynamodb_client
+
+    except Exception as e:
+        logger.error(f'Failed to initialize DynamoDB client: {str(e)}')
+        raise RuntimeError(f'DynamoDB initialization failed: {str(e)}')
 
     server_url = f'http://{settings.host}:{settings.port}'
     logger.info(f'Voyager-T800 is running at {server_url}')
 
     yield
 
-    # Shutdown
-    # TODO: Close database connections
+    logger.info('Shutting down Voyager-T800 application...')
+
+    if dynamodb_client:
+        logger.info('DynamoDB client cleanup completed')
+        dynamodb_client = None
+
     logger.info('Application shutdown complete')
 
 
