@@ -11,6 +11,8 @@ from langchain_groq import ChatGroq
 
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
+from app.services.weaviate.weaviate_setup import setup_complete_database
+from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.utils.read_prompt_from_file import load_prompt_from_file
 
 
@@ -30,6 +32,11 @@ model_name = os.getenv('GROQ_MODEL_NAME', 'llama3-8b-8192')
 temperature = float(os.getenv('GROQ_TEMPERATURE', '0.7'))
 
 llm = ChatGroq(groq_api_key=groq_key, model=model_name, temperature=temperature, streaming=True)
+
+try:
+    db_manager, client_wrapper, result = setup_complete_database()
+except Exception as e:
+    logger.error(f"ERROR setting up database: {e}")
 
 try:
     itinerary_template = load_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
@@ -52,8 +59,10 @@ try:
 except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
-# Initialize RAG Prototype and retriever
-retriever = get_rag_retriever()
+# Initialize RAG and retriever
+retriever = setup_rag_retriever(
+    db=db_manager
+)
 
 # Chain where we will pass the last message from the chat history
 chain = (
@@ -92,7 +101,6 @@ def _cleanup_expired_sessions():
             del session_memories[s_id]
     except Exception as e:
         logger.warning(f'Session cleanup failed: {e}')
-
 
 def get_session_memory(session_id: str):
     """
@@ -193,7 +201,6 @@ def full_response(user_input, session_id='default_session'):
     except Exception as e:
         logger.error(f'ERROR: {e}')
 
-
 def main():
     """
     Main function to run the assistant
@@ -206,9 +213,9 @@ def main():
             user_input = input("\nQuery ('q' to quit): ")
             if user_input.lower() == 'q':
                 break
-            elif user_input.lower() == 'mem':
-                print(f'\n\nMemory: {get_session_memory(session_id)}')
-                continue
+            # elif user_input.lower() == 'mem':
+            #     print(f'\n\nMemory: {get_session_memory(session_id)}')
+            #     continue
 
             print('\n\nAnswer: ', end='')
 
