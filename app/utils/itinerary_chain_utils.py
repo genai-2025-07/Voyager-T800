@@ -32,7 +32,7 @@ def extract_chat_history_content(x):
         return ""
     
 # Function to format retrieved documents with sources and city for context
-def format_docs(docs):
+def format_docs_prototype(docs):
     """
     Format retrieved documents with their source and city metadata.
     Args:
@@ -48,6 +48,35 @@ def format_docs(docs):
 
     return "\n\n".join(
         f"Source: {doc.metadata.get('source', 'unknown')}\nCity: {doc.metadata.get('city', 'unknown')}\nContent: {doc.page_content.strip()}"
+        for doc in docs
+    )
+
+# Function to format retrieved documents with sources, city, and other metadata
+def format_docs(docs):
+    """
+    Format retrieved documents with their metadata for context.
+    Args:
+        docs (list[Document]): List of retrieved document objects with metadata.
+    """
+    if DEBUG:
+        print("\n\n--- Retrieved Docs ---")
+        for d in docs:
+            print(f"UUID: {d.metadata.get('uuid', 'n/a')}")
+            print(f"Name: {d.metadata.get('name', 'unknown')}")
+            print(f"Source: {d.metadata.get('source', 'unknown')}")
+            print(f"City: {d.metadata.get('city', 'unknown')}")
+            print(f"Tags: {d.metadata.get('tags', [])}")
+            print(f"Score: {d.metadata.get('score', 'n/a')}")
+            print(f"Content: {str(d.page_content)[:200]}...\n")
+        print("--- End Retrieved Docs ---\n\n")
+
+    return "\n\n".join(
+        f"Name: {doc.metadata.get('name', 'unknown')}\n"
+        f"Source: {doc.metadata.get('source', 'unknown')}\n"
+        f"City: {doc.metadata.get('city', 'unknown')}\n"
+        f"Tags: {doc.metadata.get('tags', [])}\n"
+        f"Score: {doc.metadata.get('score', 'n/a')}\n"
+        f"Content: {doc.page_content.strip()}"
         for doc in docs
     )
 

@@ -150,7 +150,7 @@ class TestAttractionDBManagerIntegration:
         
         # First result should be exact match (distance ~0)
         first_result = results.objects[0].properties
-        assert first_result["chunk_text"] == query_chunk.chunk_text 
+        assert first_result.chunk_text == query_chunk.chunk_text 
 
     def test_hybrid_search_chunks_performance_and_accuracy(
             self, db_manager_with_schema,
@@ -201,7 +201,7 @@ class TestAttractionDBManagerIntegration:
             return_metadata=MetadataQuery(score=True)
         )
         results = [obj.properties for obj in results.objects]
-        assert results[0]["name"] == attraction_with_chunks_list[0].attraction.name
+        assert results[0].name == attraction_with_chunks_list[0].attraction.name
         
         # Test 2: Multi-word query
         results_multi = db_manager.keyword_search_attractions(
@@ -220,7 +220,7 @@ class TestAttractionDBManagerIntegration:
             limit=5
         )
         filtered_results = [obj.properties for obj in filtered_results.objects]
-        assert filtered_results[0]["name"] == attraction_with_chunks_list[1].attraction.name
+        assert filtered_results[0].name == attraction_with_chunks_list[1].attraction.name
 
     def test_filter_attractions_with_multiple_conditions(self,
             db_manager_with_schema,
@@ -243,7 +243,7 @@ class TestAttractionDBManagerIntegration:
             return_metadata=MetadataQuery(score=True)
         )
         complex_results = [obj.properties for obj in complex_results.objects]
-        assert complex_results[0]["name"] == attraction_with_chunks_list[0].attraction.name
+        assert complex_results[0].name == attraction_with_chunks_list[0].attraction.name
         
 
     def test_cross_reference_queries_attraction_to_chunks(

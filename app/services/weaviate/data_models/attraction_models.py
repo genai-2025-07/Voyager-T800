@@ -1,17 +1,14 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Union, Any
-from pydantic import BaseModel, Field, field_validator, model_validator, field_serializer
+from pydantic import BaseModel, Field, field_validator, model_validator, field_serializer, create_model
 from datetime import datetime, time, timezone
 import math
 import re
 from enum import Enum
 from urllib.parse import urlparse
 
-
-class ChunkData(BaseModel):
-    chunk_text: str
-    embedding: List[float]
-
+class ChunkBase(BaseModel):
+    chunk_text: str = Field(..., description="Text of the chunk")
     name: str = Field(..., description="Name of the attraction.")
     city: str = Field(..., description="Name of the city where attraction is located.")
     administrative_area_level_1: Optional[str] = Field(None, description="State/Province")
@@ -20,8 +17,11 @@ class ChunkData(BaseModel):
     rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
     place_id: str = Field(..., description="Google Places ID")
 
+
+class ChunkData(ChunkBase):
+    embedding: List[float] = Field(..., description="Embdedding of the chunk")
+
     def to_weaviate_properties(self) -> Dict[str, Any]:
-        """Convert chunk data to Weaviate properties format"""
         return {
             "chunk_text": self.chunk_text,
             "name": self.name,
@@ -357,7 +357,7 @@ class AttractionModel(BaseModel):
     place_id: str = Field(..., description="Google Places ID")
     phone_number: Optional[str] = Field(None, description="Contact phone number (normalized)")
     maps_url: str = Field(..., description="Maps / website URL (maps_url)")
-    opening_hours: OpeningHoursModel = Field(None, description="Opening hours structure")
+    opening_hours: Optional[OpeningHoursModel] = Field(None, description="Opening hours structure")
     price_level: Optional[int] = Field(None, description="Price level (0-4)")
     rating: Optional[float] = Field(None, description="Average rating (0.0 - 5.0)")
     reviews: List[ReviewModel] = Field(default_factory=list, description="List of reviews")
@@ -501,6 +501,8 @@ class AttractionModel(BaseModel):
 
     @model_validator(mode="after")
     def validate_required_and_compute(cls, values):
+        if cls is not AttractionModel:
+            return values
         if not values.name or not values.name.strip():
             raise ValueError("name is required and cannot be empty")
         if values.coordinates is None:
@@ -597,6 +599,58 @@ class AttractionModel(BaseModel):
             }
         }
 
+class SearchResultAttractionModel(AttractionModel):
+    """
+    Pydantic model for search results, based on AttractionModel.
+    All fields are optional, and there is no export to Weaviate.
+    """
+    
+    # Override all fields to be optional
+    name: Optional[str] = Field(None, description="Attraction name (optional)")
+    city: Optional[str] = Field(None, description="City (optional)")
+    address: Optional[str] = Field(None, description="Full address string (optional)")
+    postal_code: Optional[str] = Field(None, description="Postal/ZIP code (optional)")
+    coordinates: Optional[CoordinatesModel] = Field(None, description="Geographic coordinates (lat,lng) (optional)")
+    place_id: Optional[str] = Field(None, description="Google Places ID (optional)")
+    maps_url: Optional[str] = Field(None, description="Maps / website URL (maps_url) (optional)")
+    last_updated: Optional[datetime] = Field(None, description="Last update timestamp (ISO datetime) (optional)")
+    
+    # The rest of the fields are already Optional in the base class, so we don't need to redeclare them.
+
+    @model_validator(mode="after")
+    def validate_and_compute(cls, values):
+        # We don't check for required fields here since they're all optional
+        # The validators from the base class still run for any fields that are present
+        
+        # Ensure reviews are ReviewModel objects
+        reviews = []
+        for r in values.reviews or []:
+            if isinstance(r, ReviewModel):
+                reviews.append(r)
+            elif isinstance(r, dict):
+                reviews.append(ReviewModel(**r))
+            else:
+                raise ValueError("each review must be a ReviewModel or dict")
+        values.reviews = reviews
+
+        # Infer rating from reviews if missing
+        if values.rating is None and reviews:
+            rat_values = []
+            for rv in reviews:
+                try:
+                    rnum = float(rv.rating)
+                    if 0.0 <= rnum <= 5.0:
+                        rat_values.append(rnum)
+                except Exception:
+                    continue
+            if rat_values:
+                avg = sum(rat_values) / len(rat_values)
+                values.rating = int(round(avg)) if math.isclose(avg, round(avg)) else round(avg, 2)
+
+        # de-duplicate tags
+        values.tags = list(dict.fromkeys(values.tags or []))
+
+        return values
 
 class EmbeddingMetadataModel(BaseModel):
     """
@@ -672,3 +726,43 @@ class EmbeddingModel(BaseModel):
     embedding: List[float] = Field(..., description="Embedding vector for text")
     metadata: EmbeddingMetadataModel = Field(..., description="Emdedding Metadata model")
 
+
+class PropertyValidator:
+    """Simple validator for search method properties against Pydantic models."""
+    
+    def __init__(self, logger):
+        self.logger = logger
+        self.attraction_fields = set(AttractionModel.model_fields.keys())
+        self.chunk_fields = set(ChunkBase.model_fields.keys())
+    
+    def validate_attraction_properties(self, properties: List[str]) -> List[str]:
+        """Validate attraction properties and return invalid ones."""
+        if not properties:
+            return []
+        
+        invalid = [prop for prop in properties if prop not in self.attraction_fields]
+        if invalid:
+            self.logger.warning(f"Invalid attraction properties: {invalid}. Valid: {sorted(self.attraction_fields)}")
+        return invalid
+    
+    def validate_chunk_properties(self, properties: List[str]) -> List[str]:
+        """Validate chunk properties and return invalid ones."""
+        if not properties:
+            return []
+        
+        invalid = [prop for prop in properties if prop not in self.chunk_fields]
+        if invalid:
+            self.logger.warning(f"Invalid chunk properties: {invalid}. Valid: {sorted(self.chunk_fields)}")
+        return invalid
+    
+    def validate_chunk_query_properties(self, query_properties: List[str]) -> List[str]:
+        """Validate search query properties (should be chunk properties)."""
+        # Remove weight suffixes like ^2 for validation
+        clean_props = [prop.split('^')[0] for prop in query_properties]
+        return self.validate_chunk_properties(clean_props)
+    
+    def validate_attraction_query_properties(self, query_properties: List[str]) -> List[str]:
+        """Validate search query properties (should be attraction properties)."""
+        # Remove weight suffixes like ^2 for validation
+        clean_props = [prop.split('^')[0] for prop in query_properties]
+        return self.validate_attraction_properties(clean_props)
