@@ -1,19 +1,26 @@
-from langchain.memory import ConversationSummaryMemory
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_groq import ChatGroq
-from langchain.prompts import PromptTemplate
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from dotenv import load_dotenv
+import logging
 import os
 import time
+
+
 from app.utils.read_prompt_from_file import load_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.services.weaviate.weaviate_setup import setup_complete_database
 from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from dotenv import load_dotenv
-import logging
+from langchain.memory import ConversationSummaryMemory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_groq import ChatGroq
+from langchain.prompts import PromptTemplate
 
 # Configure logging
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 logger = logging.getLogger('app.chains.itinerary_chain')
 
 load_dotenv()  # Load environment variables from .env file
@@ -69,6 +76,8 @@ except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
 # Initialize RAG and retriever
+if db_manager is None:
+    raise RuntimeError("Database manager not initialized")
 retriever = setup_rag_retriever(
     db=db_manager
 )
