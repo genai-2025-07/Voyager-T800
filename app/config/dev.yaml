@@ -1,0 +1,20 @@
+app:
+  env: dev
+  name: voyager-t800-dev
+
+model:
+  openai:
+    temperature: 0.3
+  groq:
+    temperature: 0.3
+
+vectordb:
+  provider: chroma
+
+bedrock:
+  enabled: false
+
+features:
+  enable_metrics: true
+
+

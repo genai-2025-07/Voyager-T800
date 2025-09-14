@@ -20,6 +20,7 @@ dependencies = [
     "gunicorn (>=21.1.0,<22.1.0)",
     "python-json-logger (>=3.3.0,<4.0.0)",
     "python-dotenv (>=1.1.1,<2.0.0)",
+    "pydantic (>=2.8,<3.0)",
     "openai (>=1.99.9,<2.0.0)",
     "weaviate-client (>=4.16.9,<5.0.0)",
     "pydantic (>=2.11.7,<3.0.0)",
