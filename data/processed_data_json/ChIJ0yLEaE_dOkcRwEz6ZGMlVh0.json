@@ -1,0 +1,143 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Lychakivskyi District",
+  "address": "Mechnykova St, 33, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "+380 322 755 415",
+  "place_id": "ChIJ0yLEaE_dOkcRwEz6ZGMlVh0",
+  "url": "https://maps.google.com/?cid=2113918183923141824",
+  "coordinates": {
+    "lat": 49.8324603,
+    "lng": 24.0560909
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Ethan Shoe",
+      "author_url": "https://www.google.com/maps/contrib/113441551705098623018/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXVKA2-1MD9ywFq8PDmFedOMHGl1iXFZ4JZGzEny9BZzpr-JTjQJA=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "10 months ago",
+      "text": "One of the most interesting cemeteries I've ever visited. Tons and tons of huge headstones, all different designs, and even quite a few family tombs. It's a very big cemetery, I was walking at a decent speed and still took me 40 minutes to do one loop. There is an entrance fee but it's very cheap: 80 Hryvnia.",
+      "time": 1727872423,
+      "translated": false
+    },
+    {
+      "author_name": "Tanya Kobiljanska",
+      "author_url": "https://www.google.com/maps/contrib/101063228955546320896/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjU7nTwg4cLhb0-ha67GTtjrsnVYf2-KEzBp2DJNf0MGc8ZIwYxG=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "I like to visit Lychakiv cemetery.\n\nIt is the history of Lviv and Europe, a place of numerous architectural masterpieces and a good place to think, to listen to silence and to comunicate with it.\n\nLychakiv cemetery is a great museum too.",
+      "time": 1633469800,
+      "translated": false
+    },
+    {
+      "author_name": "Yuriy Polyashko",
+      "author_url": "https://www.google.com/maps/contrib/102463980670216642427/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjX10oYPv1KCoubSfVtZAGYnUNQmBOYUVF4RGlsh6mLiGuLLHqKfiw=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "2 years ago",
+      "text": "Definitely underestimated place either for calm walks or for thinking of eternal things.\nHighly recommended. Entry ticket 50 uah.",
+      "time": 1683661653,
+      "translated": false
+    },
+    {
+      "author_name": "Alyona Derkach",
+      "author_url": "https://www.google.com/maps/contrib/115860534731414090191/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVbWi7D76p0aIJ4hPKdRaGTUj5C2VsqJAPO7mv67EzaOOlB4mkprw=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "Very old and impressive cemetery that is a real museum containing lots of interesting monuments.",
+      "time": 1634307705,
+      "translated": false
+    },
+    {
+      "author_name": "Paweł Kubalewski",
+      "author_url": "https://www.google.com/maps/contrib/102127672521502478039/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjV6dNVnctKNhE0SmqubGKvMlAJF2S2r9MJUSNqIEUGNgi3rPK0o=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "7 years ago",
+      "text": "A beautiful cemetery. It carries a ton of polish and ukrainian history. Definatly one of must sees of lviv.",
+      "time": 1519766126,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "cemetery",
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.688885+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ]
+    }
+  }
+}

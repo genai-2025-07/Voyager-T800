@@ -1,0 +1,142 @@
+{
+  "postal_code": "01008",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "Pechers'kyi district",
+  "address": "5A, vulytsya Mykhaila Нrushevs'kogo, Kyiv, Ukraine, 01008",
+  "phone_number": "+380 98 549 4671",
+  "place_id": "ChIJnQ3QRa3P1EARYKLldBf2Ge0",
+  "url": "https://maps.google.com/?cid=17084957242012574304",
+  "coordinates": {
+    "lat": 50.4483553,
+    "lng": 30.5376094
+  },
+  "rating": 4.7,
+  "reviews": [
+    {
+      "author_name": "Yevgeny Krymov",
+      "author_url": "https://www.google.com/maps/contrib/117485781147047862959/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocKnnYCEmPI_vb-afm6KbNwmco1ZFQrBRdGKK-nnGrcLldJZhg=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 3,
+      "relative_time_description": "3 years ago",
+      "text": "The palace is very modern as it has been restored many times in the past 100 years. Apart from minor details, None of the interior, furniture, lighting is old, and there are no historical artifacts. There is some art, but it’s unremarkable and some authors not known. It’s beautiful but there is no “historical spirit” inside. It is a functioning presidential reception where official ceremonies are held, and many foreign dignitaries have been here. The palace is small inside and the available area for visitors is even smaller, the tour will take up to 1 hour. Worth a visit but nothing special.",
+      "time": 1640865299,
+      "translated": false
+    },
+    {
+      "author_name": "oleksa borodie",
+      "author_url": "https://www.google.com/maps/contrib/108379558549619675836/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWloHqi1mZ0xnG8zgRTNQRHxVu0bE8ewYyGp4XnL4q5nd2c5L4GNw=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "4 years ago",
+      "text": "Taste differs. Cons; requires a lot of stuff to maintain. The security check is required while you came in. The electricity bills can make your wallet empty. It is hard to park the car. You will share the building with Ukrainian president and tourists.\nPros: beautiful park and China embassy are close.",
+      "time": 1603746390,
+      "translated": false
+    },
+    {
+      "author_name": "Tanja Djenic",
+      "author_url": "https://www.google.com/maps/contrib/111504790382898946727/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJOcjAZS6_u-y8LTCvlyUEXzIrLH8jtvgGlRooZ4_gnCzbYnw=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "5 years ago",
+      "text": "we couldn't go inside, so you can see the palace only from the outside. It's nice, great clean park is outside, lots of trees and people walking. Nevertheless, also lots of military and police walking around and parking green defence jeeps near.. But all in all very peaceful and worth visiting!",
+      "time": 1570429589,
+      "translated": false
+    },
+    {
+      "author_name": "Stas",
+      "author_url": "https://www.google.com/maps/contrib/102025348118895761415/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXunjWQcMt9oriJGhHFZpagFTPITJLfHcTalSCHdcyoolBw6yI=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "4 years ago",
+      "text": "Internal restoration is over, Mariyinsky palace is open to visitors from September 4, 2020.\nTo visit, you must register on the site, only 3 days per week available: Friday, Saturday, Sunday.\nVisit only as part of a group. Available for citizens of Ukraine and foreigners.\n!!!Pay attention: The site often has technical issues. Free slots are booked very quickly.\nVisit price ~6$\nTour time 45 minutes + unlimited in the inner garden.",
+      "time": 1599902429,
+      "translated": false
+    },
+    {
+      "author_name": "Travel Smart Budget",
+      "author_url": "https://www.google.com/maps/contrib/115013486109087343292/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVd1fcol7lV4qstzw0WPBiokuPVJTsxRpwPf7WHzLoLI9uIQia4Cg=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Mariyinsky Palace is worth visiting place. There's a nice park next to the palace and a terrace you can enjoy a panoramic view of the city.",
+      "time": 1563427181,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.502120+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "17:00"
+        }
+      ]
+    }
+  }
+}

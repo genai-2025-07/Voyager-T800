@@ -18,9 +18,17 @@ handlers:
     filters: [add_service_context]
     stream: ext://sys.stdout
 
+  # File handler writes to a filename which will be adjusted by setup_logger()
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: json
+    filters: [add_service_context]
+    filename: app.log
+
 root:
   level: INFO
-  handlers: [console]
+  handlers: [console, file]
 
 loggers:
   uvicorn.error:

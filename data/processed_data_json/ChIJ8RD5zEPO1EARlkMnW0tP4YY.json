@@ -1,0 +1,90 @@
+{
+  "postal_code": "02000",
+  "administrative_area_level_1": "Kyiv",
+  "administrative_area_level_2": "Kyiv City",
+  "sublocality_level_1": "",
+  "address": "Andriivs'kyi descent, Kyiv, Ukraine, 02000",
+  "phone_number": "",
+  "place_id": "ChIJ8RD5zEPO1EARlkMnW0tP4YY",
+  "url": "https://maps.google.com/?cid=9719136655912682390",
+  "coordinates": {
+    "lat": 50.4598069,
+    "lng": 30.5161398
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Mark T",
+      "author_url": "https://www.google.com/maps/contrib/116640473044798592310/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXtgeatysHoGrGrqMMX4ufdTDmWPkdfQdKCuSxpDpXuxk21xozC=s128-c0x00000000-cc-rp-mo-ba8",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "Something of a old city and tourist area, very nice area",
+      "time": 1714700665,
+      "translated": false
+    },
+    {
+      "author_name": "Will Massey",
+      "author_url": "https://www.google.com/maps/contrib/116658681158258503893/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVg4YSis7ebUyv0imqofwwqk9qL0VvMAWiRYDDePE2o0DnECn23=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "2 months ago",
+      "text": "I love these paved/cobbled walkways in Kyiv, which has various hills. So reminiscent of other cities in Central Europe. This one reminded me of Prague! 🇺🇦 🇨🇿",
+      "time": 1749578158,
+      "translated": false
+    },
+    {
+      "author_name": "Kir Vladimirovich",
+      "author_url": "https://www.google.com/maps/contrib/107187191034010781325/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjX7Jezc6Zs1Iaclfvg5KXYuzprd2FqDZD96t5Mo34kcJy11BOFU=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "12 months ago",
+      "text": "One of these places can really be considered a historical heritage of Kyiv. Low-rise buildings that intersect with modern life. Maybe it would have been better to save - sure, but it doesn't make sense to sthink how it could be, we have to save what we have for now!\nGlory to Ukraine.",
+      "time": 1724097225,
+      "translated": false
+    },
+    {
+      "author_name": "Spartacus X",
+      "author_url": "https://www.google.com/maps/contrib/110732611635770843196/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIGoADznk2ZMU9AVlxEYnODgD_gzPQlh2oK5wF1zXjPV1qEYQ=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "Very nice hill to walk up or down.  Very nice walk and at the top there are many nice restaurants and things to see.   Great area for some exercise.",
+      "time": 1705978584,
+      "translated": false
+    },
+    {
+      "author_name": "Iryna Khmelevska",
+      "author_url": "https://www.google.com/maps/contrib/118376332120596015990/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUcs1eqQjhhumeuHsc6f5AleJta5EP9MWOBuQgwOrJcdAnNyW2U=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 4,
+      "relative_time_description": "3 years ago",
+      "text": "Nice atmosphere and artists alley, good place to have a walk and enjoy atmosphere of old Kyiv",
+      "time": 1637515881,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "route"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false
+}

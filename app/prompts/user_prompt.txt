@@ -1,0 +1,19 @@
+Please create a detailed {duration} itinerary for a trip to {destination}.
+
+Traveler Profile:
+- Interests: {interests}
+- Budget: {budget}
+- Travel Style: {travel_style}
+
+{additional_context}
+
+Please provide:
+1. A day-by-day itinerary with specific activities
+2. Cultural and historical context for major attractions
+3. Local cuisine recommendations
+4. Practical travel tips
+5. Estimated costs for budget planning
+6. Best times to visit each location
+7. Transportation options between activities
+
+Make the itinerary engaging, informative, and tailored to the traveler's preferences.

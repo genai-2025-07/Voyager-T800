@@ -1,0 +1,142 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Virmens'ka St, 7, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "",
+  "place_id": "ChIJq-X4cW3dOkcRGAW1W_XPeB4",
+  "url": "https://maps.google.com/?cid=2195733471055643928",
+  "coordinates": {
+    "lat": 49.84312370000001,
+    "lng": 24.0308447
+  },
+  "rating": 4.8,
+  "reviews": [
+    {
+      "author_name": "Shyam Tawar",
+      "author_url": "https://www.google.com/maps/contrib/117169869287994047775/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXU_NgtxiPEVeOEBZ2QmvPdMNu6a_x826E7lL_cZhzjD5GxLBm6=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 3,
+      "relative_time_description": "a year ago",
+      "text": "The inner buildings are closed but it's a connecting hallway between two streets so it remains open 24 hr.",
+      "time": 1719829615,
+      "translated": false
+    },
+    {
+      "author_name": "Andreas Poltin",
+      "author_url": "https://www.google.com/maps/contrib/102738189762201034228/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWhBNAOI8VpPw5jEUkDei1pmPsvZwyWJ8VpcPFtdoCCQ7uHovNL5A=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "a very historic place",
+      "time": 1558537000,
+      "translated": false
+    },
+    {
+      "author_name": "Phillipa Jane",
+      "author_url": "https://www.google.com/maps/contrib/105259843782959013215/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXtuQ8re9hK1Aspjon4zj8k1a3Tng4Ky9UB1OzuPXl8PgnaWHWyeA=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "8 years ago",
+      "text": "Another lovely church complex, worth a walk around",
+      "time": 1489040502,
+      "translated": false
+    },
+    {
+      "author_name": "Олександра Щербакова",
+      "author_url": "https://www.google.com/maps/contrib/115076558156950929614/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjX_DvrT0Ew_1cRVgup5Xgjp_5DHuFxaUH9Vc2Fu-fsxEFa0Wd3uNQ=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Best quarter in the old city, the oldest stone roads, authentic ancient doors, lots of conceptual restaurants",
+      "time": 1562170212,
+      "translated": false
+    },
+    {
+      "author_name": "Bill Malizia",
+      "author_url": "https://www.google.com/maps/contrib/107060729070894756726/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUZQUgOTOcx0xnXbBbnLnkrNpexEIKMLM_8wtQASVd0ZmSmsmcqIw=s128-c0x00000000-cc-rp-mo-ba6",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Great Area to visit, lots of history, fantastic eateries, Museums, Cafe's And Gallery's..",
+      "time": 1539980736,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.120517+03:00",
+    "weekly": {
+      "Saturday": [
+        {
+          "start": "00:00",
+          "end": "23:59"
+        }
+      ],
+      "Monday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "12:00",
+          "end": "21:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "21:00"
+        }
+      ]
+    }
+  }
+}

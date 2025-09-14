@@ -1,0 +1,16 @@
+---
+description: "Architectural principles for designing our API layer. The API is the strong outer wall of our application."
+globs: app/api/**/*.py
+---
+
+### **Principle 1: Strong Contracts at the Boundary**
+Our API defines the formal, public contract of our application. It must be reliable, predictable, and self-documenting.
+- **Guideline: Use Pydantic for All I/O.** Pydantic models are not just for data validation; they are our machine-readable contract. They ensure that any data entering or leaving the application conforms to a strict, explicit schema.
+
+### **Principle 2: Decoupled and Testable Logic**
+The API layer is responsible for HTTP handling (requests, responses, status codes) and nothing more. It should be completely decoupled from the business logic it orchestrates.
+- **Guideline: Achieve Decoupling with Dependency Injection.** We use FastAPI's `Depends` system to inject services into our route handlers. This allows us to test the web layer and the service layer in complete isolation. The API route knows *that* it needs a service, but it doesn't know *how* that service is constructed.
+
+### **Principle 3: Responsive and Non-Blocking**
+Our application must remain responsive under load. The API layer must never be blocked by slow I/O operations.
+- **Guideline: `async` is Mandatory for I/O.** Every route handler that performs a network call, database query, or any other form of I/O **must** be defined with `async def`. This allows the server to handle other requests while waiting for the I/O to complete.

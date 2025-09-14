@@ -1,0 +1,107 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Halytskyi District",
+  "address": "Staroievreiska St, 10, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "+380 93 725 0225",
+  "place_id": "ChIJLSfWhpDdOkcRvgdLGSMgnxY",
+  "url": "https://maps.google.com/?cid=1630056925251700670",
+  "coordinates": {
+    "lat": 49.8403849,
+    "lng": 24.0321023
+  },
+  "rating": 5,
+  "reviews": [
+    {
+      "author_name": "Джошкун Бабаєв",
+      "author_url": "https://www.google.com/maps/contrib/106658403258384470600/reviews",
+      "language": "en-US",
+      "original_language": "uk",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIcjmnd_O7GOD-QdHERfXcdZ21XwDTw004JrS1fBS0nNcWbdQ=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "4 months ago",
+      "text": "Food, service, service atmosphere, waitress Anastasia is just a bomb!!! It was my birthday, I am amazed by the emotions and positivity from the institution😁 Thank you Black House for the wonderful emotions❤️",
+      "time": 1742332762,
+      "translated": true
+    },
+    {
+      "author_name": "Соломія Шеремета",
+      "author_url": "https://www.google.com/maps/contrib/102629205181547169850/reviews",
+      "language": "en-US",
+      "original_language": "uk",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocKxp0RsARN_vIHqHAtjx_uBefQA3tB956MPb5gE2_EeMmFmZw=s128-c0x00000000-cc-rp-mo",
+      "rating": 5,
+      "relative_time_description": "4 months ago",
+      "text": "Waitress Nastya is the best of the best❤️\nBig reomendasion ❤️",
+      "time": 1742332921,
+      "translated": true
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "food",
+    "point_of_interest",
+    "restaurant"
+  ],
+  "wheelchair_accessible_entrance": false,
+  "serves_beer": true,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": true,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": true,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.999490+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "11:00",
+          "end": "22:00"
+        }
+      ]
+    }
+  }
+}

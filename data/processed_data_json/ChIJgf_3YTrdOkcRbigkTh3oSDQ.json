@@ -1,0 +1,143 @@
+{
+  "postal_code": "79000",
+  "administrative_area_level_1": "L'vivs'ka oblast",
+  "administrative_area_level_2": "",
+  "sublocality_level_1": "Lychakivskyi District",
+  "address": "Chernecha Hora St, 1, L'viv, L'vivs'ka oblast, Ukraine, 79000",
+  "phone_number": "+380 68 525 9185",
+  "place_id": "ChIJgf_3YTrdOkcRbigkTh3oSDQ",
+  "url": "https://maps.google.com/?cid=3767516300858108014",
+  "coordinates": {
+    "lat": 49.8432188,
+    "lng": 24.0629554
+  },
+  "rating": 4.7,
+  "reviews": [
+    {
+      "author_name": "Maretta Aivazian",
+      "author_url": "https://www.google.com/maps/contrib/102489158616584181712/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjW83DVM-TZRoJxBXe9bBDXYkjAPD1zY5koxcIoEjkTwWkMuxKaG3Q=s128-c0x00000000-cc-rp-mo-ba3",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "I love this partially wild park. Whenever I go off the main road, I always end up somewhere I wasn't before last time. Recommend for picnics, hiking or just going for a walk for cute pictures. Somewhere in the middle of the park there is an installation of an old Ukrainian village, also worthy to check (the entry is not free though)",
+      "time": 1638614091,
+      "translated": false
+    },
+    {
+      "author_name": "Z B",
+      "author_url": "https://www.google.com/maps/contrib/102430734717217401591/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVeYrA3vUB6IXv1xrXqt_kJUfVqZ1a3AHkYlBX_lJvzGS2B8TyvEg=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 5,
+      "relative_time_description": "6 years ago",
+      "text": "Great place to go to see the way things used to be! The whole family will have fun here and you could easily spend several hours. Be sure to wear good shoes because some of the paths can be muddy if it has rained. Some paths go into the woods and can get pretty steep.",
+      "time": 1565877307,
+      "translated": false
+    },
+    {
+      "author_name": "Legends l",
+      "author_url": "https://www.google.com/maps/contrib/104541174484791706965/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUTTBIrETwr_AxPezOx-ZCgZgUbv_Fm8vCZLNvHse6U1b0YS_Pi=s128-c0x00000000-cc-rp-mo-ba7",
+      "rating": 5,
+      "relative_time_description": "a year ago",
+      "text": "Must see place when visiting Lviv.  Brilliant architecture displaying various old traditional Ukrainian and Polish buildings. Excellent place for families and individuals alike to visit. Entrance fee was 40UAH for adults and 20UAH for children. There is so much to see here. Cafe sells tasty grilled meat too.\nA must see cultural exchange which can be reached on foot 40 minutes from centre or about 4 bus stops plus 18 minutes walk.\nPick a dry day if you can.",
+      "time": 1710461424,
+      "translated": false
+    },
+    {
+      "author_name": "Sabah Aisawi",
+      "author_url": "https://www.google.com/maps/contrib/114421347894843444323/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIEV0tH1bED5OfqenzGzCQF10LT-BPJgOLIiEF7d5GZscT4Ng=s128-c0x00000000-cc-rp-mo-ba5",
+      "rating": 5,
+      "relative_time_description": "3 years ago",
+      "text": "Beautiful park with huts that inform you of Ukrainian heritage and art. There is a pond with swans in addition to some animals. At the other end there is a small cafe and some traditional games.\nLoved it and took many photos.",
+      "time": 1632949585,
+      "translated": false
+    },
+    {
+      "author_name": "Raj Dhiman",
+      "author_url": "https://www.google.com/maps/contrib/114949401430720897292/reviews",
+      "language": "en",
+      "original_language": "en",
+      "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWUWKe1eLIc8J5jY9FqOnQNZE7aRuvUklPMtK7mO0beP_ZLmhi9=s128-c0x00000000-cc-rp-mo-ba4",
+      "rating": 4,
+      "relative_time_description": "4 years ago",
+      "text": "Beautiful space full of greenery and animals captive including_ horses, sheeps, goats, eagle, turkey, swan,etc\nIt's a huge green area with many ancient houses kept for observation\nThe ticket costs 50hrv\nYou need atleast 2 hours to see through it completely\nBut be aware it closes at 6 PM\nBesides it's a good place for one time visit only and with a group otherwise you may get bored😅",
+      "time": 1598738889,
+      "translated": false
+    }
+  ],
+  "price_level": 0,
+  "tags": [
+    "establishment",
+    "museum",
+    "point_of_interest",
+    "tourist_attraction"
+  ],
+  "wheelchair_accessible_entrance": true,
+  "serves_beer": false,
+  "serves_breakfast": false,
+  "serves_brunch": false,
+  "serves_dinner": false,
+  "serves_lunch": false,
+  "serves_vegetarian_food": false,
+  "serves_wine": false,
+  "takeout": false,
+  "opening_hours": {
+    "type": "weekly",
+    "week_start": "2025-08-11",
+    "week_end": "2025-08-17",
+    "last_refreshed": "2025-08-17T21:00:00.135079+03:00",
+    "weekly": {
+      "Monday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Tuesday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Wednesday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Thursday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Friday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Saturday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ],
+      "Sunday": [
+        {
+          "start": "10:00",
+          "end": "19:00"
+        }
+      ]
+    }
+  }
+}

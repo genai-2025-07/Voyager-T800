@@ -22,6 +22,7 @@
 - **Embeddings & Vector Search**: FAISS / Chroma / Pinecone
 - **LLMs**: OpenAI GPT / Anthropic Claude via AWS Bedrock
 - **Vision APIs**: AWS Rekognition, CLIP, or equivalent
+- **Infrastructure**: Docker Compose with DynamoDB, Redis, and Weaviate
 
 ---
 
@@ -71,6 +72,51 @@ Examples:
 ## Weekly Focus
 
 Each branch or contribution should align with the current module or sprint. See `/docs/sprints/` for a breakdown of weekly goals and accepted contributions.
+
+---
+
+## Environment Configuration
+
+The application uses two environment files for configuration:
+
+- `.env` – Development-specific settings
+- `.prod.env` – Production-specific settings
+
+**Do NOT put AWS credentials in these files!**
+
+### AWS Credentials
+
+AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) must be exported in your shell _before_ running Docker Compose. They are not stored in any .env file for security reasons.
+
+Example:
+```sh
+export AWS_ACCESS_KEY_ID=your-access-key-id
+export AWS_SECRET_ACCESS_KEY=your-secret-access-key
+export AWS_REGION=eu-central-1
+```
+
+### Docker Setup
+
+For detailed Docker configuration, environment setup, and usage instructions, see **[Docker Setup Guide](docs/docker-setup.md)**.
+
+**Quick Start:**
+```sh
+# 1. Set up secrets (one-time setup)
+mkdir -p secrets
+echo "<password>" > secrets/redis_password.txt
+
+# 2. Export AWS credentials
+export AWS_ACCESS_KEY_ID=your-access-key-id
+export AWS_SECRET_ACCESS_KEY=your-secret-access-key
+export AWS_REGION=eu-central-1
+
+# 3. Start services
+# Development
+docker compose --profile dev up --build
+
+# Production  
+docker compose --profile prod --env-file .prod.env up --build 
+```
 
 ---
 
