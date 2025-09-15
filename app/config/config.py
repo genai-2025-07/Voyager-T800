@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     log_level: str = Field(default='INFO')
     service_name: str = Field(default='local-fastapi')
 
+    # Weaviate Configuration
+    weaviate_host: str = Field(default='localhost', description='Weaviate host')
+    weaviate_port: int = Field(default=8090, description='Weaviate HTTP port')
+    weaviate_grpc_host: str = Field(default='localhost', description='Weaviate gRPC host')
+    weaviate_grpc_port: int = Field(default=50051, description='Weaviate gRPC port')
+    weaviate_http_secure: bool = Field(default=False, description='Use HTTPS for Weaviate HTTP')
+    weaviate_grpc_secure: bool = Field(default=False, description='Use TLS for Weaviate gRPC')
+
     model_config = SettingsConfigDict(
         env_file='../.env', env_file_encoding='utf-8', case_sensitive=False, extra='allow'
     )

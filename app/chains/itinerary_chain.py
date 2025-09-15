@@ -11,7 +11,6 @@ from langchain_groq import ChatGroq
 
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
-from app.services.weaviate.weaviate_setup import setup_complete_database
 from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.utils.read_prompt_from_file import load_prompt_from_file
 
@@ -34,11 +33,6 @@ temperature = float(os.getenv('GROQ_TEMPERATURE', '0.7'))
 llm = ChatGroq(groq_api_key=groq_key, model=model_name, temperature=temperature, streaming=True)
 
 try:
-    db_manager, client_wrapper, result = setup_complete_database()
-except Exception as e:
-    logger.error(f"ERROR setting up database: {e}")
-
-try:
     itinerary_template = load_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
     summary_template = load_prompt_from_file('app/prompts/test_summary_prompt.txt')
 except Exception as e:
@@ -59,17 +53,23 @@ try:
 except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
-# Initialize RAG and retriever
-retriever = setup_rag_retriever(
-    db=db_manager
-)
+# Global retriever - will be initialized when needed
+retriever = None
+
+def initialize_retriever(db_manager):
+    """Initialize the retriever with the provided database manager."""
+    global retriever
+    if retriever is None and db_manager is not None:
+        retriever = setup_rag_retriever(db=db_manager)
+        logger.info("Retriever initialized successfully")
+    return retriever
 
 # Chain where we will pass the last message from the chat history
 chain = (
     RunnablePassthrough.assign(
         chat_history=extract_chat_history_content,
         context=RunnableLambda(
-            lambda x: format_docs(retriever.invoke(x['user_input']))
+            lambda x: format_docs(retriever.invoke(x['user_input']) if retriever else [])
         ),  # Format retrieved documents with sources and city for context
     )
     | prompt

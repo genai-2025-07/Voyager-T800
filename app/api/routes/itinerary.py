@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.chains.itinerary_chain import full_response
+from app.chains.itinerary_chain import full_response, initialize_retriever
 from app.data_layer.dynamodb_client import SessionMetadata
 
 
@@ -69,6 +69,13 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
 
         # Get DynamoDB client from app state
         dynamodb_client = http_request.app.state.dynamodb_client
+
+        # Initialize retriever with Weaviate client from app state
+        weaviate_db_manager = http_request.app.state.weaviate_db_manager
+        if weaviate_db_manager:
+            initialize_retriever(weaviate_db_manager)
+        else:
+            logger.warning("Weaviate database manager not available in app state")
 
         # Generate itinerary using the existing chain
         itinerary_content = full_response(request.query, request.session_id or 'default_session')

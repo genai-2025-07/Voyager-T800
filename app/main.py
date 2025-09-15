@@ -12,13 +12,15 @@ from app.api.routes import itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
 from app.data_layer.dynamodb_client import DynamoDBClient
+from app.services.weaviate.weaviate_setup import setup_database_connection_only
 
 
 setup_logger()
 logger = logging.getLogger(__name__)
 
-# Global DynamoDB client instance
+# Global client instances
 dynamodb_client = None
+weaviate_client_wrapper = None
 
 # Check if we should use local DynamoDB
 use_local_dynamodb = settings.use_local_dynamodb
@@ -48,7 +50,7 @@ app.add_middleware(RequestIDMiddleware)
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa ARG001
     """Application lifespan manager for startup and shutdown events."""
-    global dynamodb_client
+    global dynamodb_client, weaviate_client_wrapper
 
     logger.info('Starting Voyager-T800 application...')
 
@@ -67,6 +69,25 @@ async def lifespan(app: FastAPI):  # noqa ARG001
         logger.error(f'Failed to initialize DynamoDB client: {str(e)}')
         raise RuntimeError(f'DynamoDB initialization failed: {str(e)}')
 
+    try:
+        # Initialize Weaviate client
+        logger.info('Initializing Weaviate client...')
+        logger.info(f'Connecting to Weaviate at {settings.weaviate_host}:{settings.weaviate_port}')
+        
+        db_manager, weaviate_client_wrapper = setup_database_connection_only()
+        
+        if db_manager is None or weaviate_client_wrapper is None:
+            logger.error('Failed to initialize Weaviate client')
+            raise RuntimeError('Weaviate initialization failed')
+        
+        logger.info('Weaviate client initialized successfully')
+        app.state.weaviate_client_wrapper = weaviate_client_wrapper
+        app.state.weaviate_db_manager = db_manager
+
+    except Exception as e:
+        logger.error(f'Failed to initialize Weaviate client: {str(e)}')
+        raise RuntimeError(f'Weaviate initialization failed: {str(e)}')
+
     server_url = f'http://{settings.host}:{settings.port}'
     logger.info(f'Voyager-T800 is running at {server_url}')
 
@@ -74,6 +95,16 @@ async def lifespan(app: FastAPI):  # noqa ARG001
 
     logger.info('Shutting down Voyager-T800 application...')
 
+    # Cleanup Weaviate connection
+    if weaviate_client_wrapper:
+        try:
+            weaviate_client_wrapper.disconnect()
+            logger.info('Weaviate client disconnected successfully')
+        except Exception as e:
+            logger.warning(f'Error during Weaviate disconnect: {e}')
+        weaviate_client_wrapper = None
+
+    # Cleanup DynamoDB connection
     if dynamodb_client:
         logger.info('DynamoDB client cleanup completed')
         dynamodb_client = None
