@@ -198,6 +198,8 @@ RAW_ATTRACTIONS_LIST = [
 
 ATTRACTION_COLLECTION_NAME = "Attraction"
 CHUNK_COLLECTION_NAME = "AttractionChunk"
+TAG_SET_COLLECTION_NAME = "TagSet"
+
 CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
 
 @pytest.fixture
@@ -216,7 +218,7 @@ def db_manager_with_schema(client_wrapper):
     Lifecycle:
     1. Connects to Weaviate.
     2. Tears down any old collections from previous runs.
-    3. Creates new, clean collections ('Attraction' and 'AttractionChunk').
+    3. Creates new, clean collections ('Attraction' and 'AttractionChunk', 'TagSet').
     4. Instantiates and yields an AttractionDBManager.
     5. After the test runs, tears down the collections to clean up.
     """
@@ -235,16 +237,22 @@ def db_manager_with_schema(client_wrapper):
         schema_manager.delete_collection(CHUNK_COLLECTION_NAME)
     except Exception:
         pass
-
+    try:
+        schema_manager.delete_collection(TAG_SET_COLLECTION_NAME)
+    except Exception:
+        pass
     # 2. Create collections from schema files
     attraction_schema_path = Path("app/config/attraction_class_schema.yaml")
     attraction_schema = parse_weaviate_schema_config(str(attraction_schema_path))
     schema_manager.create_collection(attraction_schema)
 
     chunk_schema_path = Path("app/config/attraction_chunk_class_schema.yaml")
-    if chunk_schema_path.exists():
-        chunk_schema = parse_weaviate_schema_config(str(chunk_schema_path))
-        schema_manager.create_collection(chunk_schema)
+    chunk_schema = parse_weaviate_schema_config(str(chunk_schema_path))
+    schema_manager.create_collection(chunk_schema)
+
+    tag_set_schema_path = Path("app/config/tag_set_class_schema.yaml")
+    tag_set_schema = parse_weaviate_schema_config(str(tag_set_schema_path))
+    schema_manager.create_collection(tag_set_schema)
 
     # 3. Yield the ready-to-use DB manager
     db_manager = AttractionDBManager(client)
@@ -258,6 +266,10 @@ def db_manager_with_schema(client_wrapper):
         pass
     try:
         schema_manager.delete_collection(CHUNK_COLLECTION_NAME)
+    except Exception:
+        pass
+    try:
+        schema_manager.delete_collection(TAG_SET_COLLECTION_NAME)
     except Exception:
         pass
     client_wrapper.disconnect()

@@ -55,10 +55,12 @@ class AttractionDBManager:
     """
     def __init__(self, client: weaviate.WeaviateClient,
                  attraction_collection_name="Attraction",
-                 chunk_collection_name="AttractionChunk"):
+                 chunk_collection_name="AttractionChunk",
+                 tag_set_collection_name="TagSet"):
         self.client = client
         self.attraction_collection = client.collections.get(attraction_collection_name)
         self.chunk_collection = client.collections.get(chunk_collection_name)
+        self.tag_set_collection = client.collections.get(tag_set_collection_name)
         self.prop_validator = PropertyValidator(logger=logger)
 
     def _ensure_coordinates_model(self, props: dict, coord_key: str = "coordinates"):
@@ -169,6 +171,7 @@ class AttractionDBManager:
         references_to_add = []
         results = []
         skipped = []
+        unique_batch_tags = set()
 
         for idx, item in enumerate(items):
             if not item.attraction:
@@ -177,6 +180,7 @@ class AttractionDBManager:
                 continue
 
             attraction_props = item.attraction.to_weaviate_properties()
+            unique_batch_tags.update(attraction_props["tags"])
             attraction_uuid = generate_uuid5(attraction_props)
             objects_to_add.append({
                 "collection": self.attraction_collection,
@@ -216,7 +220,7 @@ class AttractionDBManager:
                 "chunk_uuids": chunk_uuids
             })
 
-        return objects_to_add, references_to_add, results, skipped
+        return objects_to_add, references_to_add, results, skipped, list(unique_batch_tags)
 
     def _insert_objects(self, objects_to_add, batch_size, max_batch_errors):
         with self.client.batch.fixed_size(batch_size=batch_size) as batch:
@@ -281,6 +285,32 @@ class AttractionDBManager:
                         attraction_uuid, ve
                     )
                     return attraction_props
+                
+    def _insert_unique_tags(self, unique_batch_tags):
+        response = self.tag_set_collection.query.fetch_objects(limit=1)
+        if response.objects:
+            tagset_obj = response.objects[0]
+            existing_tags = set(tagset_obj.properties.get("tags", []))
+            merged_tags = list(existing_tags.union(set(unique_batch_tags)))
+            self.tag_set_collection.data.update(
+                uuid=tagset_obj.uuid,
+                properties={"tags": merged_tags}
+            )
+        else:
+            self.tag_set_collection.data.insert(
+                properties={"tags": list(unique_batch_tags)}
+            )
+
+    def get_unique_tags(self, tag_set_collection_name="TagSet"):
+        response = self.tag_set_collection.query.fetch_objects(limit=1)
+        if response.objects:
+            tagset_obj = response.objects[0]
+            existing_tags = tagset_obj.properties.get("tags", [])
+            if len(existing_tags) == 0:
+                logging.error(f"Got and empty list of tags for object {tagset_obj}")
+            return existing_tags
+        else:
+            logging.error(f"Got no objects in {tag_set_collection_name} collection response: {response}") 
 
     def batch_insert_attractions_with_chunks(
             self,
@@ -295,11 +325,12 @@ class AttractionDBManager:
             "results": list of dicts with attraction_uuid and chunk_uuids, chunks_present flag for each item.
             "skipped": list of indexes of skipped items.
         """
-        objects_to_add, references_to_add, results, skipped = self._prepare_objects(items)
+        objects_to_add, references_to_add, results, skipped, unique_batch_tags = self._prepare_objects(items)
         self._insert_objects(objects_to_add, batch_size, max_batch_errors)
         self._add_references(references_to_add)
         if wait_for_indexing:
             self.attraction_collection.batch.wait_for_vector_indexing()
+        self._insert_unique_tags(unique_batch_tags)
         self._handle_batch_errors()
         return {"results": results, "skipped": skipped}
 
