@@ -1,68 +1,51 @@
 import logging
-import os
 import time
 
-from dotenv import load_dotenv
 from langchain.memory import ConversationSummaryMemory
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_groq import ChatGroq
 
+from app.config.config import settings
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.retrieval.waiss_retriever import setup_rag_retriever
+from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
 from app.utils.read_prompt_from_file import load_prompt_from_file
 
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()  # Load environment variables from .env file
 
-# Set your Groq API key in your environment variables
-try:
-    groq_key = os.getenv('GROQ_API_KEY')
-except Exception as e:
-    logger.error(f'ERROR exporting Groq API key: {e}')
+groq_key = settings.groq_api_key
 
-# Initialize Groq LLM
-# Parameterize model name and temperature via environment variables for flexibility
-model_name = os.getenv('GROQ_MODEL_NAME', 'llama3-8b-8192')
-temperature = float(os.getenv('GROQ_TEMPERATURE', '0.7'))
+model_name = settings.groq_model_name
+temperature = settings.groq_temperature
 
 llm = ChatGroq(groq_api_key=groq_key, model=model_name, temperature=temperature, streaming=True)
 
-try:
-    itinerary_template = load_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
-    summary_template = load_prompt_from_file('app/prompts/test_summary_prompt.txt')
-except Exception as e:
-    logger.error(f'ERROR loading prompts: {e}')
+itinerary_template = load_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
+summary_template = load_prompt_from_file('app/prompts/test_summary_prompt.txt')
 
 prompt = PromptTemplate(input_variables=['chat_history', 'user_input', 'context'], template=itinerary_template)
 
 memory_prompt = PromptTemplate(input_variables=['summary', 'new_lines'], template=summary_template)
 
-# Configuration: expose token limit and session TTL via environment variables
-try:
-    MEMORY_MAX_TOKEN_LIMIT = int(os.getenv('SESSION_MEMORY_MAX_TOKEN_LIMIT', '1000'))
-except Exception:
-    MEMORY_MAX_TOKEN_LIMIT = 1000
-
-try:
-    SESSION_MEMORY_TTL_SECONDS = int(os.getenv('SESSION_MEMORY_TTL_SECONDS', '3600'))
-except Exception:
-    SESSION_MEMORY_TTL_SECONDS = 3600
+MEMORY_MAX_TOKEN_LIMIT = settings.session_memory_max_token_limit
+SESSION_MEMORY_TTL_SECONDS = settings.session_memory_ttl_seconds
 
 # Global retriever - will be initialized when needed
 retriever = None
+
 
 def initialize_retriever(db_manager):
     """Initialize the retriever with the provided database manager."""
     global retriever
     if retriever is None and db_manager is not None:
         retriever = setup_rag_retriever(db=db_manager)
-        logger.info("Retriever initialized successfully")
+        logger.info('Retriever initialized successfully')
     return retriever
+
 
 # Chain where we will pass the last message from the chat history
 chain = (
@@ -101,6 +84,7 @@ def _cleanup_expired_sessions():
             del session_memories[s_id]
     except Exception as e:
         logger.warning(f'Session cleanup failed: {e}')
+
 
 def get_session_memory(session_id: str):
     """
@@ -200,6 +184,7 @@ def full_response(user_input, session_id='default_session'):
         return response
     except Exception as e:
         logger.error(f'ERROR: {e}')
+
 
 def main():
     """

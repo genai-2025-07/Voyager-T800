@@ -7,32 +7,24 @@ from datetime import datetime
 import requests
 import streamlit as st
 
+from app.config.config import settings
+
 
 # Configuration
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8000')
-STREAMLIT_ENV = os.environ.get('STREAMLIT_ENV', 'dev')
+API_BASE_URL = settings.api_base_url
+STREAMLIT_ENV = settings.streamlit_env
 
 WELCOME_MESSAGE = (
     "🚀 Welcome to Voyager-T800! I'm your intelligent AI travel assistant. "
     'Tell me about your dream trip - where would you like to go, when, and what kind of experience are you looking for?'
 )
 
-APP_PAGE_TITLE = os.environ.get('VOYAGER_PAGE_TITLE', 'Voyager-T800 Travel Assistant')
-APP_PAGE_ICON = os.environ.get('VOYAGER_PAGE_ICON', '🚀')
-APP_PAGE_TAGLINE = os.environ.get(
-    'VOYAGER_PAGE_TAGLINE',
-    '*Your AI-powered conversational trip planner*',
-)
+APP_PAGE_TITLE = settings.voyager_page_title
+APP_PAGE_ICON = settings.voyager_page_icon
+APP_PAGE_TAGLINE = settings.voyager_page_tagline
 
-try:
-    MAX_INPUT_LENGTH = int(os.environ.get('VOYAGER_MAX_INPUT_LENGTH', '500'))
-except ValueError:
-    MAX_INPUT_LENGTH = 500
-
-try:
-    SESSIONS_PAGE_SIZE = int(os.environ.get('VOYAGER_SESSIONS_PAGE_SIZE', '10'))
-except ValueError:
-    SESSIONS_PAGE_SIZE = 10
+MAX_INPUT_LENGTH = settings.voyager_max_input_length
+SESSIONS_PAGE_SIZE = settings.voyager_sessions_page_size
 
 st.set_page_config(page_title=APP_PAGE_TITLE, page_icon=APP_PAGE_ICON, layout='wide')
 

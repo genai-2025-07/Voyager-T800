@@ -24,6 +24,14 @@ class Settings(BaseSettings):
 
     api_base_url: str = Field(default='http://localhost:8000')
 
+    # Frontend (Streamlit) Configuration
+    streamlit_env: str = Field(default='dev', description='Environment for Streamlit UI')
+    voyager_page_title: str = Field(default='Voyager-T800 Travel Assistant')
+    voyager_page_icon: str = Field(default='🚀')
+    voyager_page_tagline: str = Field(default='*Your AI-powered conversational trip planner*')
+    voyager_max_input_length: int = Field(default=500)
+    voyager_sessions_page_size: int = Field(default=10)
+
     # DynamoDB Configuration
     use_local_dynamodb: bool = Field(default=False, description='Use local DynamoDB instead of AWS')
     dynamodb_endpoint_url: str = Field(default='http://localhost:8003', description='Local DynamoDB endpoint URL')
@@ -43,6 +51,13 @@ class Settings(BaseSettings):
     weaviate_grpc_port: int = Field(default=50051, description='Weaviate gRPC port')
     weaviate_http_secure: bool = Field(default=False, description='Use HTTPS for Weaviate HTTP')
     weaviate_grpc_secure: bool = Field(default=False, description='Use TLS for Weaviate gRPC')
+
+    # LLM / Chain Configuration
+    groq_api_key: str | None = Field(default=None)
+    groq_model_name: str = Field(default='llama3-8b-8192')
+    groq_temperature: float = Field(default=0.7)
+    session_memory_max_token_limit: int = Field(default=1000)
+    session_memory_ttl_seconds: int = Field(default=3600)
 
     model_config = SettingsConfigDict(
         env_file='../.env', env_file_encoding='utf-8', case_sensitive=False, extra='allow'
