@@ -192,7 +192,7 @@ class StreamlitWriter(io.StringIO):
         super().write(s)
         self.placeholder.markdown(self.getvalue())
 
-def run_ai_stream(user_message:str, session_id:str):
+def run_ai_stream(user_message:str, session_id:str, include_events:bool=False):
     """
     Stream the AI model's response to a Streamlit placeholder and capture the output.
 
@@ -211,7 +211,7 @@ def run_ai_stream(user_message:str, session_id:str):
     placeholder = st.empty()
     writer = StreamlitWriter(placeholder)
     with redirect_stdout(writer):
-        stream_response(user_message, session_id)
+        stream_response(user_message, session_id, include_events)
     return writer.getvalue()
 
 def run_ai_response(user_message:str, session_id:str):
@@ -231,7 +231,7 @@ def run_ai_response(user_message:str, session_id:str):
         from contextlib import redirect_stdout
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            full_response(user_message, session_id)
+            full_response(user_message, session_id, include_events)
         return buffer.getvalue()
     except Exception as e:
         return f"Error in AI processing: {str(e)}"
@@ -280,6 +280,10 @@ with st.sidebar:
     if st.button("➕ New Session", type="primary", use_container_width=True):
         create_new_session()
         st.rerun()
+
+    st.markdown("---")
+    st.subheader("Tools")
+    include_events = st.checkbox("Include available events", value=False, help="Enrich itinerary with local events")
 
     st.markdown("---")
 
@@ -437,7 +441,7 @@ if user_input and user_input.strip():
         })
 
     with st.spinner("Voyager-T800 is analyzing your request..."):
-        assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id)
+        assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id, include_events)
 
     if isinstance(assistant_response, str) and assistant_response.strip():
         cleaned = assistant_response.strip().lower()

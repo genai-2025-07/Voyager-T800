@@ -1,15 +1,19 @@
+from app.utils.events_utils import parse_event_query
 from langchain.memory import ConversationSummaryMemory
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
 import os
 import time
-from app.utils.read_prompt_from_file import load_prompt_from_file
+from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
-from dotenv import load_dotenv
+from app.models.llms.llm_factory import get_llm
+from app.services.events.service import EventsService
+from app.services.events.providers.tavily import TavilyEventsProvider
 import logging
+
+from app.services.events.models import EventQuery
 
 # Configure logging
 logging.basicConfig(
@@ -17,35 +21,21 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-load_dotenv()  # Load environment variables from .env file
+llm = get_llm("groq")
+structured_llm = llm.with_structured_output(schema=EventQuery)
 
-# Set your Groq API key in your environment variables
-try:
-    groq_key = os.getenv("GROQ_API_KEY")
-except Exception as e:
-    logging.error(f"ERROR exporting Groq API key: {e}")
-
-# Initialize Groq LLM
-# Parameterize model name and temperature via environment variables for flexibility
-model_name = os.getenv("GROQ_MODEL_NAME", "llama3-8b-8192")
-temperature = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
-
-llm = ChatGroq(
-    groq_api_key=groq_key,
-    model=model_name,
-    temperature=temperature,
-    streaming=True
-)
+events_service = EventsService(provider=TavilyEventsProvider())
 
 try:
-    itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
-    summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
+    itinerary_template = read_prompt_from_file("app/prompts/expert_prompt_for_langchain.txt")
+    summary_template = read_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
     logging.error(f"ERROR loading prompts: {e}")
 
 prompt = PromptTemplate(
-    input_variables=["chat_history", "user_input", "context"],
-    template=itinerary_template
+    input_variables=["chat_history", "user_input", "context", "events"],
+    template=itinerary_template,
+    template_format="jinja2"
 )
 
 memory_prompt = PromptTemplate(
@@ -65,13 +55,38 @@ except Exception:
     SESSION_MEMORY_TTL_SECONDS = 3600
 
 # Initialize RAG Prototype and retriever
-retriever = get_rag_retriever()
+try:
+    retriever = get_rag_retriever()
+    rag_available = True
+    logging.info("RAG retriever initialized successfully")
+except Exception as e:
+    logging.warning(f"RAG retriever initialization failed: {e}")
+    retriever = None
+    rag_available = False
 
 # Chain where we will pass the last message from the chat history
-chain = RunnablePassthrough.assign(
-    chat_history=extract_chat_history_content,
-    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"])))  # Format retrieved documents with sources and city for context
-) | prompt | llm
+if rag_available:
+    chain = ( 
+        RunnablePassthrough.assign(
+            chat_history=extract_chat_history_content,
+            context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))),
+            event_query=lambda x: parse_event_query(x["user_input"], structured_llm)
+        )
+        .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
+        | prompt
+        | llm
+    )
+else:
+    chain = (
+        RunnablePassthrough.assign(
+            chat_history=lambda x: x.get("chat_history"),
+            context=RunnableLambda(lambda x: "No context available - RAG system temporarily disabled"),
+            event_query=lambda x: parse_event_query(x["user_input"], structured_llm),
+        )
+        .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
+        | prompt
+        | llm
+    )
 
 session_memories = {}
 
@@ -160,13 +175,13 @@ runnable_with_history = RunnableWithMessageHistory(
     history_messages_key="chat_history"
 )
 
-def stream_response(user_input, session_id="default_session"):
+def stream_response(user_input, session_id="default_session", include_events: bool = False):
     """
     Function to stream the response from the assistant (synchronous)
     """
     try:
         for chunk in runnable_with_history.stream(
-            {"user_input": user_input},
+            {"user_input": user_input, "include_events": include_events},
             config={"configurable": {"session_id": session_id}}
         ):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
@@ -176,14 +191,14 @@ def stream_response(user_input, session_id="default_session"):
     except Exception as e:
         logging.error(f"ERROR: {e}")
 
-def full_response(user_input, session_id="default_session"):
+def full_response(user_input, session_id="default_session", include_events: bool = False):
     """
     Function to get the full response from the assistant without streaming (synchronous)
     """
     response = ""
     try:
         result = runnable_with_history.invoke(
-            {"user_input": user_input},
+            {"user_input": user_input, "include_events": include_events},
             config={"configurable": {"session_id": session_id}}
         )
         response = result.content if hasattr(result, 'content') else str(result)
@@ -204,7 +219,8 @@ def main():
             if user_input.lower() == 'q':
                 break
             elif user_input.lower() == 'mem':
-                print(f"\n\nMemory: {memory.buffer}")
+                current_memory = get_session_memory(session_id)
+                print(f"\n\nMemory: {current_memory.buffer}")
                 continue
 
             print("\n\nAnswer: ", end='')
