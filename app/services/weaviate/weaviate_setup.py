@@ -79,14 +79,17 @@ class WeaviateDatabaseSetup:
         try:
             schema_config = parse_weaviate_schema_config(str(schema_path))        
             try:
-                existing_collection = self.schema_manager.get_collection(schema_config.name)
-                logger.info(f"{schema_name} collection already exists: {existing_collection}")
-                return True
+                collection_exists = self.schema_manager.collection_exists(schema_config.name)
+                if collection_exists:
+                    logger.info(f"{schema_name} collection already exists")
+                    return True
+                else:
+                    logger.info(f"Creating {schema_name} collection...")
+                    self.schema_manager.create_collection(schema_config)
+                    logger.info(f"{schema_name} collection created successfully!")
+                    return True
             except Exception:
-                logger.info(f"Creating {schema_name} collection...")
-                self.schema_manager.create_collection(schema_config)
-                logger.info(f"{schema_name} collection created successfully!")
-                return True
+                logger.error(f"Failed to create collection {schema_config.name}")
                 
         except Exception as e:
             logger.error(f"Failed to create {schema_name} schema: {e}")
@@ -109,7 +112,7 @@ class WeaviateDatabaseSetup:
         if not self._setup_schema(self.tag_set_schema_path, "TagSet"):
             return False
 
-        if not self._setup_schema(self.chunk_schema_path, "Chunk"):
+        if not self._setup_schema(self.chunk_schema_path, "AttractionChunk"):
             return False
         
         return True
@@ -184,6 +187,7 @@ def setup_complete_database() -> Tuple[Optional[AttractionDBManager], Optional[W
         return None, None, None
     
     # Setup schemas
+    logger.info(f"-------------------collections-------------------- {db_setup.schema_manager.list_collections()}")
     if not db_setup.setup_schemas():
         return None, db_setup.client_wrapper, None
     

@@ -29,7 +29,7 @@ class InvertedIndexConfig(BaseModel):
 
 class SchemaConfigModel(BaseModel):
     name: str = Field(..., alias="class")
-    description: Optional[str] = None
+    description: Optional[str]
     vectorizer: str
     vectorIndexType: Optional[str] = None
     vectorIndexConfig: Optional[VectorIndexConfig] = None

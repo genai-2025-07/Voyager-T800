@@ -1,5 +1,6 @@
 import logging
 import weaviate
+import threading
 
 from app.services.weaviate.data_models.attraction_models import (
     AttractionWithChunks, AttractionModel, ChunkBase,
@@ -7,9 +8,6 @@ from app.services.weaviate.data_models.attraction_models import (
 )
 from weaviate.classes.query import Filter, QueryReference, MetadataQuery
 from weaviate.util import generate_uuid5
-from weaviate.collections.classes.internal import (
-    QueryReturn
-)
 from weaviate.classes.data import GeoCoordinate
 from datetime import datetime
 from app.config.logger.logger import setup_logger
@@ -60,6 +58,7 @@ class AttractionDBManager:
         self.client = client
         self.attraction_collection = client.collections.get(attraction_collection_name)
         self.chunk_collection = client.collections.get(chunk_collection_name)
+        self._tag_update_lock = threading.Lock()
         self.tag_set_collection = client.collections.get(tag_set_collection_name)
         self.prop_validator = PropertyValidator(logger=logger)
 
@@ -287,19 +286,20 @@ class AttractionDBManager:
                     return attraction_props
                 
     def _insert_unique_tags(self, unique_batch_tags):
-        response = self.tag_set_collection.query.fetch_objects(limit=1)
-        if response.objects:
-            tagset_obj = response.objects[0]
-            existing_tags = set(tagset_obj.properties.get("tags", []))
-            merged_tags = list(existing_tags.union(set(unique_batch_tags)))
-            self.tag_set_collection.data.update(
-                uuid=tagset_obj.uuid,
-                properties={"tags": merged_tags}
-            )
-        else:
-            self.tag_set_collection.data.insert(
-                properties={"tags": list(unique_batch_tags)}
-            )
+        with self._tag_update_lock:
+            response = self.tag_set_collection.query.fetch_objects(limit=1)
+            if response.objects:
+                tagset_obj = response.objects[0]
+                existing_tags = set(tagset_obj.properties.get("tags", []))
+                merged_tags = list(existing_tags.union(set(unique_batch_tags)))
+                self.tag_set_collection.data.update(
+                    uuid=tagset_obj.uuid,
+                    properties={"tags": merged_tags}
+                )
+            else:
+                self.tag_set_collection.data.insert(
+                    properties={"tags": list(unique_batch_tags)}
+                )
 
     def get_unique_tags(self, tag_set_collection_name="TagSet"):
         response = self.tag_set_collection.query.fetch_objects(limit=1)
@@ -328,9 +328,13 @@ class AttractionDBManager:
         objects_to_add, references_to_add, results, skipped, unique_batch_tags = self._prepare_objects(items)
         self._insert_objects(objects_to_add, batch_size, max_batch_errors)
         self._add_references(references_to_add)
+
         if wait_for_indexing:
             self.attraction_collection.batch.wait_for_vector_indexing()
-        self._insert_unique_tags(unique_batch_tags)
+            
+        if unique_batch_tags:
+            self._insert_unique_tags(unique_batch_tags)
+
         self._handle_batch_errors()
         return {"results": results, "skipped": skipped}
 
