@@ -7,7 +7,7 @@ import uuid
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.chains.itinerary_chain import full_response, initialize_retriever
@@ -61,6 +61,28 @@ class SessionCreateResponse(BaseModel):
     success: bool = True
 
 
+class SessionsListResponse(BaseModel):
+    """Response model for listing sessions for a user."""
+
+    user_id: str
+    sessions: list[dict]
+
+
+class TransferSessionsRequest(BaseModel):
+    """Request model to transfer sessions from one user_id to another."""
+
+    from_user_id: str
+    to_user_id: str
+
+
+class SessionDeleteResponse(BaseModel):
+    """Response for session deletion."""
+
+    session_id: str
+    user_id: str
+    deleted: bool = True
+
+
 @router.post('/generate', response_model=ItineraryGenerateResponse)
 async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Request):
     """Generate an itinerary and store it in DynamoDB using SessionMetadata."""
@@ -80,7 +102,7 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
         if weaviate_db_manager:
             initialize_retriever(weaviate_db_manager)
         else:
-            logger.warning("Weaviate database manager not available in app state")
+            logger.warning('Weaviate database manager not available in app state')
 
         # Create a message entry for the USER query
         user_message = {
@@ -146,36 +168,6 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
         raise HTTPException(status_code=500, detail='Failed to generate and store itinerary. Please try again.')
 
 
-@router.get('/{session_id}', response_model=ItineraryRetrieveResponse)
-async def get_session_data(session_id: str, user_id: str = 'anonymous', http_request: Request = None):
-    """Retrieve session data by session_id."""
-    try:
-        logger.info(f'Retrieving session data for session_id: {session_id}')
-
-        # Get DynamoDB client from app state
-        dynamodb_client = http_request.app.state.dynamodb_client
-
-        # Get session data from DynamoDB
-        session_data = dynamodb_client.get_item(user_id, session_id)
-
-        if session_data is None:
-            raise HTTPException(status_code=404, detail='Session not found.')
-
-        return ItineraryRetrieveResponse(
-            user_id=session_data['user_id'],
-            session_id=session_data['session_id'],
-            session_summary=session_data['session_summary'],
-            started_at=session_data['started_at'],
-            messages=session_data['messages'],
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f'Failed to retrieve session data: {str(e)}')
-        raise HTTPException(status_code=500, detail='Failed to retrieve session data. Please try again.')
-
-
 @router.post('/sessions', response_model=SessionCreateResponse)
 async def create_session(request: SessionCreateRequest, http_request: Request):
     """Create a new session."""
@@ -203,7 +195,7 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
         session_metadata = SessionMetadata(
             user_id=user_id,
             session_id=session_id,
-            session_summary='New travel planning session',
+            session_summary='Session',
             started_at=now,
             messages=[welcome_message],
         )
@@ -215,10 +207,96 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
             logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
             raise HTTPException(status_code=500, detail='Failed to create session. Please try again.')
 
-        return SessionCreateResponse(
-            session_id=session_id, user_id=user_id, session_summary='New travel planning session', started_at=now
-        )
+        return SessionCreateResponse(session_id=session_id, user_id=user_id, session_summary='Session', started_at=now)
 
     except Exception as e:
         logger.error(f'Failed to create session: {str(e)}')
         raise HTTPException(status_code=500, detail='Failed to create session. Please try again.')
+
+
+@router.get('/sessions', response_model=SessionsListResponse)
+async def list_sessions(user_id: str = Query('anonymous'), http_request: Request = ...):
+    """List all sessions for a given user_id."""
+    try:
+        dynamodb_client = http_request.app.state.dynamodb_client  # type: ignore[attr-defined]
+        items = dynamodb_client.list_sessions(user_id)
+        # Do not refactor message structure; return as-is
+        return SessionsListResponse(user_id=user_id, sessions=items)
+    except Exception as e:
+        logger.error(f'Failed to list sessions: {str(e)}')
+        raise HTTPException(status_code=500, detail='Failed to list sessions. Please try again.')
+
+
+@router.post('/sessions/transfer')
+async def transfer_sessions(request: TransferSessionsRequest, http_request: Request):
+    """Transfer all sessions from from_user_id to to_user_id.
+
+    This supports upgrading anonymous sessions to an authenticated user upon login.
+    """
+    try:
+        dynamodb_client = http_request.app.state.dynamodb_client
+        from_items = dynamodb_client.list_sessions(request.from_user_id)
+        moved = 0
+        for item in from_items:
+            # Re-write the item with new user_id and delete old one
+            new_metadata = SessionMetadata(
+                user_id=request.to_user_id,
+                session_id=item['session_id'],
+                session_summary=item.get('session_summary', ''),
+                started_at=item.get('started_at', ''),
+                messages=item.get('messages', []),
+            )
+            put_status = dynamodb_client.put_item(new_metadata)
+            if put_status == 200:
+                dynamodb_client.delete_item(request.from_user_id, item['session_id'])
+                moved += 1
+        return {'migrated': moved}
+    except Exception as e:
+        logger.error(f'Failed to transfer sessions: {str(e)}')
+        raise HTTPException(status_code=500, detail='Failed to transfer sessions. Please try again.')
+
+
+@router.delete('/sessions/{session_id}', response_model=SessionDeleteResponse)
+async def delete_session(session_id: str, user_id: str = Query('anonymous'), http_request: Request = ...):
+    """Delete a specific session for a user."""
+    try:
+        dynamodb_client = http_request.app.state.dynamodb_client
+        status_code = dynamodb_client.delete_item(user_id, session_id)
+        if status_code != 200:
+            raise HTTPException(status_code=500, detail='Failed to delete session')
+        return SessionDeleteResponse(session_id=session_id, user_id=user_id, deleted=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f'Failed to delete session {session_id} for user {user_id}: {e}')
+        raise HTTPException(status_code=500, detail='Failed to delete session due to internal error')
+
+
+@router.get('/{session_id}', response_model=ItineraryRetrieveResponse)
+async def get_session_data(session_id: str, user_id: str = 'anonymous', http_request: Request = ...):
+    """Retrieve session data by session_id."""
+    try:
+        logger.info(f'Retrieving session data for session_id: {session_id}')
+
+        # Get DynamoDB client from app state
+        dynamodb_client = http_request.app.state.dynamodb_client
+
+        # Get session data from DynamoDB
+        session_data = dynamodb_client.get_item(user_id, session_id)
+
+        if session_data is None:
+            raise HTTPException(status_code=404, detail='Session not found.')
+
+        return ItineraryRetrieveResponse(
+            user_id=session_data['user_id'],
+            session_id=session_data['session_id'],
+            session_summary=session_data['session_summary'],
+            started_at=session_data['started_at'],
+            messages=session_data['messages'],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f'Failed to retrieve session data: {str(e)}')
+        raise HTTPException(status_code=500, detail='Failed to retrieve session data. Please try again.')

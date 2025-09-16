@@ -2,6 +2,7 @@ import logging
 
 import boto3
 
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from pydantic import BaseModel
 
@@ -192,9 +193,33 @@ class DynamoDBClient:
             dict: Dictionary containing the query results.
         """
         params = {
-            'query_params': QueryParams(key_condition_expression='user_id = :user_id'),
-            'ExpressionAttributeValues': {':user_id': user_id},
+            'KeyConditionExpression': Key('user_id').eq(user_id),
         }
         if limit is not None:
             params['Limit'] = limit
-        return self.query_table(**params)
+        return self.table.query(**params)
+
+    def delete_item(self, user_id: str, session_id: str) -> int:
+        """
+        Delete a specific item identified by user_id and session_id.
+
+        Returns:
+            int: HTTP status code of the response.
+        """
+        try:
+            response = self.table.delete_item(Key={'user_id': user_id, 'session_id': session_id})
+            return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
+        except ClientError as e:
+            logger.error(f'Error deleting item: {e.response["Error"]["Message"]}')
+            raise
+
+    def list_sessions(self, user_id: str) -> list[dict]:
+        """
+        List all sessions for a given user_id.
+        """
+        try:
+            response = self.table.query(KeyConditionExpression=Key('user_id').eq(user_id))
+            return response.get('Items', [])
+        except ClientError as e:
+            logger.error(f'Error listing sessions: {e.response["Error"]["Message"]}')
+            raise
