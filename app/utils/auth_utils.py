@@ -31,7 +31,7 @@ class PasswordValidator:
         'require_lowercase': True,
         'require_digits': True,
         'require_special': True,
-        'special_chars': r'[!@#$%^&*(),.?":{}|<>_]'
+        'special_chars': r'[^A-Za-z0-9]'
     }
     
     def __init__(self, policy: Optional[Dict] = None):
@@ -140,7 +140,7 @@ def validate_environment() -> None:
         "COGNITO_CLIENT_ID"
     ]
     
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    missing_vars = [var for var in required_vars if not os.getenv(var) or os.getenv(var).strip() == ""]
     
     if missing_vars:
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
@@ -260,13 +260,13 @@ def decode_cognito_token(token: str, token_type: str = "access") -> Dict[str, An
         
         # Additional validation for token type
         if token_type == "access":
-            if payload.get("token_use") != "access":
+            if payload.get("token_use", "").lower() != "access":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token: wrong token type"
                 )
         elif token_type == "id":
-            if payload.get("token_use") != "id":
+            if payload.get("token_use", "").lower() != "id":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token: wrong token type"
@@ -289,7 +289,7 @@ def decode_cognito_token(token: str, token_type: str = "access") -> Dict[str, An
             detail="Invalid token"
         )
     except Exception as e:
-        logger.error(f"Token validation error: {type(e).__name__}")
+        logger.exception("Token validation error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token validation failed"
@@ -311,7 +311,8 @@ def sanitize_email(email: str) -> str:
 
     email = email.strip().lower()
     
-    email = ''.join(char for char in email if ord(char) >= 32)
+    # Remove all non-printable ASCII characters
+    email = re.sub(r'[^\x20-\x7E]', '', email)
     
     return email
 
