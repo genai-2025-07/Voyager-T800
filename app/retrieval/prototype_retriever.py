@@ -76,7 +76,7 @@ class RAGPrototype:
             raise ValueError(f"Unknown RETRIEVER type: {self.retriever_type}")
 
     def get_retriever(self):
-        return self.retriever
+        return self._get_retriever()
 
     def get_vectorstore(self):
         return self.vectorstore

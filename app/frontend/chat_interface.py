@@ -196,7 +196,7 @@ class StreamlitWriter(io.StringIO):
         super().write(s)
         self.placeholder.markdown(self.getvalue())
 
-def run_ai_stream(user_message:str, session_id:str):
+def run_ai_stream(user_message:str, session_id:str, include_events:bool=False):
     """
     Stream the AI model's response to a Streamlit placeholder and capture the output.
 
@@ -215,7 +215,7 @@ def run_ai_stream(user_message:str, session_id:str):
     placeholder = st.empty()
     writer = StreamlitWriter(placeholder)
     with redirect_stdout(writer):
-        stream_response(user_message, session_id)
+        stream_response(user_message, session_id, include_events)
     return writer.getvalue()
 
 def run_ai_response(user_message:str, session_id:str):
@@ -235,7 +235,7 @@ def run_ai_response(user_message:str, session_id:str):
         from contextlib import redirect_stdout
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            full_response(user_message, session_id)
+            full_response(user_message, session_id, include_events)
         return buffer.getvalue()
     except Exception as e:
         return f"Error in AI processing: {str(e)}"
@@ -284,6 +284,10 @@ with st.sidebar:
     if st.button("➕ New Session", type="primary", use_container_width=True):
         create_new_session()
         st.rerun()
+
+    st.markdown("---")
+    st.subheader("Tools")
+    include_events = st.checkbox("Include available events", value=False, help="Enrich itinerary with local events")
 
     st.markdown("---")
 
@@ -439,27 +443,27 @@ if user_input:
                 "content": user_input.text.strip()
             })
 
-            with st.spinner("Voyager-T800 is analyzing your request..."):
-                assistant_response = run_ai_stream(user_input.text.strip(), st.session_state.session_id)
+    with st.spinner("Voyager-T800 is analyzing your request..."):
+        assistant_response = run_ai_stream(user_input.text.strip(), st.session_state.session_id, include_events)
 
-            if isinstance(assistant_response, str) and assistant_response.strip():
-                cleaned = assistant_response.strip().lower()
-                if cleaned.strip().lower() not in ["error", "none", "null"]:
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": assistant_response.strip()
-                    })
-                else:
-                    logger.warning(
-                        "Assistant returned error message, not saved to session")
-                    st.warning("Assistant returned an error message, not saved.")
+        if isinstance(assistant_response, str) and assistant_response.strip():
+            cleaned = assistant_response.strip().lower()
+            if cleaned.strip().lower() not in ["error", "none", "null"]:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": assistant_response.strip()
+                })
             else:
                 logger.warning(
-                    "Assistant response is empty or invalid, not saved to session")
-                st.warning("Assistant response is empty or invalid, not saved.")
+                    "Assistant returned error message, not saved to session")
+                st.warning("Assistant returned an error message, not saved.")
+        else:
+            logger.warning(
+                "Assistant response is empty or invalid, not saved to session")
+            st.warning("Assistant response is empty or invalid, not saved.")
 
-            save_current_session()
-            st.rerun()
+        save_current_session()
+        st.rerun()
 
     if hasattr(user_input, 'files') and user_input.files:
         st.image(user_input.files[0], width=400)
