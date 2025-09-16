@@ -67,6 +67,11 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
     try:
         logger.info(f'Generating and storing itinerary for query: {request.query[:100]}...')
 
+        # Prepare session data
+        user_id = request.user_id or 'anonymous'
+        session_id = request.session_id or 'default_session'
+        now = datetime.now(UTC).isoformat()
+
         # Get DynamoDB client from app state
         dynamodb_client = http_request.app.state.dynamodb_client
 
@@ -77,13 +82,17 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
         else:
             logger.warning("Weaviate database manager not available in app state")
 
+        # Create a message entry for the USER query
+        user_message = {
+            'message_id': str(uuid.uuid4()),
+            'sender': 'user',
+            'timestamp': datetime.now(UTC).isoformat(),
+            'content': request.query,
+            'metadata': {'message_type': 'user_query'},
+        }
+
         # Generate itinerary using the existing chain
         itinerary_content = full_response(request.query, request.session_id or 'default_session')
-
-        # Prepare session data
-        user_id = request.user_id or 'anonymous'
-        session_id = request.session_id or 'default_session'
-        now = datetime.now(UTC).isoformat()
 
         # Create a message entry for the generated itinerary
         itinerary_message = {
@@ -101,6 +110,7 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
         if existing_session:
             # Update existing session
             messages = existing_session.get('messages', [])
+            messages.append(user_message)
             messages.append(itinerary_message)
 
             session_metadata = SessionMetadata(
@@ -117,7 +127,7 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
                 session_id=session_id,
                 session_summary=f'Travel planning session for: {request.query[:50]}...',
                 started_at=now,
-                messages=[itinerary_message],
+                messages=[user_message, itinerary_message],
             )
 
         # Store in DynamoDB
