@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from app.chains.itinerary_chain import full_response, stream_response
+from PIL import Image
 
 WELCOME_MESSAGE = (
     "🚀 Welcome to Voyager-T800! I'm your intelligent AI travel assistant. "
@@ -211,8 +212,8 @@ def run_ai_stream(user_message:str, session_id:str):
     placeholder = st.empty()
     writer = StreamlitWriter(placeholder)
     with redirect_stdout(writer):
-        stream_response(user_message, session_id)
-    return writer.getvalue()
+        response = stream_response(user_message, session_id)
+    return response
 
 def run_ai_response(user_message:str, session_id:str):
     """
@@ -420,43 +421,51 @@ with chat_container:
 
 st.markdown("---")
 
-user_input = st.chat_input(get_dynamic_chat_placeholder())
+col1, col2 =st.columns([1,3])
 
-if user_input and user_input.strip():
+with col1:
+    use_image = st.checkbox("Use image to influence itinerary")
+    uploaded_file = st.file_uploader("")
+    if uploaded_file:
+        tags= ['beach', 'ocean', 'mountains']
+        image = Image.open(uploaded_file)
+        st.image(image)
+        st.write("Detected tags:", tags)
 
-    if not user_input.strip():
-        st.warning("Your message is empty.")
 
-    if len(user_input.strip()) > MAX_INPUT_LENGTH:
-        st.warning(f"Message too long (max {MAX_INPUT_LENGTH} characters).")
 
-    else:   
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input.strip()
-        })
+with col2:
+    user_input = st.chat_input(get_dynamic_chat_placeholder())
 
-    with st.spinner("Voyager-T800 is analyzing your request..."):
-        assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id)
+    if user_input and user_input.strip():
 
-    if isinstance(assistant_response, str) and assistant_response.strip():
-        cleaned = assistant_response.strip().lower()
-        if cleaned not in ["error", "none", "null"]:
+        if not user_input.strip():
+            st.warning("Your message is empty.")
+
+        if len(user_input.strip()) > MAX_INPUT_LENGTH:
+            st.warning(f"Message too long (max {MAX_INPUT_LENGTH} characters).")
+
+        else:   
             st.session_state.messages.append({
-               "role": "assistant",
-               "content": assistant_response.strip()})
+                "role": "user",
+                "content": user_input.strip()
+            })
+
+        with st.spinner("Voyager-T800 is analyzing your request..."):
+            assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id)
+
+        if isinstance(assistant_response, str) and assistant_response.strip():
+            cleaned = assistant_response.strip().lower()
+            if cleaned not in ["error", "none", "null"]:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": assistant_response.strip()
+                })
+            else:
+                st.warning("Assistant returned an error message, not saved.")
         else:
-            st.warning("Assistant returned an error message, not saved.")
-    else:
-        st.warning("Assistant response is empty, not saved.")
+            st.warning("Assistant response is empty or invalid, not saved.")
 
+        save_current_session()
 
-
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": assistant_response
-    })
-
-    save_current_session()
-
-    st.rerun()
+        st.rerun()

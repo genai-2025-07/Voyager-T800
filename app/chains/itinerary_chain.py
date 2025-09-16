@@ -190,6 +190,7 @@ def stream_response(user_input, session_id="default_session"):
             time.sleep(0.025)  # Simulate a delay for streaming effect
     except Exception as e:
         logger.error(f"ERROR: {e}")
+        
 
 def full_response(user_input, session_id="default_session"):
     """
