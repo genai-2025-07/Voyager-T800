@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
+from app.api.auth import router as auth_router
 from app.data_layer.dynamodb_client import DynamoDBClient
 from app.services.weaviate.weaviate_setup import setup_database_connection_only
 
@@ -73,13 +74,13 @@ async def lifespan(app: FastAPI):  # noqa ARG001
         # Initialize Weaviate client
         logger.info('Initializing Weaviate client...')
         logger.info(f'Connecting to Weaviate at {settings.weaviate_host}:{settings.weaviate_port}')
-        
+
         db_manager, weaviate_client_wrapper = setup_database_connection_only()
-        
+
         if db_manager is None or weaviate_client_wrapper is None:
             logger.error('Failed to initialize Weaviate client')
             raise RuntimeError('Weaviate initialization failed')
-        
+
         logger.info('Weaviate client initialized successfully')
         app.state.weaviate_client_wrapper = weaviate_client_wrapper
         app.state.weaviate_db_manager = db_manager
@@ -144,6 +145,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+app.include_router(auth_router)
 app.include_router(itinerary.router, prefix='/api/v1')
 
 
