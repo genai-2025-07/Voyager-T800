@@ -175,6 +175,12 @@ class SchemaManager:
 
         return collection.config.update(**update_kwargs)
 
+    def collection_exists(self, name: str) -> bool:
+        """
+        Check if collection exists by name
+        """
+        return self.client.collections.exists(name)
+
     def get_collection(self, name: str):
         """
         Get a collection object by name.

@@ -1,0 +1,15 @@
+class: TagSet
+description: "A single object holding all unique tags for fast retrieval"
+vectorizer: "none"
+vectorIndexType: "flat"
+properties:
+  - name: tags
+    dataType:
+      - text[]
+    tokenization: word
+    indexFilterable: true
+    indexSearchable: true
+invertedIndexConfig:
+  indexTimestamps: true
+  indexNullState: true
+  indexPropertyLength: true

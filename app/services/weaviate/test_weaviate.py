@@ -50,6 +50,9 @@ def main():
             chunks_keyword_res = db_manager.keyword_search_chunks(
                 query=keyword, limit=50, return_metadata=MetadataQuery.full())
             logger.info(f"chunk keyword search result results {chunks_keyword_res}")
+
+            tag_list = db_manager.get_unique_tags()
+            logger.info(f"tag list: {tag_list}")
         else:
             logger.error("Database setup failed!")
             
