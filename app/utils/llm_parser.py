@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 from app.utils.itinerary import ItineraryDay, TravelItinerary, RequestMetadata
-from app.utils.read_prompt_from_file import load_prompt_from_file  
+from app.utils.read_prompt_from_file import read_prompt_from_file  
 import logging
 from pydantic import BaseModel
 
@@ -29,7 +29,7 @@ class ItineraryParserTemplate:
             prompt_file = Path("app") / "prompts" / "itinerary_parser.txt"
         else:
             prompt_file = Path(prompt_file)   
-        self.system_instruction = load_prompt_from_file(str(prompt_file))
+        self.system_instruction = read_prompt_from_file(str(prompt_file))
         self.user_request = "## {request} ##"  
         
         class SimpleTravelItinerary(BaseModel):

@@ -3,7 +3,7 @@ Utility for loading prompt templates from text files.
 Provides a function to read and return the contents of a prompt file as a string.
 """
 
-def load_prompt_from_file(file_path: str) -> str:
+def read_prompt_from_file(file_path: str) -> str:
     """
     Reads a prompt from a file and returns its content as a string.
     
