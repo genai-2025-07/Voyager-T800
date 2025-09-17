@@ -187,7 +187,6 @@ def setup_complete_database() -> Tuple[Optional[AttractionDBManager], Optional[W
         return None, None, None
     
     # Setup schemas
-    logger.info(f"-------------------collections-------------------- {db_setup.schema_manager.list_collections()}")
     if not db_setup.setup_schemas():
         return None, db_setup.client_wrapper, None
     

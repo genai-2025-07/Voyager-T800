@@ -13,8 +13,10 @@ from app.services.weaviate.dataloader import (
 from app.services.weaviate.weaviate_client import WeaviateClientWrapper, load_config_from_yaml
 from app.services.weaviate.schema_manager import SchemaManager, parse_weaviate_schema_config
 from app.services.weaviate.attraction_db_manager import AttractionDBManager
+from app.services.weaviate.dataloader import DataLoader
 
-
+EMBEDDINGS_DIR_PATH = "data/embeddings"
+METADATA_FILE_PATH = "data/attractions_metadata.csv"
 EMBEDDING_VECTOR_LENGTH = 1536
 RAW_CHUNKS_DICTS = [
         [
@@ -326,3 +328,8 @@ def sample_multiple_attraction_with_chunks_list():
     return res
 
 
+@pytest.fixture
+def sample_all_real_attractions():
+    loader = DataLoader(EMBEDDINGS_DIR_PATH,
+                        METADATA_FILE_PATH)
+    return loader.load_all()
