@@ -4,7 +4,7 @@ import os
 import time
 
 
-from app.utils.read_prompt_from_file import load_prompt_from_file
+from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.services.weaviate.weaviate_setup import setup_complete_database
 from app.retrieval.waiss_retriever import setup_rag_retriever
@@ -49,8 +49,8 @@ except Exception as e:
     logger.error(f"ERROR setting up database: {e}")
 
 try:
-    itinerary_template = load_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
-    summary_template = load_prompt_from_file("app/prompts/test_summary_prompt.txt")
+    itinerary_template = read_prompt_from_file("app/prompts/test_itinerary_prompt.txt")
+    summary_template = read_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
     logger.error(f"ERROR loading prompts: {e}")
 
@@ -190,6 +190,7 @@ def stream_response(user_input, session_id="default_session"):
             time.sleep(0.025)  # Simulate a delay for streaming effect
     except Exception as e:
         logger.error(f"ERROR: {e}")
+        
 
 def full_response(user_input, session_id="default_session"):
     """

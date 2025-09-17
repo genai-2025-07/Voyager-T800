@@ -7,9 +7,13 @@ import copy
 from contextlib import redirect_stdout
 import uuid
 import re
+import logging
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from app.chains.itinerary_chain import full_response, stream_response
+from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 WELCOME_MESSAGE = (
     "🚀 Welcome to Voyager-T800! I'm your intelligent AI travel assistant. "
@@ -420,43 +424,42 @@ with chat_container:
 
 st.markdown("---")
 
-user_input = st.chat_input(get_dynamic_chat_placeholder())
+placeholder_text = get_dynamic_chat_placeholder()
+user_input = st.chat_input(placeholder_text, accept_file=True, file_type = ['jpg', 'jpeg', 'png'])
 
-if user_input and user_input.strip():
-
-    if not user_input.strip():
-        st.warning("Your message is empty.")
-
-    if len(user_input.strip()) > MAX_INPUT_LENGTH:
-        st.warning(f"Message too long (max {MAX_INPUT_LENGTH} characters).")
-
-    else:   
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input.strip()
-        })
-
-    with st.spinner("Voyager-T800 is analyzing your request..."):
-        assistant_response = run_ai_stream(user_input.strip(), st.session_state.session_id)
-
-    if isinstance(assistant_response, str) and assistant_response.strip():
-        cleaned = assistant_response.strip().lower()
-        if cleaned not in ["error", "none", "null"]:
-            st.session_state.messages.append({
-               "role": "assistant",
-               "content": assistant_response.strip()})
+if user_input:
+    if user_input.text:
+        if not user_input.text.strip():
+            st.warning("Your message is empty.")
+        elif len(user_input.text) > MAX_INPUT_LENGTH:
+            st.warning(f"Message too long (max {MAX_INPUT_LENGTH} characters).")
         else:
-            st.warning("Assistant returned an error message, not saved.")
-    else:
-        st.warning("Assistant response is empty, not saved.")
+            st.session_state.messages.append({
+                "role": "user",
+                "content": user_input.text.strip()
+            })
 
+            with st.spinner("Voyager-T800 is analyzing your request..."):
+                assistant_response = run_ai_stream(user_input.text.strip(), st.session_state.session_id)
 
+            if isinstance(assistant_response, str) and assistant_response.strip():
+                cleaned = assistant_response.strip().lower()
+                if cleaned.strip().lower() not in ["error", "none", "null"]:
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_response.strip()
+                    })
+                else:
+                    logger.warning(
+                        "Assistant returned error message, not saved to session")
+                    st.warning("Assistant returned an error message, not saved.")
+            else:
+                logger.warning(
+                    "Assistant response is empty or invalid, not saved to session")
+                st.warning("Assistant response is empty or invalid, not saved.")
 
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": assistant_response
-    })
+            save_current_session()
+            st.rerun()
 
-    save_current_session()
-
-    st.rerun()
+    if hasattr(user_input, 'files') and user_input.files:
+        st.image(user_input.files[0], width=400)

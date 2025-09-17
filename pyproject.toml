@@ -27,6 +27,8 @@ dependencies = [
     "langchain-groq (>=0.3.7,<0.4.0)",
     "langchain-community (>=0.3.27,<0.4.0)",
     "langchain-openai (>=0.3.30,<0.4.0)",
+    "protobuf (>=6.32.1,<7.0.0)",
+    "streamlit (>=1.49.1,<2.0.0)"
 ]
 
 [tool.poetry]
