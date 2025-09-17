@@ -424,17 +424,6 @@ with chat_container:
 
 st.markdown("---")
 
-# col1, col2 =st.columns([1,3])
-
-# with col1:
-#     use_image = st.checkbox("Use image to influence itinerary")
-#     uploaded_file = st.file_uploader("")
-#     if uploaded_file:
-#         image = Image.open(uploaded_file)
-#         st.image(image)
-
-
-# with col2:
 placeholder_text = get_dynamic_chat_placeholder()
 user_input = st.chat_input(placeholder_text, accept_file=True, file_type = ['jpg', 'jpeg', 'png'])
 
