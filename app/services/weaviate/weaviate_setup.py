@@ -14,6 +14,7 @@ logger = logging.getLogger('app.services.weaviate.test')
 
 CONNECTION_CONFIG = None  # Use settings-based config instead
 ATTRACTION_SCHEMA_PATH = "app/config/attraction_class_schema.yaml"
+TAG_SET_SCHEMA_PATH = "app/config/tag_set_class_schema.yaml"
 CHUNK_SCHEMA_PATH = "app/config/attraction_chunk_class_schema.yaml"
 EMBEDDINGS_DIR_PATH = "data/embeddings"
 METADATA_FILE_PATH = "data/attractions_metadata.csv"
@@ -27,6 +28,7 @@ class WeaviateDatabaseSetup:
     def __init__(self,
                  connection_config=CONNECTION_CONFIG,
                  attraction_schema_path=ATTRACTION_SCHEMA_PATH,
+                 tag_set_schema_path=TAG_SET_SCHEMA_PATH,
                  chunk_schema_path=CHUNK_SCHEMA_PATH,
                  embeddings_dir_path=EMBEDDINGS_DIR_PATH,
                  metadata_file_path=METADATA_FILE_PATH):
@@ -35,6 +37,7 @@ class WeaviateDatabaseSetup:
         self.schema_manager = None
 
         self.attraction_schema_path = Path(attraction_schema_path)
+        self.tag_set_schema_path = Path(tag_set_schema_path)
         self.chunk_schema_path = Path(chunk_schema_path)
         self.embeddings_dir = Path(embeddings_dir_path)
         self.metadata_file = Path(metadata_file_path)
@@ -63,6 +66,35 @@ class WeaviateDatabaseSetup:
             logger.error(f"Failed to connect to Weaviate: {e}")
             return False
     
+    def _setup_schema(self, schema_path: Path, schema_name: str) -> bool:
+        """
+        Generic method to set up a schema in Weaviate.
+        
+        Args:
+            schema_path: Path to the schema configuration file
+            schema_name: Human-readable name for logging            
+        Returns:
+            bool: True if schema created/exists successfully, False otherwise
+        """
+        try:
+            schema_config = parse_weaviate_schema_config(str(schema_path))        
+            try:
+                collection_exists = self.schema_manager.collection_exists(schema_config.name)
+                if collection_exists:
+                    logger.info(f"{schema_name} collection already exists")
+                    return True
+                else:
+                    logger.info(f"Creating {schema_name} collection...")
+                    self.schema_manager.create_collection(schema_config)
+                    logger.info(f"{schema_name} collection created successfully!")
+                    return True
+            except Exception:
+                logger.error(f"Failed to create collection {schema_config.name}")
+                
+        except Exception as e:
+            logger.error(f"Failed to create {schema_name} schema: {e}")
+            return False
+    
     def setup_schemas(self) -> bool:
         """
         Set up required schemas (collections) in Weaviate.
@@ -74,50 +106,16 @@ class WeaviateDatabaseSetup:
             logger.error("No schema manager available. Connect first.")
             return False
             
-        # Setup Attraction schema
-        if not self._setup_attraction_schema():
+        if not self._setup_schema(self.attraction_schema_path, "Attraction"):
             return False
-            
-        if not self._setup_chunk_schema():
+        
+        if not self._setup_schema(self.tag_set_schema_path, "TagSet"):
+            return False
+
+        if not self._setup_schema(self.chunk_schema_path, "AttractionChunk"):
             return False
         
         return True
-    
-    def _setup_attraction_schema(self) -> bool:
-        """Setup the main Attraction schema."""
-        try:
-            attraction_schema = parse_weaviate_schema_config(str(self.attraction_schema_path))        
-            try:
-                existing_collection = self.schema_manager.get_collection(attraction_schema.name)
-                logger.info(f"Attraction collection already exists: {existing_collection}")
-                return True
-            except Exception:
-                logger.info("Creating Attraction collection...")
-                self.schema_manager.create_collection(attraction_schema)
-                logger.info("Attraction collection created successfully!")
-                return True
-                
-        except Exception as e:
-            logger.error(f"Failed to create Attraction schema: {e}")
-            return False
-    
-    def _setup_chunk_schema(self) -> bool:
-        """Setup the optional Chunk schema."""
-        try:
-            chunk_schema = parse_weaviate_schema_config(str(self.chunk_schema_path))  
-            try:
-                existing_collection = self.schema_manager.get_collection(chunk_schema.name)
-                logger.info(f"Chunk collection already exists: {existing_collection}")
-                return True
-            except Exception:
-                logger.info("Creating Chunk collection...")
-                self.schema_manager.create_collection(chunk_schema)
-                logger.info("Chunk collection created successfully!")
-                return True
-                
-        except Exception as e:
-            logger.warning(f"Could not create Chunk schema (optional): {e}")
-            return False
     
     def populate_database(self) -> Optional[Dict[str, Any]]:
         """
@@ -189,6 +187,7 @@ def setup_complete_database() -> Tuple[Optional[AttractionDBManager], Optional[W
         return None, None, None
     
     # Setup schemas
+    logger.info(f"-------------------collections-------------------- {db_setup.schema_manager.list_collections()}")
     if not db_setup.setup_schemas():
         return None, db_setup.client_wrapper, None
     

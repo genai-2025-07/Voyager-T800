@@ -625,7 +625,8 @@ with chat_container:
 
 st.markdown('---')
 
-user_input = st.chat_input(get_dynamic_chat_placeholder())
+placeholder_text = get_dynamic_chat_placeholder()
+user_input = st.chat_input(placeholder_text, accept_file=True, file_type = ['jpg', 'jpeg', 'png'])
 
 if user_input and user_input.strip():
     if not user_input.strip():

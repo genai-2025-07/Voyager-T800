@@ -24,6 +24,13 @@ class RAGAttractionRetriever(BaseRetriever):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    # def get_relevant_documents(self, query: str) -> List[Document]:
+    #     """
+    #     Public method required by LangChain retriever interface.
+    #     Calls the internal retrieval logic.
+    #     """
+    #     return self._get_relevant_documents(query)
+
     def _get_relevant_documents(self, query: str) -> List[Document]:
         """
         Run retrieval using AttractionDBManager and convert results to LangChain Documents

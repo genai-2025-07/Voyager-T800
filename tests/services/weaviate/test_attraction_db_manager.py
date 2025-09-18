@@ -378,3 +378,21 @@ class TestAttractionDBManagerIntegration:
         # All UUIDs should be unique
         all_attraction_uuids = [uuid for uuid in attraction_results if uuid]
         assert len(all_attraction_uuids) == len(set(all_attraction_uuids))
+
+    def test_get_unique_tags_completeness(
+            self,
+            db_manager_with_schema,
+            sample_multiple_attraction_with_chunks_list):
+        
+        attraction_with_chunks_list = sample_multiple_attraction_with_chunks_list
+
+        db_manager = db_manager_with_schema
+        result = db_manager.batch_insert_attractions_with_chunks(
+            attraction_with_chunks_list
+        )
+        expected_attractions_tags = set()
+        for attr_w_chunk in attraction_with_chunks_list:
+            expected_attractions_tags.update(attr_w_chunk.attraction.tags)
+
+        retieved_tags = db_manager.get_unique_tags()
+        assert list(expected_attractions_tags) == retieved_tags

@@ -1,0 +1,25 @@
+app:
+  env: prod
+  name: voyager-t800
+
+model:
+  openai:
+    temperature: 0.2
+  groq:
+    temperature: 0.2
+
+vectordb:
+  provider: weaviate
+  weaviate:
+    class_name: voyager_prod
+
+bedrock:
+  enabled: ${BEDROCK_ENABLED:false}
+  region_name: ${AWS_REGION}
+
+features:
+  use_cache: true
+  enable_metrics: false
+  strict_validation: true
+
+
