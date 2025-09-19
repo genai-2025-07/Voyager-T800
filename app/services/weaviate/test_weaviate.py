@@ -48,7 +48,8 @@ def main():
             logger.info(f"Attraction keyword search result results {attr_keyword_res}")
                 
             chunks_keyword_res = db_manager.keyword_search_chunks(
-                query=keyword, limit=50, return_metadata=MetadataQuery.full())
+                query=keyword, limit=50, return_metadata=MetadataQuery.full(),
+                return_attraction_properties=["name", "address", "opening_hours"])
             logger.info(f"chunk keyword search result results {chunks_keyword_res}")
 
             tag_list = db_manager.get_unique_tags()

@@ -396,3 +396,46 @@ class TestAttractionDBManagerIntegration:
 
         retieved_tags = db_manager.get_unique_tags()
         assert list(expected_attractions_tags) == retieved_tags
+        
+    def test_references_keyword_chunk_search(
+        self, db_manager_with_schema: AttractionDBManager,
+        sample_all_real_attractions: list[AttractionWithChunks]
+    ):
+        attractions = sample_all_real_attractions
+        manager = db_manager_with_schema
+
+        insert_results = manager.batch_insert_attractions_with_chunks(attractions)["results"]
+
+        attraction_props = list(
+            attractions[0].attraction.to_weaviate_properties().keys()
+        )
+
+        for attraction_with_chunks in attractions:
+            for chunk in attraction_with_chunks.chunks:
+                chunk_keyword = " ".join(chunk.chunk_text[:50].split(" ")[:5])
+
+                search_res = manager.keyword_search_chunks(
+                    query=chunk_keyword,
+                    limit=50,
+                    return_metadata=MetadataQuery.full(),
+                    return_attraction_properties=attraction_props
+                )
+
+                search_objects = search_res.objects
+                search_props_list = [obj.properties.model_dump() for obj in search_objects]
+
+                chunk_props = chunk.to_weaviate_properties()
+                assert chunk_props in search_props_list
+
+                matched_obj = search_objects[search_props_list.index(chunk_props)]
+
+                orig_attraction_props = attraction_with_chunks.attraction.to_weaviate_properties()
+                # in weaviate precision for coords is dropping
+                del orig_attraction_props["coordinates"]
+
+                referenced_attraction_props = matched_obj.references.to_weaviate_properties()
+                # in weaviate precision for coords is dropping
+                del referenced_attraction_props["coordinates"]
+
+                assert orig_attraction_props == referenced_attraction_props
+
