@@ -1,6 +1,7 @@
 import logging
 import weaviate
 import threading
+import time 
 
 from app.services.weaviate.data_models.attraction_models import (
     AttractionWithChunks, AttractionModel, ChunkBase,
@@ -65,6 +66,12 @@ class AttractionDBManager:
         self.prop_validator = PropertyValidator(logger=logger)
         
         self.chunk_collection_name = chunk_collection_name
+
+        chunk_config = self.chunk_collection.config.get()
+        reference_names = [ref.name for ref in getattr(chunk_config, "references", [])]
+        if attraction_reference_prop_name not in reference_names:
+            raise ValidationError(f"Reference property {attraction_reference_prop_name} not found in schema.")
+        
         self.attraction_reference_prop_name = attraction_reference_prop_name
 
     def _ensure_coordinates_model(self, props: dict, coord_key: str = "coordinates"):
@@ -207,7 +214,7 @@ class AttractionDBManager:
                 all_correct = False
         return all_correct
 
-    def _add_references(self, references_to_add, batch_size=100, max_retries=3):
+    def _add_references(self, references_to_add, batch_size=100, max_retries=3, retry_base_constant=2):
         """
         Add references between objects in batch mode with verification and retries.
         """
@@ -272,6 +279,7 @@ class AttractionDBManager:
             
             if retry_count < max_retries:
                 logger.warning(f"Reference verification failed for {len(failed_refs_to_retry)} references, retrying...")
+                time.sleep(retry_base_constant ** retry_count)  # Add exponential backoff
             else:
                 logger.error(f"Failed to add and verify {len(failed_refs_to_retry)} references: {failed_refs_to_retry} after {max_retries} attempts")
 
@@ -377,8 +385,9 @@ class AttractionDBManager:
                     )
                     retry_refs = obj.references.get(reference_name) if obj.references else None
                     if not retry_refs.objects or len(retry_refs.objects) != 1:
-                        logger.error(f"More than one or 0 references returned from search {retry_refs.objects}")
+                        logger.error(f"Chunk {chunk_uuid} has {len(v.objects)} references in property {reference_name}: {v.objects}")
                         return None
+                    
                     ref_obj = retry_refs.objects[0]
                     attraction_props = ref_obj.properties or {}
                     attraction_uuid = str(ref_obj.uuid)
@@ -387,6 +396,7 @@ class AttractionDBManager:
                     attraction_props = ref_obj.properties or {}
                     attraction_uuid = str(ref_obj.uuid)
 
+                attraction_props = dict(ref_obj.properties or {})
                 self._ensure_coordinates_model(attraction_props, "coordinates")
 
                 try:
