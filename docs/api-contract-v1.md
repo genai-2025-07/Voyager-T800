@@ -188,23 +188,6 @@ Delete a specific session.
 }
 ```
 
-#### POST `/api/v1/itinerary/sessions/transfer`
-
-Transfer sessions from one user to another (useful for anonymous → authenticated user migration).
-
-**Request Body:**
-```json
-{
-  "from_user_id": "anonymous",
-  "to_user_id": "user@example.com"
-}
-```
-
-**Response (200):**
-```json
-{
-  "migrated": 3
-}
 ```
 
 ### Authentication (Optional)

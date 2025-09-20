@@ -105,26 +105,6 @@ def test_delete_session(client: TestClient):
     assert rg.status_code == 404
 
 
-def test_transfer_sessions(client: TestClient):
-    # Create sessions for from_user
-    r1 = client.post('/api/v1/itinerary/sessions', json={'user_id': 'from_u'})
-    r2 = client.post('/api/v1/itinerary/sessions', json={'user_id': 'from_u'})
-    assert r1.status_code == 200 and r2.status_code == 200
-
-    # Transfer
-    rt = client.post(
-        '/api/v1/itinerary/sessions/transfer',
-        json={'from_user_id': 'from_u', 'to_user_id': 'to_u'},
-    )
-    assert rt.status_code == 200
-    assert rt.json()['migrated'] >= 2
-
-    # Verify destination has sessions
-    rlist = client.get('/api/v1/itinerary/sessions', params={'user_id': 'to_u'})
-    assert rlist.status_code == 200
-    assert len(rlist.json()['sessions']) >= 2
-
-
 def test_generate_itinerary_stores_messages(monkeypatch, client: TestClient):
     # Mock chain full_response to return a static itinerary
     from app.chains import itinerary_chain

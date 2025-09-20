@@ -157,14 +157,6 @@ def login_user(email: str, password: str) -> dict | None:
     return call_auth_endpoint('/login', {'email': email, 'password': password}, method='POST')
 
 
-def transfer_sessions_api(from_user_id: str, to_user_id: str) -> dict | None:
-    return call_api_endpoint(
-        '/itinerary/sessions/transfer',
-        {'from_user_id': from_user_id, 'to_user_id': to_user_id},
-        method='POST',
-    )
-
-
 def delete_session_api(user_id: str, session_id: str) -> bool:
     try:
         _ = call_api_endpoint(
@@ -420,16 +412,10 @@ with st.sidebar:
             if st.button('Sign In', key='login_btn', use_container_width=True):
                 auth_resp = login_user(login_email.strip(), login_password)
                 if auth_resp and 'access_token' in auth_resp:
-                    prev_user = st.session_state.user_id
-                    prev_session = st.session_state.current_session_id
                     st.session_state.auth = auth_resp
-                    st.session_state.user_id = auth_resp.get('user_sub') or auth_resp.get('email') or prev_user
-                    prev_is_anon = prev_user == 'anonymous' or (
-                        isinstance(prev_user, str) and prev_user.startswith('anon_')
-                    )
-                    if prev_user and prev_is_anon and st.session_state.user_id != prev_user and prev_session:
-                        transfer_sessions_api(prev_user, st.session_state.user_id)
-                    # Clear any anonymous session state to avoid showing an empty session
+                    st.session_state.user_id = auth_resp.get('user_sub') or auth_resp.get('email')
+
+                    st.session_state.sessions = {}
                     st.session_state.current_session_id = None
                     st.session_state.session_id = None
                     st.session_state.messages = []
@@ -600,16 +586,19 @@ chat_container = st.container()
 with chat_container:
     for _i, message in enumerate(st.session_state.messages):
         if message['role'] == 'user':
-            st.markdown(
-                f"""
-                <div class="message-container">
-                    <div class ="message-bubble">
-                        {message['content']}
+            if 'image' in message and message['image'] is not None:
+                st.image(message['image'], width=400)
+            else:
+                st.markdown(
+                    f"""
+                    <div class="message-container">
+                        <div class ="message-bubble">
+                            {message['content']}
+                        </div>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
         else:
             st.markdown(
                 f"""
@@ -626,38 +615,40 @@ with chat_container:
 st.markdown('---')
 
 placeholder_text = get_dynamic_chat_placeholder()
-user_input = st.chat_input(placeholder_text, accept_file=True, file_type = ['jpg', 'jpeg', 'png'])
+user_input = st.chat_input(placeholder_text, accept_file=True, file_type=['jpg', 'jpeg', 'png'])
 
-if user_input and user_input.strip():
-    if not user_input.strip():
-        st.warning('Your message is empty.')
-
-    if len(user_input.strip()) > MAX_INPUT_LENGTH:
-        st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
-
-    else:
-        st.session_state.messages.append({'role': 'user', 'content': user_input.strip()})
-
-    with st.spinner('Voyager-T800 is analyzing your request...'):
-        # Generate itinerary and store in DynamoDB
-        result = generate_itinerary(user_input.strip(), st.session_state.session_id, st.session_state.user_id)
-
-        if result and isinstance(result, dict):
-            assistant_response = result.get('itinerary', '')
-            itinerary_id = result.get('itinerary_id', '')
-
-            if assistant_response and assistant_response.strip():
-                cleaned = assistant_response.strip().lower()
-                if cleaned not in ['error', 'none', 'null']:
-                    # Store the itinerary ID in the message for future reference
-                    st.session_state.messages.append(
-                        {'role': 'assistant', 'content': assistant_response.strip(), 'itinerary_id': itinerary_id}
-                    )
-                else:
-                    st.warning('Assistant returned an error message, not saved.')
-            else:
-                st.warning('Assistant response is empty, not saved.')
+if user_input:
+    if user_input.text:
+        if not user_input.text.strip():
+            st.warning('Your message is empty.')
+        elif len(user_input.text) > MAX_INPUT_LENGTH:
+            st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
         else:
-            st.warning('Failed to generate itinerary. Please try again.')
+            st.session_state.messages.append({'role': 'user', 'content': user_input.text.strip()})
+
+            with st.spinner('Voyager-T800 is analyzing your request...'):
+                result = generate_itinerary(
+                    user_input.text.strip(), st.session_state.session_id, st.session_state.user_id
+                )
+
+            if result and isinstance(result, dict):
+                assistant_response = result.get('itinerary', '')
+                itinerary_id = result.get('itinerary_id', '')
+
+                if assistant_response and assistant_response.strip():
+                    cleaned = assistant_response.strip().lower()
+                    if cleaned not in ['error', 'none', 'null']:
+                        st.session_state.messages.append(
+                            {'role': 'assistant', 'content': assistant_response.strip(), 'itinerary_id': itinerary_id}
+                        )
+                    else:
+                        st.warning('Assistant returned an error message, not saved.')
+                else:
+                    st.warning('Assistant response is empty, not saved.')
+            else:
+                st.warning('Failed to generate itinerary. Please try again.')
+
+    if hasattr(user_input, 'files') and user_input.files:
+        st.session_state.messages.append({'role': 'user', 'image': user_input.files[0]})
 
     st.rerun()

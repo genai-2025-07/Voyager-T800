@@ -11,7 +11,7 @@ from app.config.config import settings
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
-from app.utils.read_prompt_from_file import load_prompt_from_file
+from app.utils.read_prompt_from_file import read_prompt_from_file
 
 
 logger = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ temperature = settings.groq_temperature
 
 llm = ChatGroq(groq_api_key=groq_key, model=model_name, temperature=temperature, streaming=True)
 
-itinerary_template = load_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
-summary_template = load_prompt_from_file('app/prompts/test_summary_prompt.txt')
+itinerary_template = read_prompt_from_file('app/prompts/test_itinerary_prompt.txt')
+summary_template = read_prompt_from_file('app/prompts/test_summary_prompt.txt')
 
 prompt = PromptTemplate(input_variables=['chat_history', 'user_input', 'context'], template=itinerary_template)
 

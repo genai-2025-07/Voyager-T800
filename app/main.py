@@ -1,10 +1,6 @@
 import logging
 
 from contextlib import asynccontextmanager
-from os import getenv
-from pathlib import Path
-from dotenv import load_dotenv
-from fastapi import FastAPI
 
 import uvicorn
 
@@ -12,13 +8,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.auth import router as auth_router
 from app.api.routes import itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
-from app.api.auth import router as auth_router
 from app.data_layer.dynamodb_client import DynamoDBClient
 from app.services.weaviate.weaviate_setup import setup_database_connection_only
-from app.config.loader import ConfigLoader
 
 
 setup_logger()
@@ -47,15 +42,6 @@ if not use_local_dynamodb:
         raise RuntimeError(error_msg)
 else:
     logger.info('Using local DynamoDB - AWS credentials not required')
-
-
-app = FastAPI()
-app.add_middleware(RequestIDMiddleware)
-logger = logging.getLogger(__name__)
-config_loader = ConfigLoader(project_root=Path(__file__).resolve().parents[1])
-settings = config_loader.get_settings()
-model = settings.model.openai.model_name
-
 
 
 @asynccontextmanager

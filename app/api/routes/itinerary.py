@@ -68,13 +68,6 @@ class SessionsListResponse(BaseModel):
     sessions: list[dict]
 
 
-class TransferSessionsRequest(BaseModel):
-    """Request model to transfer sessions from one user_id to another."""
-
-    from_user_id: str
-    to_user_id: str
-
-
 class SessionDeleteResponse(BaseModel):
     """Response for session deletion."""
 
@@ -225,35 +218,6 @@ async def list_sessions(user_id: str = Query('anonymous'), http_request: Request
     except Exception as e:
         logger.error(f'Failed to list sessions: {str(e)}')
         raise HTTPException(status_code=500, detail='Failed to list sessions. Please try again.')
-
-
-@router.post('/sessions/transfer')
-async def transfer_sessions(request: TransferSessionsRequest, http_request: Request):
-    """Transfer all sessions from from_user_id to to_user_id.
-
-    This supports upgrading anonymous sessions to an authenticated user upon login.
-    """
-    try:
-        dynamodb_client = http_request.app.state.dynamodb_client
-        from_items = dynamodb_client.list_sessions(request.from_user_id)
-        moved = 0
-        for item in from_items:
-            # Re-write the item with new user_id and delete old one
-            new_metadata = SessionMetadata(
-                user_id=request.to_user_id,
-                session_id=item['session_id'],
-                session_summary=item.get('session_summary', ''),
-                started_at=item.get('started_at', ''),
-                messages=item.get('messages', []),
-            )
-            put_status = dynamodb_client.put_item(new_metadata)
-            if put_status == 200:
-                dynamodb_client.delete_item(request.from_user_id, item['session_id'])
-                moved += 1
-        return {'migrated': moved}
-    except Exception as e:
-        logger.error(f'Failed to transfer sessions: {str(e)}')
-        raise HTTPException(status_code=500, detail='Failed to transfer sessions. Please try again.')
 
 
 @router.delete('/sessions/{session_id}', response_model=SessionDeleteResponse)
