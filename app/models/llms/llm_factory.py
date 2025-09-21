@@ -67,7 +67,7 @@ def _create_groq_llm() -> ChatGroq:
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    model_name = os.getenv("GROQ_MODEL_NAME", "llama3-8b-8192")
+    model_name = os.getenv("GROQ_MODEL_NAME", "llama-3.1-8b-instant")
     temperature = float(os.getenv("GROQ_TEMPERATURE", "0.5"))
 
     logger.info(

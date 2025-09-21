@@ -41,7 +41,8 @@ try:
     itinerary_template = read_prompt_from_file("app/prompts/expert_prompt_for_langchain.txt")
     summary_template = read_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
-    logger.error(f"ERROR loading prompts: {e}")
+    logging.error(f"ERROR loading prompts: {e}")
+    raise e
 
 prompt = PromptTemplate(
     input_variables=["chat_history", "user_input", "context", "events"],
