@@ -6,6 +6,8 @@ import time
 
 from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
+from app.utils.date_utils import extract_date_range, derive_city_from_text
+from app.services.weather import get_weather_forecast_sync
 from app.services.weaviate.weaviate_setup import setup_complete_database
 from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
@@ -55,7 +57,7 @@ except Exception as e:
     logger.error(f"ERROR loading prompts: {e}")
 
 prompt = PromptTemplate(
-    input_variables=["chat_history", "user_input", "context"],
+    input_variables=["chat_history", "user_input", "context", "weather_context"],
     template=itinerary_template
 )
 
@@ -83,9 +85,68 @@ retriever = setup_rag_retriever(
 )
 
 # Chain where we will pass the last message from the chat history
+def _build_weather_context(payload: dict) -> str:
+    
+    """Derive city and dates from the user input, fetch weather, and format a compact context string.
+
+    This function is defensive: if anything fails, it returns an empty string so the LLM falls back gracefully.
+    """
+    try:
+        user_text = payload.get("user_input", "")
+        
+        if not isinstance(user_text, str) or not user_text.strip():
+            return ""
+
+        # City heuristic extracted via utility function
+        city = derive_city_from_text(user_text)
+        if not city:
+            return ""
+
+        start_dt, end_dt = extract_date_range(user_text)
+
+        # Read UI-provided flag via environment variable for thin-client compliance
+        use_weather_env = os.getenv("VOYAGER_USE_WEATHER", "1").strip()
+        use_weather = use_weather_env not in ("0", "false", "False")
+        if not use_weather:
+            return ""
+
+        weather_json = get_weather_forecast_sync(
+            project_root=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
+            city=city,
+            start_date=start_dt,
+            end_date=end_dt,
+        )
+
+        if not isinstance(weather_json, dict) or weather_json.get("disabled") or weather_json.get("error"):
+            return ""
+
+        days = weather_json.get("days", [])
+        if not days:
+            return ""
+
+        # Compact, LLM-friendly weather block. Keep it minimal and deterministic.
+        lines = [
+            "<weather>",
+            f"city={weather_json.get('city','')} units={weather_json.get('units','metric')}",
+        ]
+        for d in days:
+            lines.append(
+                f"{d['date']} label={d['label']} tmin={d['temp_min_c']}C tmax={d['temp_max_c']}C precip={d['precipitation_mm']}mm wind={d['wind_mps']}mps desc={d['description']}"
+            )
+        lines.append("</weather>")
+
+        weather_context_str = "\n".join(lines)
+        logger.info(f"Weather context generated for user_input '{user_text}':\n{weather_context_str}")
+        
+        return weather_context_str
+    except Exception:
+        return ""
+
+
 chain = RunnablePassthrough.assign(
     chat_history=extract_chat_history_content,
-    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"])))  # Format retrieved documents with sources and city for context
+    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))), # Format retrieved documents with sources and city for context
+    weather_context=RunnableLambda(_build_weather_context),
 ) | prompt | llm
 
 session_memories = {}

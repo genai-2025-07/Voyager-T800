@@ -72,6 +72,14 @@ if "session_id" not in st.session_state:
 if "session_counter" not in st.session_state:
     st.session_state.session_counter = 1
 
+# Weather toggle persisted per-session (not personally identifiable)
+if "use_weather" not in st.session_state:
+    st.session_state.use_weather = True
+
+# Simple holder for last derived weather summary block
+if "weather_summary" not in st.session_state:
+    st.session_state.weather_summary = None
+
 if "sessions" not in st.session_state:
     st.session_state.sessions = {}
     initial_name = f"Trip Planning {st.session_state.session_counter}"
@@ -215,6 +223,8 @@ def run_ai_stream(user_message:str, session_id:str):
     placeholder = st.empty()
     writer = StreamlitWriter(placeholder)
     with redirect_stdout(writer):
+        # Inject an environment flag read by the chain's weather builder
+        os.environ["VOYAGER_USE_WEATHER"] = "1" if st.session_state.use_weather else "0"
         stream_response(user_message, session_id)
     return writer.getvalue()
 
@@ -235,6 +245,7 @@ def run_ai_response(user_message:str, session_id:str):
         from contextlib import redirect_stdout
         buffer = io.StringIO()
         with redirect_stdout(buffer):
+            os.environ["VOYAGER_USE_WEATHER"] = "1" if st.session_state.use_weather else "0"
             full_response(user_message, session_id)
         return buffer.getvalue()
     except Exception as e:
@@ -284,6 +295,12 @@ with st.sidebar:
     if st.button("➕ New Session", type="primary", use_container_width=True):
         create_new_session()
         st.rerun()
+
+    st.markdown("---")
+
+    # Weather toggle in sidebar
+    st.header("🌤️ Weather")
+    st.session_state.use_weather = st.checkbox("Enable weather-aware recommendations", value=st.session_state.use_weather)
 
     st.markdown("---")
 
@@ -421,6 +438,14 @@ with chat_container:
                 unsafe_allow_html=True
             )
 
+# Weather summary card
+if st.session_state.weather_summary and st.session_state.use_weather:
+    ws = st.session_state.weather_summary
+    with st.container():
+        st.markdown("### 🌤️ Weather (summary)")
+        st.caption(f"{ws.get('city','')} | Units: {ws.get('units','metric')}")
+        for d in ws.get("days", [])[:5]:
+            st.markdown(f"- {d['date']}: {d['label']} — {d['temp_min_c']}–{d['temp_max_c']}°C, precip {d['precipitation_mm']}mm")
 
 st.markdown("---")
 
