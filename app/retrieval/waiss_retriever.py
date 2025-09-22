@@ -21,24 +21,31 @@ class RAGAttractionRetriever(BaseRetriever):
     embeddings: Any
     mode: str = os.getenv("RETRIEVER", "hybrid")
     limit: int = int(os.getenv("TOP_K", 5))
+    alpha: float = float(os.getenv("HYBRID_ALPHA", 0.75))
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # def get_relevant_documents(self, query: str) -> List[Document]:
-    #     """
-    #     Public method required by LangChain retriever interface.
-    #     Calls the internal retrieval logic.
-    #     """
-    #     return self._get_relevant_documents(query)
-
-    def _get_relevant_documents(self, query: str) -> List[Document]:
+    def _get_relevant_documents(self, query: str, **kwargs) -> List[Document]:
         """
         Run retrieval using AttractionDBManager and convert results to LangChain Documents
         """
+        tags = kwargs.get("tags", None)
         search_methods = {
-            "similarity": lambda: self.db.vector_search_chunks(self.embeddings.embed_query(query), limit=self.limit),
-            "keyword": lambda: self.db.keyword_search_chunks(query, limit=self.limit),
-            "hybrid": lambda: self.db.hybrid_search_chunks(query, self.embeddings.embed_query(query), limit=self.limit)
+            "similarity": lambda: self.db.vector_search_chunks(
+                self.embeddings.embed_query(query), limit=self.limit
+            ),
+            "keyword": lambda: self.db.keyword_search_chunks(
+                query, limit=self.limit
+            ),
+            "hybrid": lambda: self.db.hybrid_search_chunks(
+                query, self.embeddings.embed_query(query), limit=self.limit, alpha=self.alpha
+            ),
+            "tags": lambda: self.db.keyword_search_chunks_by_tags(
+                tags, limit=self.limit
+            ) if tags else self.db.keyword_search_chunks(query, limit=self.limit),
+            "hybrid_tags": lambda: self.db.hybrid_search_chunks_by_tags(
+                tags, self.embeddings.embed_query(query), limit=self.limit, alpha=self.alpha
+            ) if tags else self.db.hybrid_search_chunks(query, self.embeddings.embed_query(query), limit=self.limit, alpha=self.alpha)
         }
 
         try:
