@@ -39,12 +39,12 @@ def format_docs_prototype(docs):
         docs (list): List of retrieved document objects with metadata.
     """
     if DEBUG:
-        print("\n\n--- Retrieved Docs ---")
+        logger.debug("\n\n--- Retrieved Docs ---")
         for d in docs:
-            print(f"Source: {d.metadata.get('source', 'unknown')}")
-            print(f"City: {d.metadata.get('city', 'unknown')}")
-            print(f"Content: {str(d.page_content)[:200]}...\n")
-        print("--- End Retrieved Docs ---\n\n")
+            logger.debug(f"Source: {d.metadata.get('source', 'unknown')}")
+            logger.debug(f"City: {d.metadata.get('city', 'unknown')}")
+            logger.debug(f"Content: {str(d.page_content)[:200]}...\n")
+        logger.debug("--- End Retrieved Docs ---\n\n")
 
     return "\n\n".join(
         f"Source: {doc.metadata.get('source', 'unknown')}\nCity: {doc.metadata.get('city', 'unknown')}\nContent: {doc.page_content.strip()}"
@@ -59,16 +59,16 @@ def format_docs(docs):
         docs (list[Document]): List of retrieved document objects with metadata.
     """
     if DEBUG:
-        print("\n\n--- Retrieved Docs ---")
+        logger.debug("\n\n--- Retrieved Docs ---")
         for d in docs:
-            print(f"UUID: {d.metadata.get('uuid', 'n/a')}")
-            print(f"Name: {d.metadata.get('name', 'unknown')}")
-            print(f"Source: {d.metadata.get('source', 'unknown')}")
-            print(f"City: {d.metadata.get('city', 'unknown')}")
-            print(f"Tags: {d.metadata.get('tags', [])}")
-            print(f"Score: {d.metadata.get('score', 'n/a')}")
-            print(f"Content: {str(d.page_content)[:200]}...\n")
-        print("--- End Retrieved Docs ---\n\n")
+            logger.debug(f"UUID: {d.metadata.get('uuid', 'n/a')}")
+            logger.debug(f"Name: {d.metadata.get('name', 'unknown')}")
+            logger.debug(f"Source: {d.metadata.get('source', 'unknown')}")
+            logger.debug(f"City: {d.metadata.get('city', 'unknown')}")
+            logger.debug(f"Tags: {d.metadata.get('tags', [])}")
+            logger.debug(f"Score: {d.metadata.get('score', 'n/a')}")
+            logger.debug(f"Content: {str(d.page_content)[:200]}...\n")
+        logger.debug("--- End Retrieved Docs ---\n\n")
 
     return "\n\n".join(
         f"Name: {doc.metadata.get('name', 'unknown')}\n"
