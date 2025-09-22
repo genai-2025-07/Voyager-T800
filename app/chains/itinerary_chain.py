@@ -76,9 +76,9 @@ retriever = setup_rag_retriever(
 chain = (RunnablePassthrough.assign(
     chat_history=extract_chat_history_content,
     context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))),  # Format retrieved documents with sources and city for context
-    event_query=lambda x: parse_event_query(x["user_input"], structured_llm),
+    event_query=lambda x: parse_event_query(x["user_input"], structured_llm) if x.get("include_events") else None,
     )
-    .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
+    .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") and x.get("event_query") else "")
     | prompt | llm
 )
 
