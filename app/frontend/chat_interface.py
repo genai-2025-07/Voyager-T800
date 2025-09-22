@@ -33,6 +33,9 @@ try:
 except ValueError:
     SESSIONS_PAGE_SIZE = 10
 
+MIN_LOADED_IMAGE_WIDTH = 200
+MIN_LOADED_IMAGE_HEIGHT = 200
+
 st.set_page_config(
     page_title=APP_PAGE_TITLE,
     page_icon=APP_PAGE_ICON,
@@ -462,4 +465,10 @@ if user_input:
             st.rerun()
 
     if hasattr(user_input, 'files') and user_input.files:
-        st.image(user_input.files[0], width=400)
+        img = Image.open(user_input.files[0])
+        width, height = img.size
+
+        if width <MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
+            st.warning("Image is too small. Please, upload image of size at least 200x200 px")
+        else:    
+            st.image(user_input.files[0], width=400)

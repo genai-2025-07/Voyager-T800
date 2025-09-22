@@ -6,7 +6,7 @@ messageformat= "%(asctime)s [%(levelname)s] %(message)s"
 showErrorDetails = "full"
 
 [server]
-maxUploadSize= 300
+maxUploadSize= 32
 runOnSave = true
 
 [theme]
