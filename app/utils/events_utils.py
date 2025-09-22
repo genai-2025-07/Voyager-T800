@@ -1,7 +1,7 @@
 import json
 import re
 import logging
-from datetime import datetime, date
+from datetime import datetime, timezone
 from typing import Any, List, Dict
 from app.utils.read_prompt_from_file import read_prompt_from_file
 
@@ -95,7 +95,7 @@ def parse_event_query(user_input: str, structured_llm) -> EventQuery | None:
         hints = preprocess_dates(user_input)
 
         # Pass today's date as contextual hint to the parser to reduce wrong-year outputs
-        current_date = date.today()
+        current_date = datetime.now(timezone.utc).date()
         augmented_input = (
             f"{user_input}\n\n"
             f"Note: The current year is {current_date.year}. Make sure the start date corresponds to the current year.\n"
@@ -170,11 +170,15 @@ def extract_events(raw: str) -> List[Dict[str, Any]]:
         for i, block in enumerate(fenced_json_blocks):
             logger.debug(f"Processing JSON block {i+1}")
             parsed = _try_parse_json(block)
-            if parsed and isinstance(parsed, list):
-                logger.info(
-                    f"Successfully extracted {len(parsed)} events from JSON-fenced block"
-                )
-                return parsed
+            if parsed:
+                if isinstance(parsed, list):
+                    logger.info(
+                        f"Successfully extracted {len(parsed)} events from JSON-fenced block"
+                    )
+                    return parsed
+                elif isinstance(parsed, dict):
+                    logger.info("Successfully extracted 1 event from JSON-fenced block")
+                    return [parsed]
     except Exception as e:
         logger.warning(f"Error processing JSON-fenced blocks: {e}")
 
@@ -187,43 +191,26 @@ def extract_events(raw: str) -> List[Dict[str, Any]]:
         for i, block in enumerate(fenced_blocks):
             logger.debug(f"Processing generic block {i+1}")
             parsed = _try_parse_json(block)
-            if parsed and isinstance(parsed, list):
-                logger.info(
-                    f"Successfully extracted {len(parsed)} events from generic-fenced block"
-                )
-                return parsed
+            if parsed:
+                if isinstance(parsed, list):
+                    logger.info(
+                        f"Successfully extracted {len(parsed)} events from generic-fenced block"
+                    )
+                    return parsed
+                elif isinstance(parsed, dict):
+                    logger.info("Successfully extracted 1 event from generic-fenced block")
+                    return [parsed]
     except Exception as e:
         logger.warning(f"Error processing generic-fenced blocks: {e}")
 
     # Strategy 3: Look for raw JSON arrays in the text
     logger.debug("Attempting to parse raw JSON arrays in text")
     try:
-        start_index = raw.find("[")
-        if start_index != -1:
-            logger.debug(f"Found potential JSON array at index {start_index}")
-
-            depth = 0
-            for i in range(start_index, len(raw)):
-                ch = raw[i]
-                if ch == "[":
-                    depth += 1
-                elif ch == "]":
-                    depth -= 1
-                    if depth == 0:
-                        candidate = raw[start_index : i + 1]
-                        logger.debug(
-                            f"Extracted candidate JSON of length {len(candidate)}"
-                        )
-
-                        parsed = _try_parse_json(candidate)
-                        if parsed and isinstance(parsed, list):
-                            logger.info(
-                                f"Successfully extracted {len(parsed)} events from raw JSON array"
-                            )
-                            return parsed
-                        break
-        else:
-            logger.debug("No potential JSON array found in text")
+        parsed = json.loads(re.search(r"\[.*\]", raw, re.DOTALL).group(0))
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict):
+            return [parsed]
     except Exception as e:
         logger.warning(f"Error processing raw JSON arrays: {e}")
 

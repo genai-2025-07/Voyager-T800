@@ -6,12 +6,41 @@ def preprocess_dates(user_input: str) -> dict:
     today = datetime.today().date()
     hints = {}
 
-    # "for X days"
-    match = re.search(r"for\s+(\d+)\s+day", user_input, re.IGNORECASE)
-    if match:
-        days = int(match.group(1))
+    # Trip duration extraction: supports multiple phrasings
+    duration_days = None
+
+    # for X days
+    m = re.search(r"\bfor\s+(\d+)\s+days?\b", user_input, re.IGNORECASE)
+    if m:
+        duration_days = int(m.group(1))
+
+    # for X nights (convert nights to days ~ nights + 1)
+    if duration_days is None:
+        m = re.search(r"\bfor\s+(\d+)\s+nights?\b", user_input, re.IGNORECASE)
+        if m:
+            duration_days = int(m.group(1)) + 1
+
+    # X-day trip / X days trip
+    if duration_days is None:
+        m = re.search(r"\b(\d+)\s*-?\s*day(?:s)?(?:\s+trip)?\b", user_input, re.IGNORECASE)
+        if m:
+            duration_days = int(m.group(1))
+
+    # stay X days
+    if duration_days is None:
+        m = re.search(r"\bstay\s+(\d+)\s+days?\b", user_input, re.IGNORECASE)
+        if m:
+            duration_days = int(m.group(1))
+
+    # stay X nights
+    if duration_days is None:
+        m = re.search(r"\bstay\s+(\d+)\s+nights?\b", user_input, re.IGNORECASE)
+        if m:
+            duration_days = int(m.group(1)) + 1
+
+    if duration_days is not None and "start_date" not in hints and "end_date" not in hints:
         hints["start_date"] = today
-        hints["end_date"] = today + timedelta(days=days)
+        hints["end_date"] = today + timedelta(days=duration_days)
 
     # "tomorrow"
     if re.search(r"\btomorrow\b", user_input, re.IGNORECASE):
@@ -35,3 +64,13 @@ def preprocess_dates(user_input: str) -> dict:
         hints["end_date"] = end
 
     return hints
+
+def get_time_block(hour: int) -> str:
+    if 8 <= hour < 12:
+        return "morning"
+    elif 12 <= hour < 17:
+        return "afternoon"
+    elif 17 <= hour < 23:
+        return "evening"
+    else:
+        return None

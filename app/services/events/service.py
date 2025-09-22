@@ -1,6 +1,8 @@
 import logging
 from typing import List, Optional, Dict
 from datetime import datetime
+
+from app.utils.date_utils import get_time_block
 from .models import Event, EventRequest
 from .providers.base import EventsProvider
 
@@ -58,7 +60,7 @@ class EventsService:
             )
 
             # Check cache first
-            cache_key = f"{request.city}-{request.start_date}-{request.end_date}-{request.categories or 'all'}"
+            cache_key = f"{request.city}-{request.start_date}-{request.end_date}-{sorted(request.categories or [])}"
             if self.cache:
                 cached_events = self.cache.get(cache_key)
                 if cached_events:
@@ -107,14 +109,8 @@ class EventsService:
             day_index = (event_date - start_date).days + 1
             day_key = f"Day {day_index}"
             hour = e.date.hour
-            if 8 <= hour < 12:
-                block = "morning"
-            elif 12 <= hour < 17:
-                block = "afternoon"
-            elif 17 <= hour < 23:
-                block = "evening"
-            else:
-                # Skip events outside itinerary range (night, early morning, etc.)
+            block = get_time_block(hour)
+            if not block:
                 continue
 
             if day_key not in mapped:

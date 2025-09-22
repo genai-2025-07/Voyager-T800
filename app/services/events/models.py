@@ -31,6 +31,13 @@ class Event(BaseModel):
             raise ValueError("URL must start with http:// or https://")
         return v
 
+    @field_validator("date", mode="before")
+    @classmethod
+    def parse_date(cls, v):
+        if isinstance(v, str):
+            return datetime.fromisoformat(v)
+        return v
+
 
 class EventQuery(BaseModel):
     """Simple model for parsing event search queries from user input."""
@@ -104,9 +111,9 @@ class EventRequest(BaseModel):
     @field_validator("end_date")
     @classmethod
     def validate_date_range(cls, v, info):
-        """Ensure end_date is after start_date."""
-        if "start_date" in info.data and v <= info.data["start_date"]:
-            raise ValueError("end_date must be after start_date")
+        """Ensure end_date is not before start_date (same day allowed)."""
+        if "start_date" in info.data and v < info.data["start_date"]:
+            raise ValueError("end_date cannot be before start_date")
         return v
 
     @field_validator("categories")

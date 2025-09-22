@@ -3,7 +3,6 @@ import os
 import time
 
 
-
 from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
 from app.services.weaviate.weaviate_setup import setup_complete_database
@@ -41,7 +40,7 @@ try:
     itinerary_template = read_prompt_from_file("app/prompts/expert_prompt_for_langchain.txt")
     summary_template = read_prompt_from_file("app/prompts/test_summary_prompt.txt")
 except Exception as e:
-    logging.error(f"ERROR loading prompts: {e}")
+    logger.error(f"ERROR loading prompts: {e}")
     raise e
 
 prompt = PromptTemplate(
@@ -74,28 +73,14 @@ retriever = setup_rag_retriever(
 )
 
 # Chain where we will pass the last message from the chat history
-if rag_available:
-    chain = ( 
-        RunnablePassthrough.assign(
-            chat_history=extract_chat_history_content,
-            context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))),
-            event_query=lambda x: parse_event_query(x["user_input"], structured_llm)
-        )
-        .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
-        | prompt
-        | llm
+chain = (RunnablePassthrough.assign(
+    chat_history=extract_chat_history_content,
+    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))),  # Format retrieved documents with sources and city for context
+    event_query=lambda x: parse_event_query(x["user_input"], structured_llm),
     )
-else:
-    chain = (
-        RunnablePassthrough.assign(
-            chat_history=lambda x: x.get("chat_history"),
-            context=RunnableLambda(lambda x: "No context available - RAG system temporarily disabled"),
-            event_query=lambda x: parse_event_query(x["user_input"], structured_llm),
-        )
-        .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
-        | prompt
-        | llm
-    )
+    .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") else None)
+    | prompt | llm
+)
 
 session_memories = {}
 
@@ -199,6 +184,7 @@ def stream_response(user_input, session_id="default_session", include_events: bo
             time.sleep(0.025)  # Simulate a delay for streaming effect
     except Exception as e:
         logger.error(f"ERROR: {e}")
+        raise e
 
 def full_response(user_input, session_id="default_session", include_events: bool = False):
     """

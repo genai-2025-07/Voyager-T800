@@ -24,14 +24,10 @@ class TavilyEventsProvider(EventsProvider):
 
         try:
             self.api_key = os.getenv("TAVILY_API_KEY")
+            if not self.api_key or not self.api_key.strip():
+                raise ValueError("TAVILY_API_KEY environment variable is not set or empty")
+            
             self.api_url = os.getenv("TAVILY_API_URL", "https://api.tavily.com/search")
-
-            # Validate API key
-            if not self.api_key:
-                raise ValueError("TAVILY_API_KEY environment variable is not set")
-
-            if not self.api_key.strip():
-                raise ValueError("TAVILY_API_KEY is empty")
 
             logger.info("TavilyEventsProvider initialized successfully")
 
