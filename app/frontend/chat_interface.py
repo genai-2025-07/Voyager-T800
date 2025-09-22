@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from app.chains.itinerary_chain import full_response, stream_response
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ except ValueError:
 
 MIN_LOADED_IMAGE_WIDTH = 200
 MIN_LOADED_IMAGE_HEIGHT = 200
+IMAGE_DISPLAY_WIDTH =400
 
 st.set_page_config(
     page_title=APP_PAGE_TITLE,
@@ -465,10 +466,13 @@ if user_input:
             st.rerun()
 
     if hasattr(user_input, 'files') and user_input.files:
-        img = Image.open(user_input.files[0])
-        width, height = img.size
+        try:
+            with Image.open(user_input,files[0]) as img:
+                width, height = img.size
+        except UnidentifiedImageError:
+            st.warning("Invalid image file.")
 
         if width <MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
-            st.warning("Image is too small. Please, upload image of size at least 200x200 px")
+            st.warning("Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px")
         else:    
-            st.image(user_input.files[0], width=400)
+            st.image(user_input.files[0], width=IMAGE_DISPLAY_WIDTH)
