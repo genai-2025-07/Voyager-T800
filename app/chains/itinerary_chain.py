@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-
+import json
 
 from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
@@ -72,7 +72,15 @@ retriever = setup_rag_retriever(
     db=db_manager
 )
 
-tags = ["museum", "point_of_interest"]  # Example tags for filtering
+# Mock tags for testing purposes
+# In production, these would come from Claude response
+file_path = "app/utils/mocks/claude_response_mock.json"
+
+with open(file_path, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+# tags need to be list[str]
+tags: list[str] = data.get("tags", [])
 
 # Chain where we will pass the last message from the chat history
 chain = (RunnablePassthrough.assign(
