@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from app.chains.itinerary_chain import full_response, stream_response
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,10 @@ try:
     SESSIONS_PAGE_SIZE = int(os.environ.get("VOYAGER_SESSIONS_PAGE_SIZE", "10"))
 except ValueError:
     SESSIONS_PAGE_SIZE = 10
+
+MIN_LOADED_IMAGE_WIDTH = 200
+MIN_LOADED_IMAGE_HEIGHT = 200
+IMAGE_DISPLAY_WIDTH =400
 
 st.set_page_config(
     page_title=APP_PAGE_TITLE,
@@ -466,4 +470,13 @@ if user_input:
         st.rerun()
 
     if hasattr(user_input, 'files') and user_input.files:
-        st.image(user_input.files[0], width=400)
+        try:
+            with Image.open(user_input,files[0]) as img:
+                width, height = img.size
+        except UnidentifiedImageError:
+            st.warning("Invalid image file.")
+
+        if width <MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
+            st.warning("Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px")
+        else:    
+            st.image(user_input.files[0], width=IMAGE_DISPLAY_WIDTH)
