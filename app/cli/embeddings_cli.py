@@ -36,7 +36,6 @@ from app.retrieval.embedding.generate_embeddings import (
 from app.utils.file_utils import discover_input_files
 
 
-load_dotenv()
 setup_logger()
 logger = logging.getLogger('app.cli.embeddings_cli')
 

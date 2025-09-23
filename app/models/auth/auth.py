@@ -38,7 +38,7 @@ class SignUpRequest(BaseModel):
     """
     email: EmailStr
     password: str = Field(..., min_length=8, description="Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a digit, and a special character")
-    
+
     @validator('email')
     def sanitize_email_input(cls, v):
         """Sanitize email input."""

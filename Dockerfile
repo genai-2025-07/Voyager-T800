@@ -67,6 +67,13 @@ RUN --mount=type=cache,target=/root/.cache \
 ################################
 FROM python-base AS dev
 
+# Install system dependencies for development
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR $PYSETUP_PATH
 
 # Copy Poetry + venv from builder
@@ -89,6 +96,14 @@ CMD uvicorn ${UVICORN_MODULE_DEV:-app.main}:app --reload --host ${HOST:-0.0.0.0}
 # PRODUCTION IMAGE
 ################################
 FROM python-base AS prod
+
+# Install system dependencies for production
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN useradd -r -m --no-log-init appuser
 

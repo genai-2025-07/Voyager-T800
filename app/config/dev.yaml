@@ -14,7 +14,7 @@ vectordb:
 bedrock:
   enabled: false
 
-features:
-  enable_metrics: true
+#features:
+#  enable_metrics: true
 
 

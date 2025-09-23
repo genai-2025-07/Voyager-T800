@@ -9,13 +9,10 @@ import sys
 
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from app.config.logger.logger import setup_logger
 from app.retrieval.parsing.attractions_wiki_parser import AttractionsParser
 
 
-load_dotenv()
 setup_logger()
 logger = logging.getLogger('app.cli.attractions_cli')
 

@@ -61,7 +61,7 @@ class PasswordValidator:
         # Check length
         if len(password) < self.policy['min_length']:
             errors.append(f"Password must contain at least {self.policy['min_length']} characters")
-        
+
         # Check uppercase
         if self.policy['require_uppercase'] and not re.search(r'[A-Z]', password):
             errors.append("Password must contain at least one uppercase letter")
@@ -141,7 +141,7 @@ def validate_environment() -> None:
     ]
     
     missing_vars = [var for var in required_vars if not os.getenv(var) or os.getenv(var).strip() == ""]
-    
+
     if missing_vars:
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
     
@@ -313,7 +313,7 @@ def sanitize_email(email: str) -> str:
     
     # Remove all non-printable ASCII characters
     email = re.sub(r'[^\x20-\x7E]', '', email)
-    
+
     return email
 
 
