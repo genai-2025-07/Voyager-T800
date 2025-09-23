@@ -1,6 +1,7 @@
 import logging
 import weaviate
 import threading
+import time 
 
 from app.services.weaviate.data_models.attraction_models import (
     AttractionWithChunks, AttractionModel, ChunkBase,
@@ -54,13 +55,24 @@ class AttractionDBManager:
     def __init__(self, client: weaviate.WeaviateClient,
                  attraction_collection_name="Attraction",
                  chunk_collection_name="AttractionChunk",
-                 tag_set_collection_name="TagSet"):
+                 tag_set_collection_name="TagSet",
+                 attraction_reference_prop_name="fromAttraction"):
+        
         self.client = client
         self.attraction_collection = client.collections.get(attraction_collection_name)
         self.chunk_collection = client.collections.get(chunk_collection_name)
         self._tag_update_lock = threading.Lock()
         self.tag_set_collection = client.collections.get(tag_set_collection_name)
         self.prop_validator = PropertyValidator(logger=logger)
+        
+        self.chunk_collection_name = chunk_collection_name
+
+        chunk_config = self.chunk_collection.config.get()
+        reference_names = [ref.name for ref in getattr(chunk_config, "references", [])]
+        if attraction_reference_prop_name not in reference_names:
+            raise ValidationError(f"Reference property {attraction_reference_prop_name} not found in schema.")
+        
+        self.attraction_reference_prop_name = attraction_reference_prop_name
 
     def _ensure_coordinates_model(self, props: dict, coord_key: str = "coordinates"):
         """Ensure coordinates is a CoordinatesModel instance (recreate from existing GeoCoordinate object)."""
@@ -102,11 +114,12 @@ class AttractionDBManager:
     def _build_return_references(self, return_attraction_properties: Optional[List[str]]):
         """
         Validate and build QueryReference list (or None) for returning attraction properties
-        attached by 'fromAttraction' link.
+        attached by reference link.
         """
         if not return_attraction_properties:
             return None
 
+        reference_name = self.attraction_reference_prop_name
         invalid = self.prop_validator.validate_attraction_properties(return_attraction_properties)
         if invalid:
             logger.error(f"Invalid attraction properties in search: {invalid}")
@@ -116,7 +129,7 @@ class AttractionDBManager:
 
         return [
             QueryReference(
-                link_on="fromAttraction",
+                link_on=reference_name,
                 return_properties=return_attraction_properties
             )
         ]
@@ -149,8 +162,11 @@ class AttractionDBManager:
                 parsed_props = raw_props
 
             # references: try to unpack into SearchResultAttractionModel when present
-            references_parsed = self._unpack_references(getattr(o, "references", None))
-
+            if getattr(o, "references", None) is not None:
+                references_parsed = self._unpack_references(getattr(o, "references", None), chunk_uuid=getattr(o, "uuid"))
+            else:
+                references_parsed = None
+                
             metadata_obj = self._metadata_from_obj(o)
 
             # construct WeaviateObject exactly as before
@@ -164,6 +180,108 @@ class AttractionDBManager:
                 )
             )
         return objs
+    
+    def _verify_chunk_references(self, chunk_uuids, expected_attraction_uuid, reference_name):
+        """
+        For each chunk UUID, verify that the attraction reference points to the expected attraction UUID.
+        Returns True if all references are correct, False otherwise.
+        """
+        all_correct = True
+        for chunk_uuid in chunk_uuids:
+            try:
+                obj = self.chunk_collection.query.fetch_object_by_id(
+                    uuid=chunk_uuid,
+                    return_references=QueryReference(
+                        link_on=reference_name
+                    )
+                )
+                refs = obj.references.get(reference_name) if obj.references else None
+                if not refs or not refs.objects:
+                    logger.error(f"Chunk {chunk_uuid} has no {reference_name} reference.")
+                    all_correct = False
+                    continue
+                ref_obj = refs.objects[0]
+                if str(ref_obj.uuid) != str(expected_attraction_uuid):
+                    logger.error(
+                        f"Chunk {chunk_uuid} {reference_name} reference points to {ref_obj.uuid}, "
+                        f"expected {expected_attraction_uuid}"
+                    )
+                    all_correct = False
+                else:
+                    logger.debug(f"Chunk {chunk_uuid} correctly references attraction {expected_attraction_uuid}")
+            except Exception as e:
+                logger.error(f"Error verifying reference for chunk {chunk_uuid}: {e}")
+                all_correct = False
+        return all_correct
+
+    def _add_references(self, references_to_add, batch_size=100, max_retries=3, retry_base_constant=2):
+        """
+        Add references between objects in batch mode with verification and retries.
+        """
+        if not references_to_add:
+            logger.info("No references to add")
+            return
+        
+        # Group references by attraction for verification
+        refs_by_attraction = {}
+        for ref in references_to_add:
+            attraction_uuid = ref["to"]
+            if attraction_uuid not in refs_by_attraction:
+                refs_by_attraction[attraction_uuid] = []
+            refs_by_attraction[attraction_uuid].append(ref["from_uuid"])
+        
+        retry_count = 0
+        failed_refs_to_retry = references_to_add
+        
+        while retry_count < max_retries and failed_refs_to_retry:
+            logger.info(f"Adding {len(failed_refs_to_retry)} references (attempt {retry_count + 1}/{max_retries})")
+            
+            with self.client.batch.fixed_size(batch_size=batch_size) as batch:
+                for ref in failed_refs_to_retry:
+                    try:
+                        batch.add_reference(
+                            from_collection=ref["from_collection_name"],
+                            from_uuid=ref["from_uuid"],
+                            from_property=ref["from_property"],
+                            to=ref["to"]
+                        )
+                    except Exception as e:
+                        logger.error(f"Error adding reference from {ref['from_uuid']} to {ref['to']}: {e}")
+            
+            # Check for failed references after batch completion
+            failed_refs = self.chunk_collection.batch.failed_references
+            if failed_refs:
+                logger.error(f"Failed to add {len(failed_refs)} references in batch")
+                for failed_ref in failed_refs:
+                    logger.error(f"Failed reference: {failed_ref}")
+            
+            # Verify all references were created correctly
+            all_verified = True
+            failed_verifications = []
+            
+            for attraction_uuid, chunk_uuids in refs_by_attraction.items():
+                if not self._verify_chunk_references(chunk_uuids, attraction_uuid, self.attraction_reference_prop_name):
+                    all_verified = False
+                    # Collect failed references for retry
+                    for chunk_uuid in chunk_uuids:
+                        for ref in references_to_add:
+                            if ref["from_uuid"] == chunk_uuid and ref["to"] == attraction_uuid:
+                                failed_verifications.append(ref)
+                                break
+            
+            if all_verified:
+                logger.info("All references verified successfully")
+                return
+            
+            # Prepare for retry with only failed references
+            failed_refs_to_retry = failed_verifications
+            retry_count += 1
+            
+            if retry_count < max_retries:
+                logger.warning(f"Reference verification failed for {len(failed_refs_to_retry)} references, retrying...")
+                time.sleep(retry_base_constant ** retry_count)  # Add exponential backoff
+            else:
+                logger.error(f"Failed to add and verify {len(failed_refs_to_retry)} references: {failed_refs_to_retry} after {max_retries} attempts")
 
     def _prepare_objects(self, items: list[AttractionWithChunks]):
         objects_to_add = []
@@ -208,19 +326,20 @@ class AttractionDBManager:
                         "vector": chunk.embedding
                     })
                     references_to_add.append({
-                        "collection": self.chunk_collection,
+                        "from_collection_name": self.chunk_collection_name,
                         "from_uuid": chunk_uuid,
-                        "from_property": "fromAttraction",
+                        "from_property": self.attraction_reference_prop_name,
                         "to": attraction_uuid
                     })
-
+                    
             results.append({
                 "attraction_uuid": attraction_uuid,
-                "chunk_uuids": chunk_uuids
+                "chunk_uuids": chunk_uuids,
+                "chunks_present": len(chunk_uuids) > 0
             })
 
         return objects_to_add, references_to_add, results, skipped, list(unique_batch_tags)
-
+    
     def _insert_objects(self, objects_to_add, batch_size, max_batch_errors):
         with self.client.batch.fixed_size(batch_size=batch_size) as batch:
             for obj in objects_to_add:
@@ -236,15 +355,6 @@ class AttractionDBManager:
             if batch.number_errors > max_batch_errors:
                 raise Exception("Too many errors during batch import, aborting.")
 
-    def _add_references(self, references_to_add, batch_size=100):
-        with self.client.batch.fixed_size(batch_size=batch_size) as batch:
-            for ref in references_to_add:
-                batch.add_reference(
-                    from_collection=ref["collection"].name,
-                    from_uuid=ref["from_uuid"],
-                    from_property=ref["from_property"],
-                    to=ref["to"]
-                )
 
     def _handle_batch_errors(self):
         failed = self.attraction_collection.batch.failed_objects
@@ -253,27 +363,40 @@ class AttractionDBManager:
             for i, error_obj in enumerate(failed, 1):
                 logger.error(f"Failed object {i}: {error_obj}")
 
-    def _unpack_references(self, refs):
+    def _unpack_references(self, refs, chunk_uuid=None):
         """
         Convert references returned by weaviate into SearchResultAttractionModel when possible.
         """
         if not refs:
             return None
 
-        # The existing logic expects a dict of reference lists keyed by property (e.g. "fromAttraction")
+        # The existing logic expects a dict of reference lists keyed by property
+        reference_name = self.attraction_reference_prop_name
         for k, v in refs.items():
-            if k != "fromAttraction":
+            if k != reference_name:
                 logger.error(f"Unknown type of reference in returned from search: {k}")
                 continue
             else:
+                ref_obj, attraction_props, attraction_uuid = None, None, None
                 if len(v.objects) != 1:
-                    logger.error(f"More than one or 0 references returned from search {v.objects}")
-                    # fallback: return raw
-                    return None
-                ref_obj = v.objects[0]
-                attraction_props = ref_obj.properties or {}
-                attraction_uuid = str(ref_obj.uuid)
-                # ensure coordinates
+                    obj = self.chunk_collection.query.fetch_object_by_id(
+                        uuid=chunk_uuid,
+                        return_references=QueryReference(link_on=reference_name)
+                    )
+                    retry_refs = obj.references.get(reference_name) if obj.references else None
+                    if not retry_refs.objects or len(retry_refs.objects) != 1:
+                        logger.error(f"Chunk {chunk_uuid} has {len(v.objects)} references in property {reference_name}: {v.objects}")
+                        return None
+                    
+                    ref_obj = retry_refs.objects[0]
+                    attraction_props = ref_obj.properties or {}
+                    attraction_uuid = str(ref_obj.uuid)
+                else:   
+                    ref_obj = v.objects[0]
+                    attraction_props = ref_obj.properties or {}
+                    attraction_uuid = str(ref_obj.uuid)
+
+                attraction_props = dict(ref_obj.properties or {})
                 self._ensure_coordinates_model(attraction_props, "coordinates")
 
                 try:
@@ -327,11 +450,11 @@ class AttractionDBManager:
         """
         objects_to_add, references_to_add, results, skipped, unique_batch_tags = self._prepare_objects(items)
         self._insert_objects(objects_to_add, batch_size, max_batch_errors)
+        if wait_for_indexing:
+            self.chunk_collection.batch.wait_for_vector_indexing()
+            self.attraction_collection.batch.wait_for_vector_indexing()
         self._add_references(references_to_add)
 
-        if wait_for_indexing:
-            self.attraction_collection.batch.wait_for_vector_indexing()
-            
         if unique_batch_tags:
             self._insert_unique_tags(unique_batch_tags)
 
@@ -347,10 +470,11 @@ class AttractionDBManager:
 
     def get_chunks_by_attraction(self, attraction_uuid: str) -> List[dict]:
         """
-        Fetch all chunks linked to a given attraction via the fromAttraction reference.
+        Fetch all chunks linked to a given attraction via the attraction reference.
         """
+        reference_name = self.attraction_reference_prop_name
         response = self.chunk_collection.query.fetch_objects(
-            filters=Filter.by_ref("fromAttraction").by_id().equal(attraction_uuid),
+            filters=Filter.by_ref(reference_name).by_id().equal(attraction_uuid),
             limit=1000
         )
         return [obj.properties for obj in response.objects]
@@ -379,9 +503,10 @@ class AttractionDBManager:
         """
         Delete an attraction and all its linked chunks by UUID.
         """
+        reference_name = self.attraction_reference_prop_name
         try:
             self.chunk_collection.data.delete_many(
-                where=Filter.by_ref("fromAttraction").by_id().equal(uuid)
+                where=Filter.by_ref(reference_name).by_id().equal(uuid)
             )
             self.attraction_collection.data.delete_by_id(uuid)
         except Exception as e:
@@ -402,7 +527,7 @@ class AttractionDBManager:
         limit: int = 10,
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None,
-        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+        return_attraction_properties: Optional[list[str]] = None
     ) -> WeaviateQueryResponse:
         """
         Vector search for chunks using a query vector.
@@ -431,7 +556,7 @@ class AttractionDBManager:
         limit: int = 10,
         filters: Optional[Filter] = None,
         return_metadata: Optional[MetadataQuery] = None,
-        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+        return_attraction_properties: Optional[list[str]] = None
     ) -> WeaviateQueryResponse:
         """
         Keyword (BM25) search for chunks using a query string.
@@ -467,7 +592,7 @@ class AttractionDBManager:
         filters: Optional[Filter] = None,
         alpha: float = 0.75,
         return_metadata: Optional[MetadataQuery] = None,
-        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+        return_attraction_properties: Optional[list[str]] = None
     ) -> WeaviateQueryResponse:
         """
         Hybrid search for chunks using a query string (combines vector and keyword search).

@@ -44,7 +44,7 @@ class UserAlreadyExistsException(AuthException):
     def __init__(self, email: str):
         super().__init__(
             status_code=409,
-            detail=f"User with email {email} already exists"
+            detail="A user with this email already exists"
         )
 
 
@@ -66,7 +66,7 @@ class UserNotFoundException(AuthException):
     def __init__(self, email: str):
         super().__init__(
             status_code=404,
-            detail=f"User with email {email} not found"
+            detail="User not found"
         )
 
 
@@ -209,7 +209,7 @@ class PasswordPolicyException(AuthException):
     def __init__(self, message: str):
         super().__init__(
             status_code=400,
-            detail=f"Password does not meet requirements: {message}"
+            detail="Password does not meet security requirements"
         )
 
 
