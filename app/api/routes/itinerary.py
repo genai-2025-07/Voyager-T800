@@ -79,12 +79,15 @@ class SessionDeleteResponse(BaseModel):
 @router.post('/generate', response_model=ItineraryGenerateResponse)
 async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Request):
     """Generate an itinerary and store it in DynamoDB using SessionMetadata."""
+    if not request.query:
+        raise HTTPException(status_code=422, detail="Query is required.")
+
     try:
         logger.info(f'Generating and storing itinerary for query: {request.query[:100]}...')
 
         # Prepare session data
         user_id = request.user_id or 'anonymous'
-        session_id = request.session_id or 'default_session'
+        session_id = request.session_id or f'voyager_session_{uuid.uuid4().hex}'
         now = datetime.now(UTC).isoformat()
 
         # Get DynamoDB client from app state
@@ -226,6 +229,8 @@ async def delete_session(session_id: str, user_id: str = Query('anonymous'), htt
     try:
         dynamodb_client = http_request.app.state.dynamodb_client
         status_code = dynamodb_client.delete_item(user_id, session_id)
+        if status_code == 404:
+            raise HTTPException(status_code=404, detail='Session not found')
         if status_code != 200:
             raise HTTPException(status_code=500, detail='Failed to delete session')
         return SessionDeleteResponse(session_id=session_id, user_id=user_id, deleted=True)
@@ -252,11 +257,11 @@ async def get_session_data(session_id: str, user_id: str = 'anonymous', http_req
             raise HTTPException(status_code=404, detail='Session not found.')
 
         return ItineraryRetrieveResponse(
-            user_id=session_data['user_id'],
-            session_id=session_data['session_id'],
-            session_summary=session_data['session_summary'],
-            started_at=session_data['started_at'],
-            messages=session_data['messages'],
+            user_id=session_data.get('user_id', ''),
+            session_id=session_data.get('session_id', ''),
+            session_summary=session_data.get('session_summary', ''),
+            started_at=session_data.get('started_at', ''),
+            messages=session_data.get('messages', []),
         )
 
     except HTTPException:

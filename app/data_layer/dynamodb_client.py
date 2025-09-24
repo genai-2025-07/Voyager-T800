@@ -69,8 +69,8 @@ class DynamoDBClient:
                     'dynamodb',
                     region_name=self.region_name,
                     endpoint_url=endpoint_url,
-                    aws_access_key_id='dummy',
-                    aws_secret_access_key='dummy',
+                    aws_access_key_id=settings.aws_access_key_id,
+                    aws_secret_access_key=settings.aws_secret_access_key,
                 )
                 logger.info(f'Using local DynamoDB at {endpoint_url}')
             else:

@@ -25,6 +25,7 @@ APP_PAGE_TAGLINE = settings.voyager_page_tagline
 
 MAX_INPUT_LENGTH = settings.voyager_max_input_length
 SESSIONS_PAGE_SIZE = settings.voyager_sessions_page_size
+IMAGE_DISPLAY_WIDTH = settings.image_display_width
 
 st.set_page_config(page_title=APP_PAGE_TITLE, page_icon=APP_PAGE_ICON, layout='wide')
 
@@ -587,7 +588,7 @@ with chat_container:
     for _i, message in enumerate(st.session_state.messages):
         if message['role'] == 'user':
             if 'image' in message and message['image'] is not None:
-                st.image(message['image'], width=400)
+                st.image(message['image'], width=IMAGE_DISPLAY_WIDTH)
             else:
                 st.markdown(
                     f"""

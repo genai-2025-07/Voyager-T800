@@ -12,6 +12,7 @@ from app.memory.custom_summary_memory import SummaryChatMessageHistory
 from app.retrieval.waiss_retriever import setup_rag_retriever
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
 from app.utils.read_prompt_from_file import read_prompt_from_file
+from threading import Lock
 
 
 logger = logging.getLogger(__name__)
@@ -36,14 +37,16 @@ SESSION_MEMORY_TTL_SECONDS = settings.session_memory_ttl_seconds
 
 # Global retriever - will be initialized when needed
 retriever = None
+retriever_lock = Lock()
 
 
 def initialize_retriever(db_manager):
     """Initialize the retriever with the provided database manager."""
     global retriever
-    if retriever is None and db_manager is not None:
-        retriever = setup_rag_retriever(db=db_manager)
-        logger.info('Retriever initialized successfully')
+    with retriever_lock:
+        if retriever is None and db_manager is not None:
+            retriever = setup_rag_retriever(db=db_manager)
+            logger.info('Retriever initialized successfully')
     return retriever
 
 

@@ -10,11 +10,6 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV STREAMLIT_SERVER_PORT=8501
-ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
-ENV STREAMLIT_SERVER_HEADLESS=true
-ENV STREAMLIT_SERVER_ENABLE_CORS=false
-ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -36,15 +31,6 @@ COPY app/ ./app/
 # Set Python path to include the app directory
 ENV PYTHONPATH=/app
 
-# Set default environment variables for Streamlit
-ENV API_BASE_URL=http://api-dev:8000
-ENV STREAMLIT_ENV=dev
-ENV VOYAGER_PAGE_TITLE="Voyager-T800 Travel Assistant"
-ENV VOYAGER_PAGE_ICON="🚀"
-ENV VOYAGER_PAGE_TAGLINE="*Your AI-powered conversational trip planner*"
-ENV VOYAGER_MAX_INPUT_LENGTH=500
-ENV VOYAGER_SESSIONS_PAGE_SIZE=10
-
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash streamlit \
     && chown -R streamlit:streamlit /app
@@ -60,4 +46,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 # Run Streamlit
-CMD ["streamlit", "run", "app/frontend/chat_interface.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run app/frontend/chat_interface.py --server.port=${STREAMLIT_SERVER_PORT:-8501} --server.address=${STREAMLIT_SERVER_ADDRESS:-0.0.0.0}"]

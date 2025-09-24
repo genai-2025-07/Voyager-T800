@@ -26,14 +26,14 @@ def create_dynamodb_table():
     table_name = settings.dynamodb_table
     region_name = settings.aws_region
 
-    print(f'🚀 Setting up DynamoDB table: {table_name}')
-    print(f'📍 Region: {region_name}')
-    print(f'🏠 Local DynamoDB: {use_local_dynamodb}')
+    print(f'Setting up DynamoDB table: {table_name}')
+    print(f'Region: {region_name}')
+    print(f'Local DynamoDB: {use_local_dynamodb}')
 
     # Configure DynamoDB client
     if use_local_dynamodb:
         endpoint_url = settings.dynamodb_endpoint_url
-        print(f'�� Local endpoint: {endpoint_url}')
+        print(f'Local endpoint: {endpoint_url}')
 
         dynamodb = boto3.resource(
             'dynamodb',
@@ -43,7 +43,7 @@ def create_dynamodb_table():
             aws_secret_access_key='dummy',
         )
     else:
-        print('☁️  Using AWS DynamoDB')
+        print('Using AWS DynamoDB')
         dynamodb = boto3.resource('dynamodb', region_name=region_name)
 
     # Table schema based on SessionMetadata model
@@ -77,23 +77,23 @@ def create_dynamodb_table():
         try:
             existing_table = dynamodb.Table(table_name)
             existing_table.load()
-            print(f"✅ Table '{table_name}' already exists!")
-            print(f'📊 Table status: {existing_table.table_status}')
+            print(f"Table '{table_name}' already exists!")
+            print(f'Table status: {existing_table.table_status}')
             return True
         except ClientError as e:
             if e.response['Error']['Code'] != 'ResourceNotFoundException':
                 raise
 
         # Create the table
-        print(f"🔨 Creating table '{table_name}'...")
+        print(f"Creating table '{table_name}'...")
         table = dynamodb.create_table(**table_schema)
 
         # Wait for table to be created
-        print('⏳ Waiting for table to be created...')
+        print('Waiting for table to be created...')
         waiter = dynamodb.meta.client.get_waiter('table_exists')
         waiter.wait(TableName=table_name)
 
-        print(f"✅ Table '{table_name}' created successfully!")
+        print(f"Table '{table_name}' created successfully!")
         print(f'�� Table status: {table.table_status}')
 
         return True
@@ -101,31 +101,31 @@ def create_dynamodb_table():
     except ClientError as e:
         error_code = e.response['Error']['Code']
         if error_code == 'ResourceInUseException':
-            print(f"✅ Table '{table_name}' already exists!")
+            print(f" Table '{table_name}' already exists!")
             return True
         else:
-            print(f'❌ Error creating table: {e}')
+            print(f' Error creating table: {e}')
             return False
     except Exception as e:
-        print(f'❌ Unexpected error: {e}')
+        print(f' Unexpected error: {e}')
         return False
 
 
 def main():
     """Main function to set up DynamoDB table."""
     print('=' * 60)
-    print('🎯 Voyager-T800 DynamoDB Table Setup')
+    print('Voyager-T800 DynamoDB Table Setup')
     print('=' * 60)
 
     success = create_dynamodb_table()
 
     if success:
-        print('\n🎉 Setup completed successfully!')
+        print('\n Setup completed successfully!')
         print('�� You can now run your application:')
         print('   python -m app.main')
     else:
-        print('\n💥 Setup failed!')
-        print('🔍 Please check the error messages above.')
+        print('\n Setup failed!')
+        print(' Please check the error messages above.')
         sys.exit(1)
 
 

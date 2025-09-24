@@ -110,9 +110,6 @@ services:
       - "${STREAMLIT_HOST_PORT_PROD:-8502}:8501"
     env_file:
       - .prod.env
-    environment:
-      - API_BASE_URL=http://api:8001
-      - STREAMLIT_ENV=prod
     depends_on:
       api:
         condition: service_healthy
@@ -178,9 +175,6 @@ services:
       - "${STREAMLIT_HOST_PORT_DEV:-8501}:8501"
     env_file:
       - .env
-    environment:
-      - API_BASE_URL=http://api-dev:8000
-      - STREAMLIT_ENV=dev
     volumes:
       # Hot reload for development
       - ./app/frontend:/app/frontend

@@ -31,14 +31,15 @@ class Settings(BaseSettings):
     voyager_page_tagline: str = Field(default='*Your AI-powered conversational trip planner*')
     voyager_max_input_length: int = Field(default=500)
     voyager_sessions_page_size: int = Field(default=10)
+    image_display_width: int = Field(default=400)
 
     # DynamoDB Configuration
     use_local_dynamodb: bool = Field(default=False, description='Use local DynamoDB instead of AWS')
     dynamodb_endpoint_url: str = Field(default='http://localhost:8003', description='Local DynamoDB endpoint URL')
     dynamodb_table: str = Field(default='session_metadata', description='DynamoDB table name')
     aws_region: str = Field(default='us-east-2', description='AWS region for DynamoDB')
-    aws_access_key_id: str | None = Field(default=None, description='AWS access key ID')
-    aws_secret_access_key: str | None = Field(default=None, description='AWS secret access key')
+    aws_access_key_id: str | None = Field(default='dummy', description='AWS access key ID')
+    aws_secret_access_key: str | None = Field(default='dummy', description='AWS secret access key')
 
     logging_config_file: str = Field(default='logger.yaml')
     log_level: str = Field(default='INFO')
