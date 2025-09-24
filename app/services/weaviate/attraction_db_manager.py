@@ -642,20 +642,16 @@ class AttractionDBManager:
 
         return_references = self._build_return_references(return_attraction_properties)
 
-        response = self.chunk_collection.query.bm25(
+        response = self.keyword_search_chunks(
             query=query,
             query_properties=["tags"], 
             limit=limit,
             filters=filters,
             return_metadata=return_metadata or MetadataQuery(score=True),
-            return_references=return_references
+            return_attraction_properties=return_references
         )
 
-        objects = self._objects_from_response(
-            response,
-            properties_model_cls=ChunkBase,
-        )
-        return WeaviateQueryResponse(objects=objects)
+        return response
 
     def hybrid_search_chunks_by_tags(
         self,
@@ -676,9 +672,10 @@ class AttractionDBManager:
             return self.vector_search_chunks(vector, limit=limit, filters=filters)
 
         query = " OR ".join(tags)
+
         return_references = self._build_return_references(return_attraction_properties)
 
-        response = self.chunk_collection.query.hybrid(
+        response = self.hybrid_search_chunks(
             query=query,
             vector=vector,
             query_properties=["tags"],
@@ -686,14 +683,10 @@ class AttractionDBManager:
             filters=filters,
             alpha=alpha,
             return_metadata=return_metadata or MetadataQuery(score=True),
-            return_references=return_references
+            return_attraction_properties=return_references
         )
 
-        objects = self._objects_from_response(
-            response,
-            properties_model_cls=ChunkBase,
-        )
-        return WeaviateQueryResponse(objects=objects)
+        return response
 
     def filter_attractions(
         self,

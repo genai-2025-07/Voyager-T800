@@ -74,13 +74,16 @@ retriever = setup_rag_retriever(
 
 # Mock tags for testing purposes
 # In production, these would come from Claude response
-file_path = "app/utils/mocks/claude_response_mock.json"
+file_path = os.getenv("CLAUDE_RESPONSE_MOCK_PATH", "app/utils/mocks/claude_response_mock.json")
 
 with open(file_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 # tags need to be list[str]
-tags: list[str] = data.get("tags", [])
+tags = data.get("tags", [])
+if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+    tags = []
+    logger.warning(f"Invalid tags format in tags data: {tags}. Defaulting to empty list.")
 
 # Chain where we will pass the last message from the chat history
 chain = (RunnablePassthrough.assign(
