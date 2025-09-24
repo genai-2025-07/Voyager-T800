@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-
+import json
 
 from app.utils.read_prompt_from_file import read_prompt_from_file
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
@@ -72,10 +72,23 @@ retriever = setup_rag_retriever(
     db=db_manager
 )
 
+# Mock tags for testing purposes
+# In production, these would come from Claude response
+file_path = os.getenv("CLAUDE_RESPONSE_MOCK_PATH", "app/utils/mocks/claude_response_mock.json")
+
+with open(file_path, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+# tags need to be list[str]
+tags = data.get("tags", [])
+if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+    tags = []
+    logger.warning(f"Invalid tags format in tags data: {tags}. Defaulting to empty list.")
+
 # Chain where we will pass the last message from the chat history
 chain = (RunnablePassthrough.assign(
     chat_history=extract_chat_history_content,
-    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"]))),  # Format retrieved documents with sources and city for context
+    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"], tags=tags))),  # Format retrieved documents with sources and city for context
     event_query=lambda x: parse_event_query(x["user_input"], structured_llm) if x.get("include_events") else None,
     )
     .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") and x.get("event_query") else "")

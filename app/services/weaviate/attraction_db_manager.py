@@ -622,6 +622,72 @@ class AttractionDBManager:
         )
         return WeaviateQueryResponse(objects=objects)
 
+    def keyword_search_chunks_by_tags(
+        self,
+        tags: list[str],
+        limit: int = 10,
+        filters: Optional[Filter] = None,
+        return_metadata: Optional[MetadataQuery] = None,
+        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+    ) -> WeaviateQueryResponse:
+        """
+        Keyword (BM25) search for chunks **only by tags**.
+        Takes a list of tags (strings) and searches in the `tags` property.
+        """
+        if not tags:
+            logger.warning("keyword_search_chunks_by_tags called with empty tags list.")
+            return WeaviateQueryResponse(objects=[])
+        
+        query = " OR ".join(tags)
+
+        return_references = self._build_return_references(return_attraction_properties)
+
+        response = self.keyword_search_chunks(
+            query=query,
+            query_properties=["tags"], 
+            limit=limit,
+            filters=filters,
+            return_metadata=return_metadata or MetadataQuery(score=True),
+            return_attraction_properties=return_references
+        )
+
+        return response
+
+    def hybrid_search_chunks_by_tags(
+        self,
+        tags: list[str],
+        vector: list[float],
+        limit: int = 10,
+        filters: Optional[Filter] = None,
+        alpha: float = 0.75,
+        return_metadata: Optional[MetadataQuery] = None,
+        return_attraction_properties: Optional[list[str]] = ["name", "address", "opening_hours"]
+    ) -> WeaviateQueryResponse:
+        """
+        Hybrid search combining tag-based keyword search and vector similarity search.
+        tags -> OR-joined string, searched only in `tags` property.
+        """
+        if not tags:
+            logger.warning("hybrid_search_chunks_with_tags called with empty tags list. Falling back to vector search only.")
+            return self.vector_search_chunks(vector, limit=limit, filters=filters)
+
+        query = " OR ".join(tags)
+
+        return_references = self._build_return_references(return_attraction_properties)
+
+        response = self.hybrid_search_chunks(
+            query=query,
+            vector=vector,
+            query_properties=["tags"],
+            limit=limit,
+            filters=filters,
+            alpha=alpha,
+            return_metadata=return_metadata or MetadataQuery(score=True),
+            return_attraction_properties=return_references
+        )
+
+        return response
+
     def filter_attractions(
         self,
         filters: Filter,

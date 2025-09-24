@@ -21,33 +21,50 @@ class RAGAttractionRetriever(BaseRetriever):
     embeddings: Any
     mode: str = os.getenv("RETRIEVER", "hybrid")
     limit: int = int(os.getenv("TOP_K", 5))
+    alpha: float = float(os.getenv("HYBRID_ALPHA", 0.75))
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # def get_relevant_documents(self, query: str) -> List[Document]:
-    #     """
-    #     Public method required by LangChain retriever interface.
-    #     Calls the internal retrieval logic.
-    #     """
-    #     return self._get_relevant_documents(query)
+    def _choose_search_method(self, query: str, tags: List[str] = None):
+            vector = lambda: self.embeddings.embed_query(query)
+            
+            search_options = {
+            "similarity": lambda: self.db.vector_search_chunks(vector(), limit=self.limit),
+            "keyword": lambda: self.db.keyword_search_chunks(query, limit=self.limit),
+            "hybrid": lambda: self.db.hybrid_search_chunks(query, vector(), limit=self.limit, alpha=self.alpha),
+            "tags": lambda: (self.db.keyword_search_chunks_by_tags(tags, limit=self.limit) 
+                       if tags else self.db.keyword_search_chunks(query, limit=self.limit)),
+            "hybrid_tags": lambda: (self.db.hybrid_search_chunks_by_tags(tags, vector(), limit=self.limit, alpha=self.alpha)
+                          if tags else self.db.hybrid_search_chunks(query, vector(), limit=self.limit, alpha=self.alpha))
+            }
+            method = search_options[self.mode] if self.mode in search_options else None
+            return method()
 
-    def _get_relevant_documents(self, query: str) -> List[Document]:
+    def _get_relevant_documents(self, query: str, **kwargs) -> List[Document]:
         """
         Run retrieval using AttractionDBManager and convert results to LangChain Documents
         """
-        search_methods = {
-            "similarity": lambda: self.db.vector_search_chunks(self.embeddings.embed_query(query), limit=self.limit),
-            "keyword": lambda: self.db.keyword_search_chunks(query, limit=self.limit),
-            "hybrid": lambda: self.db.hybrid_search_chunks(query, self.embeddings.embed_query(query), limit=self.limit)
-        }
+        tags = kwargs.get("tags", None)
+        # def _choose_search_method(self, query: str, tags: List[str] = None):
+        #     vector = lambda: self.embeddings.embed_query(query)
+            
+        #     search_options = {
+        #     "similarity": lambda: self.db.vector_search_chunks(vector(), limit=self.limit),
+        #     "keyword": lambda: self.db.keyword_search_chunks(query, limit=self.limit),
+        #     "hybrid": lambda: self.db.hybrid_search_chunks(query, vector(), limit=self.limit, alpha=self.alpha),
+        #     "tags": lambda: (self.db.keyword_search_chunks_by_tags(tags, limit=self.limit) 
+        #                if tags else self.db.keyword_search_chunks(query, limit=self.limit)),
+        #     "hybrid_tags": lambda: (self.db.hybrid_search_chunks_by_tags(tags, vector(), limit=self.limit, alpha=self.alpha)
+        #                   if tags else self.db.hybrid_search_chunks(query, vector(), limit=self.limit, alpha=self.alpha))
+        #     }
+        #     return search_options.get(self.mode)
 
-        try:
-            results = search_methods[self.mode]()
-        except KeyError:
+        search_method = self._choose_search_method(query, tags)
+        if not search_method:
             raise ValueError(f"Unknown retriever mode: {self.mode}")
 
         docs = []
-        for obj in results.objects:
+        for obj in search_method.objects:
             props = obj.properties.dict() if hasattr(obj.properties, "dict") else obj.properties
             docs.append(
                 Document(
@@ -64,7 +81,7 @@ class RAGAttractionRetriever(BaseRetriever):
                 )
             )
         logger.info(f"Succesfully retrieved {len(docs)} documents.")
-        return docs
+        return list(docs)
 
 def setup_rag_retriever(
     db: AttractionDBManager
