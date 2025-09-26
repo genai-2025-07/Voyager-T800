@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from app.chains.itinerary_chain import full_response, stream_response
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,10 @@ try:
     SESSIONS_PAGE_SIZE = int(os.environ.get("VOYAGER_SESSIONS_PAGE_SIZE", "10"))
 except ValueError:
     SESSIONS_PAGE_SIZE = 10
+
+MIN_LOADED_IMAGE_WIDTH = 200
+MIN_LOADED_IMAGE_HEIGHT = 200
+IMAGE_DISPLAY_WIDTH =400
 
 st.set_page_config(
     page_title=APP_PAGE_TITLE,
@@ -206,7 +210,7 @@ class StreamlitWriter(io.StringIO):
         super().write(s)
         self.placeholder.markdown(self.getvalue())
 
-def run_ai_stream(user_message:str, session_id:str):
+def run_ai_stream(user_message:str, session_id:str, include_events:bool=False):
     """
     Stream the AI model's response to a Streamlit placeholder and capture the output.
 
@@ -228,7 +232,7 @@ def run_ai_stream(user_message:str, session_id:str):
         # Inject an environment flag read by the chain's weather builder
         use_weather = get_current_session_weather_state()
         os.environ["VOYAGER_USE_WEATHER"] = "1" if use_weather else "0"
-        stream_response(user_message, session_id)
+        stream_response(user_message, session_id, include_events)
     return writer.getvalue()
 
 def run_ai_response(user_message:str, session_id:str):
@@ -250,7 +254,7 @@ def run_ai_response(user_message:str, session_id:str):
         with redirect_stdout(buffer):
             use_weather = get_current_session_weather_state()
             os.environ["VOYAGER_USE_WEATHER"] = "1" if use_weather else "0"
-            full_response(user_message, session_id)
+            full_response(user_message, session_id, include_events)
         return buffer.getvalue()
     except Exception as e:
         return f"Error in AI processing: {str(e)}"
@@ -299,6 +303,10 @@ with st.sidebar:
     if st.button("➕ New Session", type="primary", use_container_width=True):
         create_new_session()
         st.rerun()
+
+    st.markdown("---")
+    st.subheader("Tools")
+    include_events = st.checkbox("Include available events", value=False, help="Enrich itinerary with local events")
 
     st.markdown("---")
 
@@ -474,27 +482,36 @@ if user_input:
                 "content": user_input.text.strip()
             })
 
-            with st.spinner("Voyager-T800 is analyzing your request..."):
-                assistant_response = run_ai_stream(user_input.text.strip(), st.session_state.session_id)
+    with st.spinner("Voyager-T800 is analyzing your request..."):
+        assistant_response = run_ai_stream(user_input.text.strip(), st.session_state.session_id, include_events)
 
-            if isinstance(assistant_response, str) and assistant_response.strip():
-                cleaned = assistant_response.strip().lower()
-                if cleaned.strip().lower() not in ["error", "none", "null"]:
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": assistant_response.strip()
-                    })
-                else:
-                    logger.warning(
-                        "Assistant returned error message, not saved to session")
-                    st.warning("Assistant returned an error message, not saved.")
+        if isinstance(assistant_response, str) and assistant_response.strip():
+            cleaned = assistant_response.strip().lower()
+            if cleaned.strip().lower() not in ["error", "none", "null"]:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": assistant_response.strip()
+                })
             else:
                 logger.warning(
-                    "Assistant response is empty or invalid, not saved to session")
-                st.warning("Assistant response is empty or invalid, not saved.")
+                    "Assistant returned error message, not saved to session")
+                st.warning("Assistant returned an error message, not saved.")
+        else:
+            logger.warning(
+                "Assistant response is empty or invalid, not saved to session")
+            st.warning("Assistant response is empty or invalid, not saved.")
 
-            save_current_session()
-            st.rerun()
+        save_current_session()
+        st.rerun()
 
     if hasattr(user_input, 'files') and user_input.files:
-        st.image(user_input.files[0], width=400)
+        try:
+            with Image.open(user_input,files[0]) as img:
+                width, height = img.size
+        except UnidentifiedImageError:
+            st.warning("Invalid image file.")
+
+        if width <MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
+            st.warning("Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px")
+        else:    
+            st.image(user_input.files[0], width=IMAGE_DISPLAY_WIDTH)

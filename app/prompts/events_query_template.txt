@@ -1,0 +1,6 @@
+{categories} in {city} during {start_date} - {end_date}, formulate only english language answer in JSON format like this: 
+"title": "Lviv Food Festival",
+"category": "Food", 
+"date": "2025-06-12T18:00",
+"venue": "Central Park",
+"url": "https://eventbrite.com/e/12345"

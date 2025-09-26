@@ -1,0 +1,20 @@
+[logger]
+level= "info"
+messageformat= "%(asctime)s [%(levelname)s] %(message)s"
+
+[client]
+showErrorDetails = "full"
+
+[server]
+maxUploadSize= 32
+runOnSave = true
+
+[theme]
+base = "light"
+primaryColor = "#c40a42"
+backgroundColor = "#e6ddc8"
+secondaryBackgroundColor = "#f2efe4"
+textColor = "#0a0a0a"
+linkColor = "#1a0dab"
+linkUnderline = true
+codeBackgroundColor = "#ab7979"
