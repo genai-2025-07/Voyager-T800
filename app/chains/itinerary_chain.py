@@ -140,6 +140,7 @@ def _build_weather_context(payload: dict) -> str:
         
         return weather_context_str
     except Exception:
+        logger.error(f"Weather context generation failed: {e}")
         return ""
 
 

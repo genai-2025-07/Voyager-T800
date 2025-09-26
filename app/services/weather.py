@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -42,28 +43,36 @@ class _TTLCache:
     def __init__(self, ttl_seconds: int) -> None:
         self._ttl = max(0, int(ttl_seconds))
         self._store: Dict[str, Tuple[float, Any]] = {}
+        self._lock = threading.Lock()
 
     def _key(self, city: str, start: str, end: str) -> str:
         return json.dumps([city.strip().lower(), start, end])
 
-    def get(self, city: str, start: str, end: str) -> Optional[Any]:
-        if self._ttl == 0:
+    def get(self, city: str, start: str, end: str, ttl_override_seconds: Optional[int] = None) -> Optional[Any]:
+        if self._ttl == 0 and (ttl_override_seconds is None or int(ttl_override_seconds) == 0):
             return None
         key = self._key(city, start, end)
-        entry = self._store.get(key)
-        if not entry:
-            return None
-        ts, value = entry
-        if time.time() - ts > self._ttl:
-            self._store.pop(key, None)
-            return None
-        return value
+        
+        with self._lock:
+            entry = self._store.get(key)
+            if not entry:
+                return None
+            ts, value = entry
+            effective_ttl = self._ttl if ttl_override_seconds is None else max(0, int(ttl_override_seconds))
+            if effective_ttl == 0:
+                return None
+            if time.time() - ts > effective_ttl:
+                self._store.pop(key, None)
+                return None
+            return value
 
     def set(self, city: str, start: str, end: str, value: Any) -> None:
         if self._ttl == 0:
             return
         key = self._key(city, start, end)
-        self._store[key] = (time.time(), value)
+        
+        with self._lock:
+            self._store[key] = (time.time(), value)
 
 
 # Process-wide cache instance (initialized on first WeatherService creation)
@@ -87,19 +96,20 @@ def _coerce_date(d: Any) -> datetime:
 
 
 def _normalize_label(weather_main: str, temp_min: float, temp_max: float, precipitation_mm: float) -> str:
-    main_lower = (weather_main or "").strip().lower()
-    if "snow" in main_lower:
+    weather = (weather_main or "").strip().lower()
+
+    if "snow" in weather:
         return "snowy"
-    if precipitation_mm >= 2.0 or "rain" in main_lower or "drizzle" in main_lower:
+    if "rain" in weather or "drizzle" in weather or precipitation_mm >= 2.0:
         return "rainy"
+    if "cloud" in weather:
+        return "cloudy"
     if temp_max <= 0.0:
         return "freezing"
     if temp_max < 10.0:
         return "cold"
     if temp_min > 25.0:
         return "hot"
-    if "cloud" in main_lower:
-        return "cloudy"
     return "sunny"
 
 
@@ -124,9 +134,14 @@ def _aggregate_to_daily(list_items: List[Dict[str, Any]]) -> List[Dict[str, Any]
         temp_max = float(main.get("temp_max", main.get("temp", 0.0)))
 
         weather_arr = item.get("weather", []) or [{}]
-        top_weather = weather_arr[0] or {}
-        weather_main = top_weather.get("main", "")
-        description = top_weather.get("description", "")
+        # Process all weather objects for more accurate aggregation
+        for w in weather_arr:
+            if w:  # Skip empty weather objects
+                weather_main = w.get("main", "")
+                description = w.get("description", "")
+                # Count each weather condition and description
+                bucket["weather_counts"][weather_main] = bucket["weather_counts"].get(weather_main, 0) + 1
+                bucket["desc_counts"][description] = bucket["desc_counts"].get(description, 0) + 1
 
         rain_mm = 0.0
         snow_mm = 0.0
@@ -151,8 +166,6 @@ def _aggregate_to_daily(list_items: List[Dict[str, Any]]) -> List[Dict[str, Any]
         bucket["temp_max"] = max(bucket["temp_max"], temp_max)
         bucket["precip"] += precipitation
         bucket["wind"] = max(bucket["wind"], wind_mps)
-        bucket["weather_counts"][weather_main] = bucket["weather_counts"].get(weather_main, 0) + 1
-        bucket["desc_counts"][description] = bucket["desc_counts"].get(description, 0) + 1
 
     daily: List[Dict[str, Any]] = []
     for day, b in sorted(buckets.items()):
@@ -185,9 +198,9 @@ class WeatherService:
             raise RuntimeError("Weather settings are missing in configuration.")
         w = settings.weather
         if not w.api_key:
-            logger.warning("OPENWEATHER_API_KEY is not set. Weather will be disabled.")
+            raise RuntimeError("OPENWEATHER_API_KEY is required for weather features.")
 
-        self._api_key = w.api_key or ""
+        self._api_key = w.api_key
         self._base_url = w.base_url.rstrip("/")
         self._units = w.units
         self._timeout = w.request_timeout_seconds
@@ -224,6 +237,7 @@ class WeatherService:
         async with session.get(url, params=params, timeout=self._timeout) as resp:
             if resp.status != 200:
                 text = await resp.text()
+                logger.error(f"Error {resp.status} from weather API: {text}")
                 raise RuntimeError(f"OpenWeather forecast error: {resp.status} {text}")
             return await resp.json()
 
@@ -265,13 +279,25 @@ class WeatherService:
             },
         }
 
-    async def get_weather_forecast(self, city: str, start_date: Any, end_date: Any) -> Dict[str, Any]:
+    async def get_weather_forecast(
+        self,
+        city: str,
+        start_date: Any,
+        end_date: Any,
+        *,
+        force_refresh: bool = False,
+        ttl_override_seconds: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """Fetch and normalize weather forecast for the given city and date range.
 
         Args:
             city: City name (e.g., "Kyiv", "Lviv").
             start_date: Inclusive start date (str, datetime, or epoch).
             end_date: Inclusive end date (str, datetime, or epoch).
+            force_refresh: If True, bypass the cache and fetch fresh data.
+            ttl_override_seconds: Optional TTL (seconds) to use for this call's
+                cache lookup decision. Does not mutate the global cache's TTL;
+                only affects whether an existing entry is considered fresh.
 
         Returns:
             Normalized JSON dict with daily forecasts in Celsius. On failure, returns
@@ -279,17 +305,19 @@ class WeatherService:
             gracefully fall back.
         """
         
-        if not self._api_key:
-            return {"disabled": True, "reason": "missing_api_key"}
-
         try:
             start_dt = _coerce_date(start_date)
             end_dt = _coerce_date(end_date)
         except Exception as e:
             return {"error": "invalid_dates"}
 
-        cache_hit = self._cache.get(city, start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d"))
-        if cache_hit is not None:
+        cache_hit = None if force_refresh else self._cache.get(
+            city,
+            start_dt.strftime("%Y-%m-%d"),
+            end_dt.strftime("%Y-%m-%d"),
+            ttl_override_seconds=ttl_override_seconds,
+        )
+        if cache_hit is not None and not force_refresh:
             return cache_hit
 
         attempt = 0
@@ -305,7 +333,12 @@ class WeatherService:
                     daily = _aggregate_to_daily(raw.get("list", []))
                     sliced = self._slice_by_dates(daily, start_dt, end_dt)
                     normalized = self._to_normalized(city, sliced)
-                    self._cache.set(city, start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d"), normalized)
+                    self._cache.set(
+                        city,
+                        start_dt.strftime("%Y-%m-%d"),
+                        end_dt.strftime("%Y-%m-%d"),
+                        normalized,
+                    )
                     return normalized
                 except Exception as e:
                     attempt += 1
@@ -316,14 +349,43 @@ class WeatherService:
                     backoff = min(self._retry_max, backoff * 2)
 
 
-def get_weather_forecast_sync(project_root: str, city: str, start_date: Any, end_date: Any) -> Dict[str, Any]:
+def get_weather_forecast_sync(
+    project_root: str,
+    city: str,
+    start_date: Any,
+    end_date: Any,
+    *,
+    force_refresh: bool = False,
+    ttl_override_seconds: Optional[int] = None,
+) -> Dict[str, Any]:
     """Synchronous convenience wrapper for environments without asyncio plumbing."""
     service = WeatherService(project_root=project_root)
+    
+    # Check if we're already in an event loop
     try:
-        return asyncio.run(service.get_weather_forecast(city, start_date, end_date))
+        loop = asyncio.get_running_loop()
+        # We're in an event loop, use create_task
+        task = loop.create_task(
+            service.get_weather_forecast(
+                city,
+                start_date,
+                end_date,
+                force_refresh=force_refresh,
+                ttl_override_seconds=ttl_override_seconds,
+            )
+        )
+        # Wait for the task to complete
+        return loop.run_until_complete(task)
     except RuntimeError:
-        # If already in an event loop (e.g., Streamlit), create a task in that loop
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(service.get_weather_forecast(city, start_date, end_date))
+        # No event loop running, safe to use asyncio.run
+        return asyncio.run(
+            service.get_weather_forecast(
+                city,
+                start_date,
+                end_date,
+                force_refresh=force_refresh,
+                ttl_override_seconds=ttl_override_seconds,
+            )
+        )
 
 

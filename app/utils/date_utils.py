@@ -74,7 +74,7 @@ def derive_city_from_text(text: str) -> Optional[str]:
     if not isinstance(text, str) or not text.strip():
         return None
     tokens = [t.strip(",. ") for t in text.split()]
-    candidates = [t for t in tokens if len(t) >= 3 and t[0].isupper()]
+    candidates = [t for t in tokens if len(t) >= 3 and t[0].isupper() and t.lower() not in {"plan", "trip", "vacation"}]
     return candidates[-1] if candidates else None
 
 

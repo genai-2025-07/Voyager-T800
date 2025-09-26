@@ -72,10 +72,6 @@ if "session_id" not in st.session_state:
 if "session_counter" not in st.session_state:
     st.session_state.session_counter = 1
 
-# Weather toggle persisted per-session (not personally identifiable)
-if "use_weather" not in st.session_state:
-    st.session_state.use_weather = True
-
 # Simple holder for last derived weather summary block
 if "weather_summary" not in st.session_state:
     st.session_state.weather_summary = None
@@ -87,6 +83,7 @@ if "sessions" not in st.session_state:
         "name": initial_name,
         "messages": copy.deepcopy(st.session_state.messages),
         "created": datetime.now(),
+        "use_weather": True,  # Default weather toggle state per session
     }
     st.session_state.session_counter += 1
 
@@ -97,7 +94,12 @@ if "sessions_page" not in st.session_state:
     st.session_state.sessions_page = 1
 
 if "confirm_delete" not in st.session_state:
-    st.session_state.confirm_delete = None    
+    st.session_state.confirm_delete = None
+
+def get_current_session_weather_state():
+    """Get the weather toggle state for the current session."""
+    current_session = st.session_state.sessions.get(st.session_state.current_session_id, {})
+    return current_session.get("use_weather", True)    
 
 def _sync_session_counter_with_existing_names():
     """
@@ -224,7 +226,8 @@ def run_ai_stream(user_message:str, session_id:str):
     writer = StreamlitWriter(placeholder)
     with redirect_stdout(writer):
         # Inject an environment flag read by the chain's weather builder
-        os.environ["VOYAGER_USE_WEATHER"] = "1" if st.session_state.use_weather else "0"
+        use_weather = get_current_session_weather_state()
+        os.environ["VOYAGER_USE_WEATHER"] = "1" if use_weather else "0"
         stream_response(user_message, session_id)
     return writer.getvalue()
 
@@ -245,7 +248,8 @@ def run_ai_response(user_message:str, session_id:str):
         from contextlib import redirect_stdout
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            os.environ["VOYAGER_USE_WEATHER"] = "1" if st.session_state.use_weather else "0"
+            use_weather = get_current_session_weather_state()
+            os.environ["VOYAGER_USE_WEATHER"] = "1" if use_weather else "0"
             full_response(user_message, session_id)
         return buffer.getvalue()
     except Exception as e:
@@ -300,7 +304,12 @@ with st.sidebar:
 
     # Weather toggle in sidebar
     st.header("🌤️ Weather")
-    st.session_state.use_weather = st.checkbox("Enable weather-aware recommendations", value=st.session_state.use_weather)
+    use_weather = get_current_session_weather_state()
+    new_use_weather = st.checkbox("Enable weather-aware recommendations", value=use_weather)
+    
+    # Update the session-specific weather toggle
+    if st.session_state.current_session_id in st.session_state.sessions:
+        st.session_state.sessions[st.session_state.current_session_id]["use_weather"] = new_use_weather
 
     st.markdown("---")
 
@@ -439,7 +448,8 @@ with chat_container:
             )
 
 # Weather summary card
-if st.session_state.weather_summary and st.session_state.use_weather:
+use_weather = get_current_session_weather_state()
+if st.session_state.weather_summary and use_weather:
     ws = st.session_state.weather_summary
     with st.container():
         st.markdown("### 🌤️ Weather (summary)")

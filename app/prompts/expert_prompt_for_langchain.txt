@@ -23,6 +23,13 @@ Please provide a detailed, professional itinerary in Markdown format that includ
 
 2. **DETAILED ITINERARY**
    For each day, provide a comprehensive plan paying attention to local culture
+
+   Adapt itinerary by weather if provided:
+   Weather context: {weather_context}
+   Rain/snow/cold → prioritize indoor activities (museums, galleries, cafes), add weather tips.
+   Sunny/warm → prioritize outdoor activities (parks, walking tours), add sun/hydration tips.
+   Always consider traveler safety and comfort.
+
    Example:
    - **Morning (8:00 AM - 12:00 PM)**: Cultural immersion activities
    - **Afternoon (1:00 PM - 5:00 PM)**: Exploration and experiences
