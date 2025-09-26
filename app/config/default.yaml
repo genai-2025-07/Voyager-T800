@@ -51,6 +51,16 @@ prompt:
   itinerary_template_path: app/prompts/test_itinerary_prompt.txt
   summary_template_path: app/prompts/test_summary_prompt.txt
 
+weather:
+  api_key: ${OPENWEATHER_API_KEY:""}
+  base_url: ${OPENWEATHER_BASE_URL:https://api.openweathermap.org}
+  units: metric
+  request_timeout_seconds: 15.0
+  cache_ttl_seconds: 3600
+  retry_attempts: 3
+  retry_backoff_min: 0.5
+  retry_backoff_max: 4.0
+
 bedrock:
   enabled: ${BEDROCK_ENABLED:false}
   region_name: ${AWS_REGION:""}

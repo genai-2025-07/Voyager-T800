@@ -85,6 +85,17 @@ class PromptSettings(BaseConfigModel):
     summary_template_path: str = Field(..., description="Path to the summary prompt file.")
 
 
+class WeatherSettings(BaseConfigModel):
+    api_key: Optional[str] = None
+    base_url: str = Field(..., description="Base URL for the OpenWeather API.")
+    units: str = Field(..., description="Temperature units")
+    request_timeout_seconds: float = Field(..., gt=0, description="HTTP timeout per request.")
+    cache_ttl_seconds: int = Field(..., ge=0, description="In-memory cache TTL for forecasts.")
+    retry_attempts: int = Field(..., ge=0, description="Number of retry attempts on failure.")
+    retry_backoff_min: float = Field(..., ge=0.0, description="Min backoff seconds for retries.")
+    retry_backoff_max: float = Field(..., ge=0.0, description="Max backoff seconds for retries.")
+
+
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(...)
     region_name: Optional[str] = None
@@ -124,6 +135,7 @@ class Settings(BaseConfigModel):
     attraction_parser: AttractionParserSettings = Field(default_factory=AttractionParserSettings)
     summary_memory: SummaryMemorySettings = Field(default_factory=SummaryMemorySettings)
     prompt: PromptSettings = Field(default_factory=PromptSettings)
+    weather: Optional[WeatherSettings] = None
     logging_config_file: Optional[str] = Field(default=None)
 
 
@@ -140,6 +152,7 @@ __all__ = [
     "AttractionParserSettings",
     "SummaryMemorySettings",
     "PromptSettings",
+    "WeatherSettings",
     "Settings",
 ]
 
