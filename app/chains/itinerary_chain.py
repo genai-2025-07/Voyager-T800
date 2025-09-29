@@ -1,53 +1,44 @@
-import logging
-import time
 import json
+import logging
+import os
+import time
 
-from app.utils.read_prompt_from_file import read_prompt_from_file
-from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs, get_rag_retriever
-from app.utils.date_utils import extract_date_range, derive_city_from_text
-from app.services.weather import get_weather_forecast_sync
-from app.services.weaviate.weaviate_setup import setup_complete_database
-from app.retrieval.waiss_retriever import setup_rag_retriever
-from app.memory.custom_summary_memory import SummaryChatMessageHistory
+from threading import Lock
 
 from langchain.memory import ConversationSummaryMemory
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain.prompts import PromptTemplate
-from app.models.llms.llm_factory import get_llm
-from app.services.events.service import EventsService
-from app.services.events.providers.tavily import TavilyEventsProvider
-from app.services.events.models import EventQuery
-from app.utils.events_utils import parse_event_query
-from langchain_groq import ChatGroq
 
 from app.config.config import settings
 from app.memory.custom_summary_memory import SummaryChatMessageHistory
+from app.models.llms.llm_factory import get_llm
 from app.retrieval.waiss_retriever import setup_rag_retriever
+from app.services.events.models import EventQuery
+from app.services.events.providers.tavily import TavilyEventsProvider
+from app.services.events.service import EventsService
+from app.services.weather import get_weather_forecast_sync
+from app.utils.date_utils import derive_city_from_text, extract_date_range
+from app.utils.events_utils import parse_event_query
 from app.utils.itinerary_chain_utils import extract_chat_history_content, format_docs
 from app.utils.read_prompt_from_file import read_prompt_from_file
-from threading import Lock
 
 
 logger = logging.getLogger(__name__)
 
 
-llm = get_llm("groq")
+llm = get_llm('groq')
 structured_llm = llm.with_structured_output(schema=EventQuery)
 
 events_service = EventsService(provider=TavilyEventsProvider())
-
-llm = ChatGroq(groq_api_key=groq_key, model=model_name, temperature=temperature, streaming=True)
 
 itinerary_template = read_prompt_from_file('app/prompts/expert_prompt_for_langchain.txt')
 summary_template = read_prompt_from_file('app/prompts/test_summary_prompt.txt')
 
 prompt = PromptTemplate(
-    input_variables=["chat_history", "user_input", "context", "weather_context", "events"],
+    input_variables=['chat_history', 'user_input', 'context', 'weather_context', 'events'],
     template=itinerary_template,
-    template_format="jinja2"
+    template_format='jinja2',
 )
 
 memory_prompt = PromptTemplate(input_variables=['summary', 'new_lines'], template=summary_template)
@@ -72,85 +63,92 @@ def initialize_retriever(db_manager):
 
 # Mock tags for testing purposes
 # In production, these would come from Claude response
-file_path = os.getenv("CLAUDE_RESPONSE_MOCK_PATH", "app/utils/mocks/claude_response_mock.json")
+file_path = os.getenv('CLAUDE_RESPONSE_MOCK_PATH', 'app/utils/mocks/claude_response_mock.json')
 
-with open(file_path, "r", encoding="utf-8") as f:
+with open(file_path, encoding='utf-8') as f:
     data = json.load(f)
 
 # tags need to be list[str]
-tags = data.get("tags", [])
+tags = data.get('tags', [])
 if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
     tags = []
-    logger.warning(f"Invalid tags format in tags data: {tags}. Defaulting to empty list.")
+    logger.warning(f'Invalid tags format in tags data: {tags}. Defaulting to empty list.')
+
 
 # Chain where we will pass the last message from the chat history
 def _build_weather_context(payload: dict) -> str:
-
     """Derive city and dates from the user input, fetch weather, and format a compact context string.
 
     This function is defensive: if anything fails, it returns an empty string so the LLM falls back gracefully.
     """
     try:
-        user_text = payload.get("user_input", "")
+        user_text = payload.get('user_input', '')
 
         if not isinstance(user_text, str) or not user_text.strip():
-            return ""
+            return ''
 
         # City heuristic extracted via utility function
         city = derive_city_from_text(user_text)
         if not city:
-            return ""
+            return ''
 
         start_dt, end_dt = extract_date_range(user_text)
 
         # Read UI-provided flag via environment variable for thin-client compliance
-        use_weather_env = os.getenv("VOYAGER_USE_WEATHER", "1").strip()
-        use_weather = use_weather_env not in ("0", "false", "False")
+        use_weather_env = os.getenv('VOYAGER_USE_WEATHER', '1').strip()
+        use_weather = use_weather_env not in ('0', 'false', 'False')
         if not use_weather:
-            return ""
+            return ''
 
         weather_json = get_weather_forecast_sync(
-            project_root=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
+            project_root=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
             city=city,
             start_date=start_dt,
             end_date=end_dt,
         )
 
-        if not isinstance(weather_json, dict) or weather_json.get("disabled") or weather_json.get("error"):
-            return ""
+        if not isinstance(weather_json, dict) or weather_json.get('disabled') or weather_json.get('error'):
+            return ''
 
-        days = weather_json.get("days", [])
+        days = weather_json.get('days', [])
         if not days:
-            return ""
+            return ''
 
         # Compact, LLM-friendly weather block. Keep it minimal and deterministic.
         lines = [
-            "<weather>",
-            f"city={weather_json.get('city','')} units={weather_json.get('units','metric')}",
+            '<weather>',
+            f'city={weather_json.get("city", "")} units={weather_json.get("units", "metric")}',
         ]
         for d in days:
             lines.append(
-                f"{d['date']} label={d['label']} tmin={d['temp_min_c']}C tmax={d['temp_max_c']}C precip={d['precipitation_mm']}mm wind={d['wind_mps']}mps desc={d['description']}"
+                f'{d["date"]} label={d["label"]} tmin={d["temp_min_c"]}C tmax={d["temp_max_c"]}C precip={d["precipitation_mm"]}mm wind={d["wind_mps"]}mps desc={d["description"]}'
             )
-        lines.append("</weather>")
+        lines.append('</weather>')
 
-        weather_context_str = "\n".join(lines)
+        weather_context_str = '\n'.join(lines)
         logger.info(f"Weather context generated for user_input '{user_text}':\n{weather_context_str}")
 
         return weather_context_str
     except Exception as e:
-        logger.error(f"Weather context generation failed: {e}")
-        return ""
+        logger.error(f'Weather context generation failed: {e}')
+        return ''
 
 
-chain = (RunnablePassthrough.assign(
-    chat_history=extract_chat_history_content,
-    context=RunnableLambda(lambda x: format_docs(retriever.invoke(x["user_input"], tags=tags))),  # Format retrieved documents with sources and city for context
-    weather_context=RunnableLambda(_build_weather_context),
-    event_query=lambda x: parse_event_query(x["user_input"], structured_llm) if x.get("include_events") else None,
+chain = (
+    RunnablePassthrough.assign(
+        chat_history=extract_chat_history_content,
+        context=RunnableLambda(
+            lambda x: format_docs(retriever.invoke(x['user_input'], tags=tags))
+        ),  # Format retrieved documents with sources and city for context
+        weather_context=RunnableLambda(_build_weather_context),
+        event_query=lambda x: parse_event_query(x['user_input'], structured_llm) if x.get('include_events') else None,
+    ).assign(
+        events=lambda x: events_service.get_events_for_itinerary(x['event_query'])
+        if x.get('include_events') and x.get('event_query')
+        else ''
     )
-    .assign(events=lambda x: events_service.get_events_for_itinerary(x["event_query"]) if x.get("include_events") and x.get("event_query") else "")
-    | prompt | llm
+    | prompt
+    | llm
 )
 
 session_memories = {}
@@ -243,14 +241,16 @@ runnable_with_history = RunnableWithMessageHistory(
     history_messages_key='chat_history',
 )
 
-def stream_response(user_input, session_id="default_session", include_events: bool = False):
+
+def stream_response(user_input, session_id='default_session', include_events: bool = False):
     """
     Function to stream the response from the assistant (synchronous)
     """
     full_response = ''
     try:
         for chunk in runnable_with_history.stream(
-            {'user_input': user_input, "include_events": include_events}, config={'configurable': {'session_id': session_id}}
+            {'user_input': user_input, 'include_events': include_events},
+            config={'configurable': {'session_id': session_id}},
         ):
             content = chunk.content if hasattr(chunk, 'content') else str(chunk)
 
@@ -263,14 +263,16 @@ def stream_response(user_input, session_id="default_session", include_events: bo
         logger.error(f'ERROR: {e}')
         raise e
 
-def full_response(user_input, session_id="default_session", include_events: bool = False):
+
+def full_response(user_input, session_id='default_session', include_events: bool = False):
     """
     Function to get the full response from the assistant without streaming (synchronous)
     """
     response = ''
     try:
         result = runnable_with_history.invoke(
-            {'user_input': user_input, "include_events": include_events}, config={'configurable': {'session_id': session_id}}
+            {'user_input': user_input, 'include_events': include_events},
+            config={'configurable': {'session_id': session_id}},
         )
         response = result.content if hasattr(result, 'content') else str(result)
         print(response, end='', flush=True)

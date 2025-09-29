@@ -3,6 +3,7 @@ Itinerary generation endpoints using RAG pipeline.
 """
 
 import logging
+import os
 import uuid
 
 from datetime import UTC, datetime
@@ -24,6 +25,8 @@ class ItineraryGenerateRequest(BaseModel):
     query: str
     session_id: str | None = None
     user_id: str | None = None
+    include_events: bool | None = None
+    use_weather: bool | None = None
 
 
 class ItineraryGenerateResponse(BaseModel):
@@ -80,7 +83,7 @@ class SessionDeleteResponse(BaseModel):
 async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Request):
     """Generate an itinerary and store it in DynamoDB using SessionMetadata."""
     if not request.query:
-        raise HTTPException(status_code=422, detail="Query is required.")
+        raise HTTPException(status_code=422, detail='Query is required.')
 
     try:
         logger.info(f'Generating and storing itinerary for query: {request.query[:100]}...')
@@ -109,8 +112,17 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
             'metadata': {'message_type': 'user_query'},
         }
 
+        # Feature flags from request (fallbacks maintain backward compatibility)
+        include_events_flag = bool(request.include_events) if request.include_events is not None else False
+        use_weather_flag = True if request.use_weather is None else bool(request.use_weather)
+
+        # Propagate weather toggle to chain via environment variable
+        os.environ['VOYAGER_USE_WEATHER'] = '1' if use_weather_flag else '0'
+
         # Generate itinerary using the existing chain
-        itinerary_content = full_response(request.query, request.session_id or 'default_session')
+        itinerary_content = full_response(
+            request.query, request.session_id or 'default_session', include_events=include_events_flag
+        )
 
         # Create a message entry for the generated itinerary
         itinerary_message = {

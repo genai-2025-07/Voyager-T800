@@ -1,17 +1,13 @@
 import os
 import re
 import uuid
-import re
-import logging
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-from app.chains.itinerary_chain import full_response, stream_response
-from PIL import Image, UnidentifiedImageError
 
 from datetime import datetime
 
 import requests
 import streamlit as st
+
+from PIL import Image, UnidentifiedImageError
 
 from app.config.config import settings
 
@@ -37,13 +33,7 @@ st.set_page_config(page_title=APP_PAGE_TITLE, page_icon=APP_PAGE_ICON, layout='w
 
 MIN_LOADED_IMAGE_WIDTH = 200
 MIN_LOADED_IMAGE_HEIGHT = 200
-IMAGE_DISPLAY_WIDTH =400
 
-st.set_page_config(
-    page_title=APP_PAGE_TITLE,
-    page_icon=APP_PAGE_ICON,
-    layout="wide"
-)
 
 def load_styles():
     try:
@@ -77,19 +67,11 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = f'anon_{uuid.uuid4().hex}'
 
 # Simple holder for last derived weather summary block
-if "weather_summary" not in st.session_state:
+if 'weather_summary' not in st.session_state:
     st.session_state.weather_summary = None
 
 if 'sessions' not in st.session_state:
     st.session_state.sessions = {}
-    initial_name = f"Trip Planning {st.session_state.session_counter}"
-    st.session_state.sessions[st.session_state.session_id] = {
-        "name": initial_name,
-        "messages": copy.deepcopy(st.session_state.messages),
-        "created": datetime.now(),
-        "use_weather": True,  # Default weather toggle state per session
-    }
-    st.session_state.session_counter += 1
 
 if 'current_session_id' not in st.session_state:
     st.session_state.current_session_id = None
@@ -103,10 +85,24 @@ if 'confirm_delete' not in st.session_state:
 if 'auth' not in st.session_state:
     st.session_state.auth = None
 
+
 def get_current_session_weather_state():
     """Get the weather toggle state for the current session."""
-    current_session = st.session_state.sessions.get(st.session_state.current_session_id, {})
-    return current_session.get("use_weather", True)
+    current_session_id = st.session_state.get('current_session_id')
+    if current_session_id is None:
+        return True
+    session_entry = st.session_state.sessions.get(current_session_id)
+    if session_entry is None:
+        # Initialize default weather flag for this session id in local cache
+        st.session_state.sessions[current_session_id] = {
+            'name': 'Trip Planning',
+            'messages': [],
+            'created': datetime.now(),
+            'use_weather': True,
+        }
+        return True
+    return bool(session_entry.get('use_weather', True))
+
 
 # API communication functions
 def call_api_endpoint(
@@ -265,7 +261,16 @@ def hydrate_sessions_from_backend(user_id: str) -> None:
 
 def generate_itinerary(user_message: str, session_id: str, user_id: str = 'anonymous') -> dict | None:
     """Generate itinerary and store it in DynamoDB using FastAPI backend."""
-    data = {'query': user_message, 'session_id': session_id, 'user_id': user_id}
+    # Include feature flags from UI state
+    include_events_flag = bool(st.session_state.get('include_events', False))
+    use_weather_flag = bool(get_current_session_weather_state())
+    data = {
+        'query': user_message,
+        'session_id': session_id,
+        'user_id': user_id,
+        'include_events': include_events_flag,
+        'use_weather': use_weather_flag,
+    }
     result = call_api_endpoint('/itinerary/generate', data, method='POST')
     if result and 'itinerary' in result and 'itinerary_id' in result:
         return result
@@ -489,21 +494,27 @@ with st.sidebar:
         st.rerun()
 
     st.markdown('---')
-    st.subheader("Tools")
-    include_events = st.checkbox("Include available events", value=False, help="Enrich itinerary with local events")
+    st.subheader('Tools')
+    include_events = st.checkbox(
+        'Include available events',
+        value=st.session_state.get('include_events', False),
+        help='Enrich itinerary with local events',
+    )
+    # Persist the toggle so main area can read it when sending requests
+    st.session_state['include_events'] = include_events
 
-    st.markdown("---")
+    st.markdown('---')
 
     # Weather toggle in sidebar
-    st.header("🌤️ Weather")
+    st.header('🌤️ Weather')
     use_weather = get_current_session_weather_state()
-    new_use_weather = st.checkbox("Enable weather-aware recommendations", value=use_weather)
+    new_use_weather = st.checkbox('Enable weather-aware recommendations', value=use_weather)
 
     # Update the session-specific weather toggle
     if st.session_state.current_session_id in st.session_state.sessions:
-        st.session_state.sessions[st.session_state.current_session_id]["use_weather"] = new_use_weather
+        st.session_state.sessions[st.session_state.current_session_id]['use_weather'] = new_use_weather
 
-    st.markdown("---")
+    st.markdown('---')
 
     # Render sessions fetched from backend
     sessions_list = list_sessions_api(st.session_state.user_id)
@@ -663,10 +674,12 @@ use_weather = get_current_session_weather_state()
 if st.session_state.weather_summary and use_weather:
     ws = st.session_state.weather_summary
     with st.container():
-        st.markdown("### 🌤️ Weather (summary)")
-        st.caption(f"{ws.get('city','')} | Units: {ws.get('units','metric')}")
-        for d in ws.get("days", [])[:5]:
-            st.markdown(f"- {d['date']}: {d['label']} — {d['temp_min_c']}–{d['temp_max_c']}°C, precip {d['precipitation_mm']}mm")
+        st.markdown('### 🌤️ Weather (summary)')
+        st.caption(f'{ws.get("city", "")} | Units: {ws.get("units", "metric")}')
+        for d in ws.get('days', [])[:5]:
+            st.markdown(
+                f'- {d["date"]}: {d["label"]} — {d["temp_min_c"]}–{d["temp_max_c"]}°C, precip {d["precipitation_mm"]}mm'
+            )
 
 st.markdown('---')
 
@@ -674,23 +687,20 @@ placeholder_text = get_dynamic_chat_placeholder()
 user_input = st.chat_input(placeholder_text, accept_file=True, file_type=['jpg', 'jpeg', 'png'])
 
 if user_input:
-    if user_input.text:
-        if not user_input.text.strip():
+    # Handle text input
+    if getattr(user_input, 'text', None):
+        text_value = user_input.text.strip()
+        if not text_value:
             st.warning('Your message is empty.')
-        elif len(user_input.text) > MAX_INPUT_LENGTH:
+        elif len(text_value) > MAX_INPUT_LENGTH:
             st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
         else:
-            st.session_state.messages.append({'role': 'user', 'content': user_input.text.strip()})
-
+            st.session_state.messages.append({'role': 'user', 'content': text_value})
             with st.spinner('Voyager-T800 is analyzing your request...'):
-                result = generate_itinerary(
-                    user_input.text.strip(), st.session_state.session_id, st.session_state.user_id, include_events
-                )
-
-        if result and isinstance(result, dict):
+                result = generate_itinerary(text_value, st.session_state.session_id, st.session_state.user_id)
+            if result and isinstance(result, dict):
                 assistant_response = result.get('itinerary', '')
                 itinerary_id = result.get('itinerary_id', '')
-
                 if assistant_response and assistant_response.strip():
                     cleaned = assistant_response.strip().lower()
                     if cleaned not in ['error', 'none', 'null']:
@@ -702,21 +712,24 @@ if user_input:
                 else:
                     st.warning('Assistant response is empty, not saved.')
             else:
-            st.warning('Failed to generate itinerary. Please try again.')
+                st.warning('Failed to generate itinerary. Please try again.')
 
+    # Handle file input (image)
     if hasattr(user_input, 'files') and user_input.files:
-        st.session_state.messages.append({'role': 'user', 'image': user_input.files[0]})
-
-    st.rerun()
-
-    if hasattr(user_input, 'files') and user_input.files:
+        uploaded_file = user_input.files[0]
         try:
-            with Image.open(user_input,files[0]) as img:
+            with Image.open(uploaded_file) as img:
                 width, height = img.size
         except UnidentifiedImageError:
-            st.warning("Invalid image file.")
+            st.warning('Invalid image file.')
+            uploaded_file = None
 
-        if width <MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
-            st.warning("Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px")
-        else:
-            st.image(user_input.files[0], width=IMAGE_DISPLAY_WIDTH)
+        if uploaded_file is not None:
+            if width < MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
+                st.warning(
+                    f'Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px'
+                )
+            else:
+                st.session_state.messages.append({'role': 'user', 'image': uploaded_file})
+
+    st.rerun()
