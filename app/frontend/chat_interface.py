@@ -119,16 +119,18 @@ def call_api_endpoint(
     try:
         url = f'{API_BASE_URL}/api/v1{endpoint}'
         method_upper = (method or 'POST').upper()
+        timeout = settings.api_timeout
+
         if method_upper == 'GET':
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=timeout)
         elif method_upper == 'DELETE':
-            response = requests.delete(url, params=params, timeout=30)
+            response = requests.delete(url, params=params, timeout=timeout)
         elif method_upper == 'PUT':
-            response = requests.put(url, json=data, timeout=30)
+            response = requests.put(url, json=data, timeout=timeout)
         elif method_upper == 'PATCH':
-            response = requests.patch(url, json=data, timeout=30)
+            response = requests.patch(url, json=data, timeout=timeout)
         else:
-            response = requests.post(url, json=data, timeout=30)
+            response = requests.post(url, json=data, timeout=timeout)
 
         if response.status_code in (200, 201):
             return response.json()
@@ -153,16 +155,18 @@ def call_auth_endpoint(
     try:
         url = f'{API_BASE_URL}/api/auth{endpoint}'
         method_upper = (method or 'POST').upper()
+        timeout = settings.api_timeout
+
         if method_upper == 'GET':
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=timeout)
         elif method_upper == 'DELETE':
-            response = requests.delete(url, params=params, timeout=30)
+            response = requests.delete(url, params=params, timeout=timeout)
         elif method_upper == 'PUT':
-            response = requests.put(url, json=data, timeout=30)
+            response = requests.put(url, json=data, timeout=timeout)
         elif method_upper == 'PATCH':
-            response = requests.patch(url, json=data, timeout=30)
+            response = requests.patch(url, json=data, timeout=timeout)
         else:
-            response = requests.post(url, json=data, timeout=30)
+            response = requests.post(url, json=data, timeout=timeout)
         if response.status_code in (200, 201):
             return response.json()
         else:

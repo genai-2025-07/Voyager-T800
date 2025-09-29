@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     allowed_headers: list[str] = Field(default=['*'])
 
     api_base_url: str = Field(default='http://localhost:8000')
+    api_timeout: int = Field(default=120)
 
     # Frontend (Streamlit) Configuration
     streamlit_env: str = Field(default='dev', description='Environment for Streamlit UI')
