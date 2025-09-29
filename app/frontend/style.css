@@ -24,7 +24,7 @@
 }
 
 .message-bubble {
-    background-color: #0066cc;
+    background-color: #4753d6;
     color: white;
     padding: 10px 15px;
     border-radius: 15px 15px 5px 15px;
@@ -40,7 +40,7 @@
 
 .message-bubble-left {
     background-color: #f0f2f6;
-    color: #333;
+    color: #0a0a0a;
     padding: 10px 15px;
     border-radius: 15px 15px 15px 5px;
     max-width: 75%;

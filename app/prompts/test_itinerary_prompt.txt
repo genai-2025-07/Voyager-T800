@@ -12,4 +12,10 @@ User query: {user_input}
 Retrieved context: {context}
 If some of the provided context is not relevant(another city etc.), don`t use it in the final response.
 
+Adapt itinerary by weather if provided:
+Weather context: {weather_context}
+Rain/snow/cold → prioritize indoor activities (museums, galleries, cafes), add weather tips.
+Sunny/warm → prioritize outdoor activities (parks, walking tours), add sun/hydration tips.
+Always consider traveler safety and comfort.
+
 Response: 
