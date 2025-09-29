@@ -1,10 +1,12 @@
 import logging
-import os
 
 import boto3
 
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from pydantic import BaseModel
+
+from app.config.config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -55,11 +57,26 @@ class DynamoDBClient:
         """
         if table is not None:
             self.table = table
-      
         else:
-            self.region_name = os.getenv('AWS_REGION', 'us-east-2')
-            self.table_name = os.getenv('DYNAMODB_TABLE', 'session_metadata')
-            self.dynamodb = boto3.resource('dynamodb', region_name=self.region_name)
+            self.region_name = settings.aws_region
+            self.table_name = settings.dynamodb_table
+
+            use_local_dynamodb = settings.use_local_dynamodb
+
+            if use_local_dynamodb:
+                endpoint_url = settings.dynamodb_endpoint_url
+                self.dynamodb = boto3.resource(
+                    'dynamodb',
+                    region_name=self.region_name,
+                    endpoint_url=endpoint_url,
+                    aws_access_key_id=settings.aws_access_key_id,
+                    aws_secret_access_key=settings.aws_secret_access_key,
+                )
+                logger.info(f'Using local DynamoDB at {endpoint_url}')
+            else:
+                self.dynamodb = boto3.resource('dynamodb', region_name=self.region_name)
+                logger.info(f'Using AWS DynamoDB in region {self.region_name}')
+
             self.table = self.dynamodb.Table(self.table_name)
 
     def put_item(self, session_metadata: SessionMetadata) -> int:
@@ -86,11 +103,11 @@ class DynamoDBClient:
                 }
             )
             return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
-        except ClientError as e:
-            logger.error(f'Failed to put item into DynamoDB')
+        except ClientError:
+            logger.error('Failed to put item into DynamoDB')
             raise
 
-    def get_item(self, user_id:str, session_id:str) -> dict:
+    def get_item(self, user_id: str, session_id: str) -> dict:
         """
         Returns an item from table, using unique identifier of user and session.
 
@@ -104,9 +121,7 @@ class DynamoDBClient:
             ClientError: If there's an error during the get operation.
         """
         try:
-            response = self.table.get_item(
-                Key={'user_id': user_id, 'session_id': session_id}
-            )
+            response = self.table.get_item(Key={'user_id': user_id, 'session_id': session_id})
             item = response.get('Item')
             if item is not None:
                 return item
@@ -178,9 +193,33 @@ class DynamoDBClient:
             dict: Dictionary containing the query results.
         """
         params = {
-            'query_params': QueryParams(key_condition_expression='user_id = :user_id'),
-            'ExpressionAttributeValues': {':user_id': user_id}
+            'KeyConditionExpression': Key('user_id').eq(user_id),
         }
         if limit is not None:
             params['Limit'] = limit
-        return self.query_table(**params)
+        return self.table.query(**params)
+
+    def delete_item(self, user_id: str, session_id: str) -> int:
+        """
+        Delete a specific item identified by user_id and session_id.
+
+        Returns:
+            int: HTTP status code of the response.
+        """
+        try:
+            response = self.table.delete_item(Key={'user_id': user_id, 'session_id': session_id})
+            return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
+        except ClientError as e:
+            logger.error(f'Error deleting item: {e.response["Error"]["Message"]}')
+            raise
+
+    def list_sessions(self, user_id: str) -> list[dict]:
+        """
+        List all sessions for a given user_id.
+        """
+        try:
+            response = self.table.query(KeyConditionExpression=Key('user_id').eq(user_id))
+            return response.get('Items', [])
+        except ClientError as e:
+            logger.error(f'Error listing sessions: {e.response["Error"]["Message"]}')
+            raise

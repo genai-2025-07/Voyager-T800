@@ -4,23 +4,26 @@
 # SERVICE OVERVIEW:
 # - api-dev: Development API with hot reload, source mounting, and debugging tools
 # - api: Production API optimized for performance and security
+# - streamlit-dev: Development Streamlit frontend with hot reload
+# - streamlit: Production Streamlit frontend
 # - dynamodb-local: Local DynamoDB instance for development and testing
 # - redis: Redis cache with authentication and data persistence
-# - weaviate-db: Vector database for AI-powered travel recommendations
+# - weaviate: Vector database for AI-powered travel recommendations
 #
 # USAGE INSTRUCTIONS:
 #
 # DEVELOPMENT ENVIRONMENT:
 #   Prerequisites:
-#     - Export AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#     - No AWS credentials needed (uses local DynamoDB)
 #     - Ensure .env file exists with development settings
-#   
+#
 #   Startup:
 #     docker compose --profile dev up --build
-#   
+#
 #   Default access:
 #     - API: http://localhost:8000
-#     - DynamoDB: http://localhost:8003
+#     - Streamlit: http://localhost:8501
+#     - DynamoDB: http://localhost:8003 (local)
 #     - Redis: localhost:6379
 #     - Weaviate: http://localhost:8090
 #
@@ -28,28 +31,32 @@
 #   Prerequisites:
 #     - Export AWS credentials: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
 #     - Ensure .prod.env file exists with production settings
-#   
+#
 #   Startup:
 #     docker compose --profile prod --env-file .prod.env up --build
-#   
+#
 #   Default access:
 #     - API: http://localhost:8001
-#     - DynamoDB: http://localhost:8003
+#     - Streamlit: http://localhost:8502
+#     - DynamoDB: AWS DynamoDB (cloud)
 #     - Redis: localhost:6379
 #     - Weaviate: http://localhost:8090
 #
 # ENVIRONMENT VARIABLES:
-# 
-# SHELL EXPORT (Required - Never in files):
+#
+# SHELL EXPORT (Required for PRODUCTION only):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
-#   These must be exported in your shell before running docker compose
+#   These must be exported in your shell before running docker compose --profile prod
 #
 # .env/.prod.env FILES:
+#   - USE_LOCAL_DYNAMODB (true for dev, false for prod)
+#   - DYNAMODB_ENDPOINT_URL (for dev: http://dynamodb-local:8003)
 #   - DYNAMO_HOST_PORT, DYNAMO_CONTAINER_PORT
-#   - REDIS_HOST_PORT, REDIS_CONTAINER_PORT  
+#   - REDIS_HOST_PORT, REDIS_CONTAINER_PORT
 #   - WEAVIATE_DB_HOST_PORT, WEAVIATE_DB_CONTAINER_PORT
 #   - HOST_PORT_DEV, CONTAINER_PORT_DEV
 #   - HOST_PORT_PROD, CONTAINER_PORT_PROD
+#   - STREAMLIT_HOST_PORT_DEV, STREAMLIT_HOST_PORT_PROD
 #   - GRPS_API_PORT, PERSISTENCE_DATA_PATH
 #
 # For detailed configuration and troubleshooting, see docs/docker-setup.md
@@ -70,16 +77,20 @@ services:
     env_file:
       - .prod.env
     environment:
-      # AWS credentials are passed ONLY from the host shell environment variables
+      # Production uses AWS DynamoDB - requires AWS credentials
+      - USE_LOCAL_DYNAMODB=false
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_REGION
+      # Weaviate configuration for Docker Compose
+      - WEAVIATE_HOST=weaviate
+      - WEAVIATE_PORT=${WEAVIATE_DB_CONTAINER_PORT:-8080}
+      - WEAVIATE_GRPC_HOST=weaviate
+      - WEAVIATE_GRPC_PORT=${GRPS_API_PORT:-50051}
     depends_on:
-      dynamodb-local:
-        condition: service_healthy
       redis:
         condition: service_healthy
-      weaviate-db:
+      weaviate:
         condition: service_healthy
     networks:
       - app-network
@@ -89,7 +100,28 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-  
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit-prod
+    ports:
+      - "${STREAMLIT_HOST_PORT_PROD:-8502}:8501"
+    env_file:
+      - .prod.env
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles: ["prod"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # ============================================================================
   # DEVELOPMENT CONFIGURATION
   # ============================================================================
@@ -104,35 +136,60 @@ services:
     ports:
       - "${HOST_PORT_DEV:-8000}:${CONTAINER_PORT_DEV:-8000}"
     volumes:
-      # Mount only necessary directories for development
-      - ./app/api:/app/app/api
-      - ./app/chains:/app/app/chains
-      - ./app/config:/app/app/config
-      - ./app/frontend:/app/app/frontend
-      - ./app/main.py:/app/app/main.py
+      - ./app:/app/app
+      - ./data:/app/data
 
     environment:
-      # AWS credentials are passed ONLY from the host shell environment variables
-      - AWS_ACCESS_KEY_ID
-      - AWS_SECRET_ACCESS_KEY
-      - AWS_REGION
+      # Development uses local DynamoDB - no AWS credentials needed
+      - USE_LOCAL_DYNAMODB=true
+      - DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8003
+      - AWS_REGION=us-east-2
+      # Weaviate configuration for Docker Compose
+      - WEAVIATE_HOST=weaviate
+      - WEAVIATE_PORT=${WEAVIATE_DB_CONTAINER_PORT:-8080}
+      - WEAVIATE_GRPC_HOST=weaviate
+      - WEAVIATE_GRPC_PORT=${GRPS_API_PORT:-50051}
     depends_on:
       dynamodb-local:
         condition: service_healthy
       redis:
         condition: service_healthy
-      weaviate-db:
+      weaviate:
         condition: service_healthy
     networks:
       - app-network
     profiles: ["dev"]
-    
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${CONTAINER_PORT_DEV}/docs"]
       interval: 15s
       timeout: 5s
       retries: 5
-  
+
+  streamlit-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit-dev
+    ports:
+      - "${STREAMLIT_HOST_PORT_DEV:-8501}:8501"
+    env_file:
+      - .env
+    volumes:
+      # Hot reload for development
+      - ./app/frontend:/app/frontend
+    depends_on:
+      api-dev:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles: ["dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # ============================================================================
   # INFRASTRUCTURE SERVICES
   # ============================================================================
@@ -141,13 +198,13 @@ services:
     container_name: dynamodb-local
     restart: unless-stopped
     command: -jar DynamoDBLocal.jar -sharedDb -dbPath ./data -port ${DYNAMO_CONTAINER_PORT}
-    working_dir: /home/dynamodblocal       
+    working_dir: /home/dynamodblocal
     volumes:
-      - ./dynamodb:/home/dynamodblocal/data  
+      - ./dynamodb:/home/dynamodblocal/data
     networks:
       - app-network
     ports:
-      - "${DYNAMO_HOST_PORT}:${DYNAMO_CONTAINER_PORT}" 
+      - "${DYNAMO_HOST_PORT}:${DYNAMO_CONTAINER_PORT}"
     environment:
       # AWS credentials are passed ONLY from the host shell environment variables
       - AWS_ACCESS_KEY_ID
@@ -185,7 +242,7 @@ services:
       timeout: 5s
       retries: 5
 
-  weaviate-db:
+  weaviate:
     image: semitechnologies/weaviate:1.32.3
     container_name: weaviate
     restart: unless-stopped

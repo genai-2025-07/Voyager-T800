@@ -7,6 +7,8 @@ from typing import Optional
 import weaviate
 from weaviate.connect import ConnectionParams
 
+from app.config.config import settings
+
 
 class LocalConnectionParams(BaseModel):
     """
@@ -38,7 +40,18 @@ def load_config_from_yaml(path: str) -> LocalConnectionParams:
 
 class WeaviateClientWrapper:
     def __init__(self, params: Optional[LocalConnectionParams] = None):
-        self.params = params or LocalConnectionParams()
+        if params is None:
+            # Use settings-based configuration for dynamic host/port
+            self.params = LocalConnectionParams(
+                http_host=settings.weaviate_host,
+                http_port=settings.weaviate_port,
+                http_secure=settings.weaviate_http_secure,
+                grpc_host=settings.weaviate_grpc_host,
+                grpc_port=settings.weaviate_grpc_port,
+                grpc_secure=settings.weaviate_grpc_secure,
+            )
+        else:
+            self.params = params
         self.client = None
 
     def connect(self):

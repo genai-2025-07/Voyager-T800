@@ -109,9 +109,19 @@ echo "<password>" > secrets/redis_password.txt
 export AWS_ACCESS_KEY_ID=your-access-key-id
 export AWS_SECRET_ACCESS_KEY=your-secret-access-key
 export AWS_REGION=eu-central-1
+export USE_LOCAL_DYNAMODB=true
+export DYNAMODB_ENDPOINT_URL=http://localhost:8003
 
-# 3. Start services
-# Development
+# 3. Run local DynamoDB container and create table
+docker compose up --profile dev -d dynamodb-local
+python setup_dynamodb_table.py
+
+# 4. Run local Weaviate container and load data
+docker compose up --profile dev -d weaviate
+python setup_weaviate.py
+
+# 5. Start services
+# Development (for local use)
 docker compose --profile dev up --build
 
 # Production  

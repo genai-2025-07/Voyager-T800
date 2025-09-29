@@ -12,7 +12,7 @@ from app.config.logger.logger import setup_logger
 setup_logger()
 logger = logging.getLogger('app.services.weaviate.test')
 
-CONNECTION_CONFIG = load_config_from_yaml("app/config/weaviate_connection.yaml")
+CONNECTION_CONFIG = None  # Use settings-based config instead
 ATTRACTION_SCHEMA_PATH = "app/config/attraction_class_schema.yaml"
 TAG_SET_SCHEMA_PATH = "app/config/tag_set_class_schema.yaml"
 CHUNK_SCHEMA_PATH = "app/config/attraction_chunk_class_schema.yaml"

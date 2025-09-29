@@ -29,10 +29,7 @@ There are two types of logger initialization depending on where the code is used
 
    You must initialize the logging system at the very beginning of the file:
 
-       from dotenv import load_dotenv
        from app.config.logger.logger import setup_logger
-
-       load_dotenv()
        setup_logger()
 
    Then you can safely get a logger instance:
@@ -71,6 +68,8 @@ import yaml
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config.config import settings
+
 
 request_id_ctx_var: ContextVar[str | None] = ContextVar('request_id', default=None)
 formatter_str = '%(asctime)s %(levelname)s %(name)s %(message)s %(service)s %(request_id)s'
@@ -94,7 +93,7 @@ class ServiceFilter(logging.Filter):
         Returns:
             bool: Always returns True to keep the record in the log stream.
         """
-        record.service = os.getenv('SERVICE_NAME', 'fastapi-service')
+        record.service = settings.service_name
         record.request_id = request_id_ctx_var.get() or '-'
         return True
 
@@ -180,7 +179,7 @@ def setup_logger():
 
     # override root level if present
     if 'root' in config:
-        config['root']['level'] = log_level
+        config['root']['level'] = settings.log_level
 
     # ensure handlers.file.filename points to LOG_DIR if a file handler exists
     if isinstance(config, dict) and 'handlers' in config:
