@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     voyager_sessions_page_size: int = Field(default=10)
     image_display_width: int = Field(default=400)
 
+    # Image Upload & Validation Configuration
+    image_max_size_mb: int = Field(default=5, description='Maximum image file size in MB')
+    image_max_resolution: int = Field(default=4096, description='Maximum image width or height in pixels')
+    image_allowed_types: list[str] = Field(
+        default=['jpg', 'jpeg', 'png', 'webp'], description='Allowed image file types'
+    )
+
     # DynamoDB Configuration
     use_local_dynamodb: bool = Field(default=False, description='Use local DynamoDB instead of AWS')
     dynamodb_endpoint_url: str = Field(default='http://localhost:8003', description='Local DynamoDB endpoint URL')
