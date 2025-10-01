@@ -118,6 +118,14 @@ def test_put_item(dynamodb_table, sample_messages):
         session_summary='Test session',
         started_at=datetime.now(UTC).isoformat(),
         messages=sample_messages,
+        structured_itinerary={
+            'destination': 'Paris',
+            'duration_days': 2,
+            'transportation': 'walking',
+            'itinerary': [],
+            'language': 'en',
+            'session_summary': 'Test trip to Paris',
+        },
     )
 
     result = obj.put_item(sample_item)
