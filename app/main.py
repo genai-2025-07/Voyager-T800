@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.auth import router as auth_router
-from app.api.routes import itinerary
+from app.api.routes import images, itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
 from app.data_layer.dynamodb_client import DynamoDBClient
@@ -143,6 +143,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router)
 app.include_router(itinerary.router, prefix='/api/v1')
+app.include_router(images.router, prefix='/api/v1')
 
 
 @app.get('/')

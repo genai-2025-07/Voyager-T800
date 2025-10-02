@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import re
 import uuid
@@ -222,6 +223,120 @@ def confirm_signup(email: str, code: str) -> dict | None:
 
 def resend_confirmation(email: str) -> dict | None:
     return call_auth_endpoint('/resend-confirmation', {'email': email}, method='POST')
+
+
+def upload_image_to_backend(uploaded_file) -> dict | None:
+    """Upload and validate an image using the FastAPI backend.
+    
+    Args:
+        uploaded_file: Streamlit UploadedFile object
+        
+    Returns:
+        dict: Image metadata if successful, None if failed
+    """
+    try:
+        url = f'{API_BASE_URL}/api/v1/images/upload'
+        
+        # Reset file pointer to beginning
+        uploaded_file.seek(0)
+        
+        # Prepare multipart form data
+        files = {'file': (uploaded_file.name, uploaded_file, mimetypes.guess_type(uploaded_file.name)[0] or uploaded_file.type)}
+        
+        response = requests.post(url, files=files, timeout=settings.api_timeout)
+        
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 400:
+            # Validation error
+            error_detail = response.json().get('detail', 'Image validation failed.')
+            st.error(f'Image validation failed: {error_detail}')
+            return None
+        else:
+            st.error('Failed to upload image. Please try again.')
+            if STREAMLIT_ENV == 'dev':
+                st.error(f'API Error: {response.status_code} - {response.text}')
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        st.error('Connection Error: Unable to connect to the API server.')
+        if STREAMLIT_ENV == 'dev':
+            st.error(f'Debug info: {str(e)}')
+        return None
+
+
+def validate_image_client(uploaded_file) -> bool:
+    """Quick client-side checks before sending to backend.
+
+    Performs shallow validation to provide fast feedback and avoid
+    unnecessary network calls for obviously invalid files.
+
+    Checks:
+    - Extension in ['jpg','jpeg','png','webp']
+    - Size <= 3.75 MB (to match backend limit)
+    - Resolution <= 4096 x 4096
+
+    Returns:
+        True if all checks pass, otherwise shows a UI message and returns False.
+    """
+    try:
+        allowed_exts = {'jpg', 'jpeg', 'png', 'webp'}
+
+        filename = getattr(uploaded_file, 'name', '') or ''
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        if ext not in allowed_exts:
+            st.warning('Unsupported image file type. Allowed: jpg, jpeg, png, webp.')
+            return False
+
+        file_size = getattr(uploaded_file, 'size', None)
+        if file_size is None:
+            try:
+                file_size = len(uploaded_file.getbuffer())  # type: ignore[attr-defined]
+            except Exception:
+                file_size = None
+
+        if file_size is not None:
+            max_bytes = int(settings.image_max_size_mb * 1024 * 1024)
+            if file_size > max_bytes:
+                st.warning('Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
+                return False
+
+        # Resolution check
+        try:
+            uploaded_file.seek(0)
+            with Image.open(uploaded_file) as img:
+                width, height = img.size
+            if width > 4096 or height > 4096:
+                st.warning('Image resolution exceeds 4096×4096 px.')
+                return False
+            # Minimal size UX check (keep existing behavior)
+            if width < MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
+                st.warning(
+                    f'Image is too small. Please, upload image of size at least '
+                    f'{MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px'
+                )
+                return False
+        except UnidentifiedImageError:
+            st.warning('Invalid image file.')
+            return False
+        finally:
+            try:
+                uploaded_file.seek(0)
+            except Exception:
+                pass
+
+        return True
+
+    except Exception:
+        # Silent fallback to allow backend to provide definitive validation
+        try:
+            uploaded_file.seek(0)
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        st.error(f'Unexpected error uploading image: {str(e)}')
+        return None
 
 
 def hydrate_sessions_from_backend(user_id: str) -> None:
@@ -688,18 +803,62 @@ if st.session_state.weather_summary and use_weather:
 st.markdown('---')
 
 placeholder_text = get_dynamic_chat_placeholder()
-user_input = st.chat_input(placeholder_text, accept_file=True, file_type=['jpg', 'jpeg', 'png'])
+user_input = st.chat_input(placeholder_text, accept_file=True, file_type=['jpg', 'jpeg', 'png', 'webp'])
 
 if user_input:
-    # Handle text input
-    if getattr(user_input, 'text', None):
+    # Determine if this submit includes an image
+    has_image = hasattr(user_input, 'files') and bool(user_input.files)
+    image_valid = False
+
+    if has_image:
+        uploaded_file = user_input.files[0]
+
+        # Quick client-side validation before calling backend
+        if not validate_image_client(uploaded_file):
+            image_valid = False
+        else:
+            with st.spinner('Validating image...'):
+                # Send image to backend for validation
+                validation_result = upload_image_to_backend(uploaded_file)
+
+            if validation_result:
+                image_id = validation_result.get('image_id')
+                width = validation_result.get('width')
+                height = validation_result.get('height')
+
+                # Store image metadata for later use (in order to put image above text)
+                st.session_state.temp_image_data = {
+                    'image': uploaded_file,
+                    'image_id': image_id,
+                    'image_metadata': validation_result,
+                }
+
+                image_valid = True
+            else:
+                image_valid = False
+
+    # Proceed with text generation if either no image or the image is valid
+    if getattr(user_input, 'text', None) and (not has_image or image_valid):
         text_value = user_input.text.strip()
         if not text_value:
             st.warning('Your message is empty.')
         elif len(text_value) > MAX_INPUT_LENGTH:
             st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
         else:
+            # Add text message first
             st.session_state.messages.append({'role': 'user', 'content': text_value})
+            
+            # Add image message if we have one (after text, before itinerary)
+            if has_image and image_valid and hasattr(st.session_state, 'temp_image_data'):
+                st.session_state.messages.append({
+                    'role': 'user',
+                    'image': st.session_state.temp_image_data['image'],
+                    'image_id': st.session_state.temp_image_data['image_id'],
+                    'image_metadata': st.session_state.temp_image_data['image_metadata'],
+                })
+                # Clear temp data
+                del st.session_state.temp_image_data
+            
             with st.spinner('Voyager-T800 is analyzing your request...'):
                 result = generate_itinerary(text_value, st.session_state.session_id, st.session_state.user_id)
             if result and isinstance(result, dict):
@@ -717,23 +876,5 @@ if user_input:
                     st.warning('Assistant response is empty, not saved.')
             else:
                 st.warning('Failed to generate itinerary. Please try again.')
-
-    # Handle file input (image)
-    if hasattr(user_input, 'files') and user_input.files:
-        uploaded_file = user_input.files[0]
-        try:
-            with Image.open(uploaded_file) as img:
-                width, height = img.size
-        except UnidentifiedImageError:
-            st.warning('Invalid image file.')
-            uploaded_file = None
-
-        if uploaded_file is not None:
-            if width < MIN_LOADED_IMAGE_WIDTH or height < MIN_LOADED_IMAGE_HEIGHT:
-                st.warning(
-                    f'Image is too small. Please, upload image of size at least {MIN_LOADED_IMAGE_WIDTH}x{MIN_LOADED_IMAGE_HEIGHT} px'
-                )
-            else:
-                st.session_state.messages.append({'role': 'user', 'image': uploaded_file})
-
-    st.rerun()
+            
+            st.rerun()
