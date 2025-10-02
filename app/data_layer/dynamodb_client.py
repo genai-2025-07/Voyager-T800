@@ -26,6 +26,7 @@ class SessionMetadata(BaseModel):
     session_summary: str
     started_at: str
     messages: list[dict]
+    structured_itinerary: dict | None = None  # Store SimpleTravelItinerary as dict
 
 
 class QueryParams(BaseModel):
@@ -93,15 +94,19 @@ class DynamoDBClient:
             ClientError: If there's an error during the put operation.
         """
         try:
-            response = self.table.put_item(
-                Item={
-                    'user_id': session_metadata.user_id,
-                    'session_id': session_metadata.session_id,
-                    'session_summary': session_metadata.session_summary,
-                    'started_at': session_metadata.started_at,
-                    'messages': session_metadata.messages,
-                }
-            )
+            item = {
+                'user_id': session_metadata.user_id,
+                'session_id': session_metadata.session_id,
+                'session_summary': session_metadata.session_summary,
+                'started_at': session_metadata.started_at,
+                'messages': session_metadata.messages,
+            }
+
+            # Add structured itinerary if present
+            if session_metadata.structured_itinerary is not None:
+                item['structured_itinerary'] = session_metadata.structured_itinerary
+
+            response = self.table.put_item(Item=item)
             return response.get('ResponseMetadata', {}).get('HTTPStatusCode', 0)
         except ClientError:
             logger.error('Failed to put item into DynamoDB')

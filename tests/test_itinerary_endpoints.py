@@ -24,6 +24,9 @@ class FakeDynamoDBClient:
             'started_at': session_metadata.started_at,
             'messages': list(session_metadata.messages),
         }
+        # Add structured_itinerary if present
+        if hasattr(session_metadata, 'structured_itinerary') and session_metadata.structured_itinerary is not None:
+            self._store[key]['structured_itinerary'] = session_metadata.structured_itinerary
         return 200
 
     def get_item(self, user_id: str, session_id: str) -> dict | None:
@@ -134,3 +137,39 @@ def test_generate_itinerary_stores_messages(monkeypatch, client: TestClient):
     assert len(msgs) >= 2
     assert any(m.get('sender') == 'user' and q in m.get('content', '') for m in msgs)
     assert any(m.get('sender') == 'assistant' for m in msgs)
+
+
+def test_session_metadata_includes_structured_itinerary():
+    """Test that SessionMetadata can handle structured itinerary data."""
+    from app.data_layer.dynamodb_client import SessionMetadata
+    from app.utils.itinerary import ItineraryDay, SimpleTravelItinerary
+
+    # Create a sample structured itinerary
+    structured_itinerary = SimpleTravelItinerary(
+        destination='Paris',
+        duration_days=3,
+        transportation='walking',
+        itinerary=[ItineraryDay(day=1, location='Paris', activities=['Visit Eiffel Tower'])],
+        language='en',
+        session_summary='3-day trip to Paris',
+    ).model_dump()
+
+    # Create session metadata with structured itinerary
+    session_metadata = SessionMetadata(
+        user_id='test_user',
+        session_id='test_session',
+        session_summary='Test session',
+        started_at='2024-01-01T00:00:00Z',
+        messages=[],
+        structured_itinerary=structured_itinerary,
+    )
+
+    # Verify the structured itinerary is included
+    assert session_metadata.structured_itinerary is not None
+    assert session_metadata.structured_itinerary['destination'] == 'Paris'
+    assert session_metadata.structured_itinerary['duration_days'] == 3
+    assert session_metadata.structured_itinerary['transportation'] == 'walking'
+    assert len(session_metadata.structured_itinerary['itinerary']) == 1
+    assert session_metadata.structured_itinerary['itinerary'][0]['day'] == 1
+    assert session_metadata.structured_itinerary['itinerary'][0]['location'] == 'Paris'
+    assert 'Eiffel Tower' in session_metadata.structured_itinerary['itinerary'][0]['activities'][0]

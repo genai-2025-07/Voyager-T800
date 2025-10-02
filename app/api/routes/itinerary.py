@@ -13,6 +13,8 @@ from pydantic import BaseModel
 
 from app.chains.itinerary_chain import full_response, initialize_retriever
 from app.data_layer.dynamodb_client import SessionMetadata
+from app.utils.itinerary import SimpleTravelItinerary
+from app.utils.llm_parser import ItineraryParserAgent
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ class ItineraryGenerateResponse(BaseModel):
     itinerary_id: str
     itinerary: str
     session_id: str
+    structured_itinerary: dict | None = None
     success: bool = True
 
 
@@ -46,6 +49,7 @@ class ItineraryRetrieveResponse(BaseModel):
     session_summary: str
     started_at: str
     messages: list[dict]
+    structured_itinerary: dict | None = None
 
 
 class SessionCreateRequest(BaseModel):
@@ -121,8 +125,31 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
 
         # Generate itinerary using the existing chain
         itinerary_content = full_response(
-            request.query, request.session_id or 'default_session', include_events=include_events_flag
+            user_input=request.query, session_id=session_id, include_events=include_events_flag
         )
+
+        # Parse the itinerary content to extract structured data
+        structured_itinerary = None
+        try:
+            parser = ItineraryParserAgent()
+            parsed_itinerary = parser.parse_itinerary_output(itinerary_content)
+
+            # Convert to SimpleTravelItinerary format for storage
+            structured_itinerary = SimpleTravelItinerary(
+                destination=parsed_itinerary.destination,
+                duration_days=parsed_itinerary.duration_days,
+                transportation=parsed_itinerary.transportation.value
+                if hasattr(parsed_itinerary.transportation, 'value')
+                else str(parsed_itinerary.transportation),
+                itinerary=parsed_itinerary.itinerary,
+                language=parsed_itinerary.language or 'en',
+                session_summary=parsed_itinerary.session_summary
+                or f'Travel planning session for: {request.query[:50]}...',
+            ).model_dump()
+
+            logger.info('Successfully parsed structured itinerary data')
+        except Exception as e:
+            logger.warning(f'Failed to parse structured itinerary data: {e}. Continuing with text-only storage.')
 
         # Create a message entry for the generated itinerary
         itinerary_message = {
@@ -143,21 +170,32 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
             messages.append(user_message)
             messages.append(itinerary_message)
 
+            session_summary = existing_session.get('session_summary', '')
+
+            if structured_itinerary and structured_itinerary.get('session_summary'):
+                session_summary = structured_itinerary['session_summary']
+
             session_metadata = SessionMetadata(
                 user_id=user_id,
                 session_id=session_id,
-                session_summary=existing_session.get('session_summary', ''),
+                session_summary=session_summary,
                 started_at=existing_session.get('started_at', now),
                 messages=messages,
+                structured_itinerary=structured_itinerary,
             )
         else:
             # Create new session
+            session_summary = 'New Session'
+            if structured_itinerary and structured_itinerary.get('session_summary'):
+                session_summary = structured_itinerary['session_summary']
+
             session_metadata = SessionMetadata(
                 user_id=user_id,
                 session_id=session_id,
-                session_summary=f'Travel planning session for: {request.query[:50]}...',
+                session_summary=session_summary,
                 started_at=now,
                 messages=[user_message, itinerary_message],
+                structured_itinerary=structured_itinerary,
             )
 
         # Store in DynamoDB
@@ -168,7 +206,10 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
             raise HTTPException(status_code=500, detail='Failed to store itinerary. Please try again.')
 
         return ItineraryGenerateResponse(
-            itinerary_id=itinerary_message['message_id'], itinerary=itinerary_content, session_id=session_id
+            itinerary_id=itinerary_message['message_id'],
+            itinerary=itinerary_content,
+            session_id=session_id,
+            structured_itinerary=structured_itinerary,
         )
 
     except Exception as e:
@@ -274,6 +315,7 @@ async def get_session_data(session_id: str, user_id: str = 'anonymous', http_req
             session_summary=session_data.get('session_summary', ''),
             started_at=session_data.get('started_at', ''),
             messages=session_data.get('messages', []),
+            structured_itinerary=session_data.get('structured_itinerary'),
         )
 
     except HTTPException:
