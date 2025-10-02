@@ -170,20 +170,29 @@ async def generate_itinerary(request: ItineraryGenerateRequest, http_request: Re
             messages.append(user_message)
             messages.append(itinerary_message)
 
+            session_summary = existing_session.get('session_summary', '')
+
+            if structured_itinerary and structured_itinerary.get('session_summary'):
+                session_summary = structured_itinerary['session_summary']
+
             session_metadata = SessionMetadata(
                 user_id=user_id,
                 session_id=session_id,
-                session_summary=existing_session.get('session_summary', ''),
+                session_summary=session_summary,
                 started_at=existing_session.get('started_at', now),
                 messages=messages,
                 structured_itinerary=structured_itinerary,
             )
         else:
             # Create new session
+            session_summary = 'New Session'
+            if structured_itinerary and structured_itinerary.get('session_summary'):
+                session_summary = structured_itinerary['session_summary']
+
             session_metadata = SessionMetadata(
                 user_id=user_id,
                 session_id=session_id,
-                session_summary=f'Travel planning session for: {request.query[:50]}...',
+                session_summary=session_summary,
                 started_at=now,
                 messages=[user_message, itinerary_message],
                 structured_itinerary=structured_itinerary,
