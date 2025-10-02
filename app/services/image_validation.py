@@ -67,8 +67,8 @@ async def validate_image(file: UploadFile) -> Dict[str, any]:
     """
     try:
         # Step 1: Validate filename and extension
-        filename = file.filename or 'unknown'
-        if not filename or filename == 'unknown':
+        filename = file.filename
+        if not filename:
             logger.warning('Image uploaded without filename')
             raise HTTPException(status_code=400, detail='Image filename is required.')
 
@@ -76,8 +76,8 @@ async def validate_image(file: UploadFile) -> Dict[str, any]:
         allowed_extensions = {f'.{ext}' for ext in settings.image_allowed_types}
         allowed_content_types = {f'image/{ext}' for ext in settings.image_allowed_types}
         # Handle jpg/jpeg mapping
-        if 'jpg' in settings.image_allowed_types:
-            allowed_content_types.add('image/jpg')
+        if 'jpeg' in settings.image_allowed_types:
+            allowed_content_types.add('image/jpeg')
         
         file_extension = None
         if '.' in filename:
@@ -99,20 +99,31 @@ async def validate_image(file: UploadFile) -> Dict[str, any]:
                 detail=f'Invalid content type "{content_type}". Allowed types: {", ".join(settings.image_allowed_types)}',
             )
 
-        # Step 3: Read file content into memory
-        # Note: For very large files, consider streaming validation
-        file_content = await file.read()
-        file_size = len(file_content)
-
-        # Validate file size
+        # Step 3: Read file content using chunked reading to avoid memory issues
+        file_content = b""
+        file_size = 0
+        chunk_size = 1024 * 1024  # 1 MB chunks
         max_size_bytes = settings.image_max_size_mb * 1024 * 1024
-        if file_size > max_size_bytes:
-            size_mb = file_size / (1024 * 1024)
-            logger.warning(f'File too large: {size_mb:.2f} MB for file {filename}')
-            raise HTTPException(
-                status_code=400,
-                detail=f'Image size {size_mb:.2f} MB exceeds maximum allowed {settings.image_max_size_mb} MB',
-            )
+        
+        # Read file in chunks to avoid loading entire file into memory
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:  # End of file
+                break
+                
+            file_size += len(chunk)
+            
+            # Check size limit during streaming to fail fast
+            if file_size > max_size_bytes:
+                size_mb = file_size / (1024 * 1024)
+                logger.warning(f'File too large: {size_mb:.2f} MB for file {filename}')
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'Image size {size_mb:.2f} MB exceeds maximum allowed {settings.image_max_size_mb} MB',
+                )
+            
+            file_content += chunk
+                
 
         if file_size == 0:
             logger.warning(f'Empty file uploaded: {filename}')
@@ -132,8 +143,13 @@ async def validate_image(file: UploadFile) -> Dict[str, any]:
             image = Image.open(io.BytesIO(file_content))
             width, height = image.size
             image_format = image.format  # PIL detected format
+            
+            # Verify and convert image mode to supported formats
+            if image.mode not in ['RGB', 'L']:
+                logger.info(f'Converting image mode from {image.mode} to RGB for {filename}')
+                image = image.convert('RGB')
 
-            logger.info(f'Image opened successfully: {filename} ({width}x{height}, format: {image_format})')
+            logger.info(f'Image opened successfully: {filename} ({width}x{height}, format: {image_format}, mode: {image.mode})')
 
         except UnidentifiedImageError:
             logger.warning(f'Cannot identify image format for {filename}')
@@ -151,7 +167,10 @@ async def validate_image(file: UploadFile) -> Dict[str, any]:
             )
 
         # Step 7: Reset file pointer for potential future reads
-        await file.seek(0)
+        try:
+            await file.seek(0)
+        except Exception as e:
+            logger.warning(f'Could not reset file pointer for {filename}: {str(e)}')
 
         # All validation passed - return metadata
         logger.info(
@@ -191,7 +210,8 @@ def _validate_magic_bytes(file_content: bytes, content_type: str) -> bool:
         bool: True if magic bytes match content type, False otherwise
     """
     if content_type not in MAGIC_BYTES:
-        logger.warning(f'No magic bytes defined for content type: {content_type}')
+        if content_type.startswith("image/"):
+            logger.warning(f'Unknown image type: {content_type}')
         return False
 
     magic_signatures = MAGIC_BYTES[content_type]

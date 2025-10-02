@@ -60,12 +60,16 @@ async def upload_image(file: UploadFile = File(...)):
     """
     try:
         logger.info(f'Received image upload request: {file.filename}')
+        try:
+            await file.seek(0)
+        except Exception as e:
+            logger.warning(f'Could not reset file pointer for {file.filename}: {str(e)}')
 
         # Validate the image using the validation service
         validation_result = await validate_image(file)
 
         # Generate unique image ID
-        image_id = f'img_{uuid.uuid4().hex}'
+        image_id = f'image_{uuid.uuid4().hex}'
 
         # Prepare response with image metadata
         response = ImageUploadResponse(

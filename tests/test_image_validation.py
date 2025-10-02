@@ -29,9 +29,15 @@ def _make_upload_file(data: bytes, filename: str, content_type: str) -> UploadFi
     upload.file = file_obj
     upload.content_type = content_type
     
-    # Mock the read method to return the data
-    async def mock_read():
-        return data
+    # Mock the read method to support chunked reading
+    async def mock_read(size=-1):
+        if size == -1:
+            # If no size specified, return all data (for backward compatibility)
+            return data
+        else:
+            # For chunked reading, return the requested chunk size
+            chunk = file_obj.read(size)
+            return chunk
     
     upload.read = mock_read
     

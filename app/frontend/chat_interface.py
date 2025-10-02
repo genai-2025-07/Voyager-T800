@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import re
 import uuid
@@ -240,7 +241,7 @@ def upload_image_to_backend(uploaded_file) -> dict | None:
         uploaded_file.seek(0)
         
         # Prepare multipart form data
-        files = {'file': (uploaded_file.name, uploaded_file, uploaded_file.type)}
+        files = {'file': (uploaded_file.name, uploaded_file, mimetypes.guess_type(uploaded_file.name)[0] or uploaded_file.type)}
         
         response = requests.post(url, files=files, timeout=settings.api_timeout)
         
@@ -295,9 +296,9 @@ def validate_image_client(uploaded_file) -> bool:
                 file_size = None
 
         if file_size is not None:
-            max_bytes = int(3.75 * 1024 * 1024)
+            max_bytes = int(settings.image_max_size_mb * 1024 * 1024)
             if file_size > max_bytes:
-                st.warning('Image is too large. Maximum allowed size is 3.75 MB.')
+                st.warning('Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
                 return False
 
         # Resolution check
