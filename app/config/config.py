@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     image_display_width: int = Field(default=400)
 
     # Image Upload & Validation Configuration
-    image_max_size_mb: int = Field(default=5, description='Maximum image file size in MB')
+    image_max_size_mb: float = Field(default=3.75, description='Maximum image file size in MB')
     image_max_resolution: int = Field(default=4096, description='Maximum image width or height in pixels')
     image_allowed_types: list[str] = Field(
         default=['jpg', 'jpeg', 'png', 'webp'], description='Allowed image file types'
