@@ -95,6 +95,8 @@ class WeatherSettings(BaseConfigModel):
     retry_backoff_min: float = Field(..., ge=0.0, description="Min backoff seconds for retries.")
     retry_backoff_max: float = Field(..., ge=0.0, description="Max backoff seconds for retries.")
 
+class ItinerarySettings(BaseConfigModel):
+    api_key: Optional[str] = None
 
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(...)
@@ -136,6 +138,7 @@ class Settings(BaseConfigModel):
     summary_memory: SummaryMemorySettings = Field(default_factory=SummaryMemorySettings)
     prompt: PromptSettings = Field(default_factory=PromptSettings)
     weather: Optional[WeatherSettings] = None
+    itinerary: ItinerarySettings = Field(default_factory=ItinerarySettings)
     logging_config_file: Optional[str] = Field(default=None)
 
 
