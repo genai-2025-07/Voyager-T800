@@ -23,39 +23,6 @@ class WeatherData:
     wind_speed: float
 
 
-def _serialize_place(place) -> Dict[str, Any]:
-    """
-    Serialize a place object to a dictionary.
-    
-    Args:
-        place: GetPlacesItem object
-        
-    Returns:
-        Dictionary with place information
-    """
-    place_data = {
-        "name": place.name,
-        "place_id": place.place_id,
-        "formatted_address": place.formatted_address,
-        "rating": place.rating,
-        "types": place.types,
-        "location": {
-            "lat": place.location.lat,
-            "lng": place.location.lng
-        }
-    }
-    
-    # Handle description - check if it's relevant and meaningful
-    if place.description and len(place.description.strip()) > 20:
-        place_data["description"] = place.description 
-        place_data["wiki_title"] = place.wiki_title
-        place_data["wiki_url"] = place.wiki_url
-    else:
-        place_data["description"] = "Description not found - no detailed information available"
-    
-    return place_data
-
-
 def _run_async_in_sync_context(coro):
     """
     Helper function to run async code in a sync context.
@@ -109,7 +76,7 @@ def get_itineraries(query: str, city: str, max_results: int = 5, language: str =
         places = itinerary_service.get_places(query, city, k, language)
         
         # Convert to serializable format
-        result = [_serialize_place(place) for place in places]
+        result = [place.serialize() for place in places]
         
         return json.dumps(result, indent=2, ensure_ascii=False)
         

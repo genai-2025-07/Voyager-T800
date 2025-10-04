@@ -1,11 +1,16 @@
 import requests
 from functools import lru_cache
-from typing import Optional, Any
+from typing import Optional, Any, Dict, List
 
 import googlemaps
+from googlemaps import exceptions as gmaps_exceptions
 
 from pydantic import BaseModel, model_validator
 from app.config.loader import ConfigLoader
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class PlacesLocation(BaseModel):
     lng: float
@@ -17,30 +22,44 @@ class GetPlacesItem(BaseModel):
     name: str
     place_id: str
     formatted_address: str
-    types: list[str]
+    types: List[str]
     location: PlacesLocation
 
-    # added optional fields that will be filled from Wikimedia
+    # optional Wikimedia fields
     description: Optional[str] = None
     wiki_title: Optional[str] = None
     wiki_url: Optional[str] = None
 
     @model_validator(mode="before")
     def extract_location(cls, values: dict) -> Any:
-        # values is the raw input mapping (or something mapping-like)
         if "location" not in values:
             geom = values.get("geometry")
             if isinstance(geom, dict):
                 loc = geom.get("location")
                 if loc is not None:
-                    # copy to avoid mutating whatever was passed in
                     new = dict(values)
                     new["location"] = PlacesLocation(**loc)
                     return new
         return values
 
+    def serialize(self) -> Dict[str, Any]:
+        place_data: Dict[str, Any] = {
+            "name": self.name,
+            "place_id": self.place_id,
+            "formatted_address": self.formatted_address,
+            "rating": self.rating,
+            "types": list(self.types),
+            "location": {"lat": self.location.lat, "lng": self.location.lng},
+        }
+
+        place_data["description"] = self.description
+        place_data["wiki_title"] = self.wiki_title
+        place_data["wiki_url"] = self.wiki_url
+
+        return place_data
+
     class Config:
-        extra = 'ignore' 
+        extra = "ignore"
 
 
 class ItineraryService:
@@ -48,48 +67,49 @@ class ItineraryService:
         loader = ConfigLoader(project_root=project_root)
         settings = loader.get_settings()
         if not settings.itinerary:
-            raise RuntimeError("Weather settings are missing in configuration.")
+            raise RuntimeError("Itinerary settings are missing in configuration.")
         it = settings.itinerary
         if not it.api_key:
-            raise RuntimeError("MAP_API_KEY is required for weather features.")
+            raise RuntimeError("MAP_API_KEY is required for itinerary features.")
 
         self.client = googlemaps.Client(key=it.api_key)
 
-    @lru_cache(maxsize=256)
     def _wikimedia_api(self, lang: str, params: dict) -> dict:
+        """Low-level call to Wikimedia API. Raises requests.RequestException or ValueError on failure."""
         base = f"https://{lang}.wikipedia.org/w/api.php"
         params = dict(params)
         params.setdefault("format", "json")
-        headers = {
-            'User-Agent': 'ItineraryService/1.0 (https://example.com/contact)'
-        }
+        headers = {"User-Agent": "ItineraryService/1.0"}
         r = requests.get(base, params=params, headers=headers, timeout=6)
         r.raise_for_status()
         return r.json()
 
-    def _wikimedia_geosearch(self, lang: str, lat: float, lon: float, radius: int = 1000, limit: int = 10) -> list[dict]:
+    def _wikimedia_geosearch(self, lang: str, lat: float, lon: float, radius: int = 1000, limit: int = 10) -> List[dict]:
         params = {
             "action": "query",
             "list": "geosearch",
             "gscoord": f"{lat}|{lon}",
             "gsradius": radius,
-            "gslimit": limit
+            "gslimit": limit,
         }
-        data = self._wikimedia_api(lang, tuple(sorted(params.items())))
-        return data.get("query", {}).get("geosearch", [])
+        try:
+            data = self._wikimedia_api(lang, params)
+            return data.get("query", {}).get("geosearch", [])
+        except (requests.RequestException, ValueError) as e:
+            logger.debug("Wikimedia geosearch failed (non-fatal): %s", e)
+            return []
 
-    def _wikimedia_textsearch(self, lang: str, title: str, city: Optional[str] = None, limit: int = 5) -> list[dict]:
+    def _wikimedia_textsearch(self, lang: str, title: str, city: Optional[str] = None, limit: int = 5) -> List[dict]:
         q = title if not city else f"{title} {city}"
-        params = {
-            "action": "query",
-            "list": "search",
-            "srsearch": q,
-            "srlimit": limit
-        }
-        data = self._wikimedia_api(lang, tuple(sorted(params.items())))
-        return data.get("query", {}).get("search", [])
+        params = {"action": "query", "list": "search", "srsearch": q, "srlimit": limit}
+        try:
+            data = self._wikimedia_api(lang, params)
+            return data.get("query", {}).get("search", [])
+        except (requests.RequestException, ValueError) as e:
+            logger.debug("Wikimedia text search failed (non-fatal) for '%s': %s", q, e)
+            return []
 
-    def _wikimedia_get_extracts_and_url(self, lang: str, pageids: list[int]) -> dict:
+    def _wikimedia_get_extracts_and_url(self, lang: str, pageids: List[int]) -> dict:
         if not pageids:
             return {}
         ids_str = "|".join(map(str, pageids))
@@ -99,43 +119,60 @@ class ItineraryService:
             "prop": "extracts|info",
             "exintro": 1,
             "explaintext": 1,
-            "inprop": "url"
+            "inprop": "url",
         }
-        data = self._wikimedia_api(lang, tuple(sorted(params.items())))
-        return data.get("query", {}).get("pages", {})
+        try:
+            data = self._wikimedia_api(lang, params)
+            return data.get("query", {}).get("pages", {})
+        except (requests.RequestException, ValueError) as e:
+            logger.debug("Wikimedia extracts lookup failed (non-fatal): %s", e)
+            return {}
 
-    def _pick_best_from_geosearch(self, geolist: list[dict]) -> Optional[dict]:
-        # Prefer nearest (geosearch returns 'dist' when available)
+    def _pick_best_from_geosearch(self, geolist: List[dict]) -> Optional[dict]:
         if not geolist:
             return None
-        geolist_sorted = sorted(geolist, key=lambda x: x.get("dist", float("inf")))
-        return geolist_sorted[0]
+        return min(geolist, key=lambda x: x.get("dist", float("inf")))
 
-    def _best_wiki_for_place(self, lat: float, lng: float, name: str, lang="en") -> dict:
-        # text_hits = self._wikimedia_textsearch(lang, name, city)
-        text_hits = self._wikimedia_geosearch(lang, lat, lng)
-        if text_hits:
-            exact = next((h for h in text_hits if h.get("title", "").lower() == name.lower()), None)
-            chosen = text_hits[0] or exact
+    def _best_wiki_for_place(self, lat: float, lng: float, name: str, lang: str = "en") -> Optional[dict]:
+        """Best-effort: returns dict with title/extract/fullurl or None."""
+        try:
+            geo_hits = self._wikimedia_geosearch(lang, lat, lng)
+            if not geo_hits:
+                return None
+
+            exact = next((h for h in geo_hits if h.get("title", "").lower() == name.lower()), None)
+            chosen = exact or geo_hits[0]
             pageid = chosen.get("pageid")
+            if not pageid:
+                return None
+
             pages = self._wikimedia_get_extracts_and_url(lang, [pageid])
             page = pages.get(str(pageid))
             if page and (page.get("extract") or page.get("fullurl")):
-                return {
-                    "title": page.get("title"),
-                    "extract": (page.get("extract") or "").strip(),
-                    "fullurl": page.get("fullurl")
-                }
-        
-    def get_places(self, query: str, city: str, k: int, language="en") -> list[GetPlacesItem]:
-        '''
-         query: str,
-        '''
-        places_query = query + " " + city
-        places = self.client.places(places_query, language=language)["results"]
-        items = [GetPlacesItem(**places[i]) for i in range(min(k, len(places)))]
+                return {"title": page.get("title"), "extract": (page.get("extract") or "").strip(), "fullurl": page.get("fullurl")}
+            return None
+        except Exception as e:
+            logger.debug("Wikimedia enrichment failed for '%s' (%s): %s", name, f"{lat},{lng}", e)
+            return None
 
-        # enrich with Wikimedia info (best-effort). Keep this non-fatal.
+    def get_places(self, query: str, city: str, k: int, language: str = "en") -> List[GetPlacesItem]:
+        places_query = f"{query} {city}"
+        try:
+            resp = self.client.places(places_query, language=language)
+            places = resp.get("results", [])
+        except gmaps_exceptions.ApiError as e:
+            # Treat Google API errors as fatal for this operation
+            raise RuntimeError(f"Google Places API error for query '{places_query}': {e}") from e
+        except Exception as e:
+            # Unexpected failure from client library or network - surface as runtime error
+            raise RuntimeError(f"Failed to call Google Places API for query '{places_query}': {e}") from e
+
+        items = [GetPlacesItem(**p) for p in places[:k]]
+
+        logger.info("Found %d places for query '%s'", len(items), places_query)
+
+        # Best-effort enrichment with Wikimedia (non-fatal)
+        enriched_count = 0
         for it in items:
             try:
                 wiki = self._best_wiki_for_place(it.location.lat, it.location.lng, name=query, lang=language)
@@ -143,8 +180,9 @@ class ItineraryService:
                     it.description = wiki.get("extract")
                     it.wiki_title = wiki.get("title")
                     it.wiki_url = wiki.get("fullurl")
-            except Exception:
-                # keep going even if one lookup fails
-                continue
+                    enriched_count += 1
+            except Exception as e:
+                logger.error(f"Exception occured during _best_wiki_for_place call: {e}")
+        logger.info("Enriched %d/%d places with Wikimedia data", enriched_count, len(items))
 
         return items
