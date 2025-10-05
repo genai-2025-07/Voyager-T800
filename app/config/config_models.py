@@ -98,6 +98,15 @@ class WeatherSettings(BaseConfigModel):
 class ItinerarySettings(BaseConfigModel):
     api_key: Optional[str] = None
 
+
+class TavilySettings(BaseConfigModel):
+    tavily_api_key: Optional[str] = None
+    tavily_api_url: str = Field(..., description="API URL for Tavily Search.")
+    tavily_max_results: int = Field(..., gt=0, description="Maximum number of results to return.")
+    tavily_country: str = Field(..., description="Country to search in.")
+    tavily_include_answer: str = Field(..., description="Include answer in the response.")
+    tavily_timeout: int = Field(..., gt=0, description="Timeout for the API request in seconds.")
+
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(...)
     region_name: Optional[str] = None
@@ -139,6 +148,7 @@ class Settings(BaseConfigModel):
     prompt: PromptSettings = Field(default_factory=PromptSettings)
     weather: Optional[WeatherSettings] = None
     itinerary: ItinerarySettings = Field(default_factory=ItinerarySettings)
+    tavily: TavilySettings = Field(default_factory=TavilySettings)
     logging_config_file: Optional[str] = Field(default=None)
 
 
@@ -156,6 +166,8 @@ __all__ = [
     "SummaryMemorySettings",
     "PromptSettings",
     "WeatherSettings",
+    "ItinerarySettings",
+    "TavilySettings",
     "Settings",
 ]
 

@@ -4,11 +4,15 @@ Unit tests for EventsService.
 Tests the service layer that orchestrates event providers and caching.
 """
 import pytest
-from unittest.mock import Mock, patch
+import json
+from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
+from pathlib import Path
 from app.services.events.service import EventsService
 from app.services.events.models import Event
 from app.services.events.providers.base import EventsProvider
+from app.services.events.providers.tavily import TavilyEventsProvider
+from app.agents.tools import get_events
 
 
 class MockEventsProvider(EventsProvider):
@@ -120,7 +124,7 @@ class TestEventsService:
         categories = ["music", "food"]
         
         # Pre-populate cache
-        cache_key = f"{city}-{start_date}-{end_date}-{categories}"
+        cache_key = f"{city}-{start_date}-{end_date}-{sorted(categories)}"
         cache.set(cache_key, sample_events)
 
         # Act
@@ -142,7 +146,7 @@ class TestEventsService:
         city = "Kyiv"
         start_date = datetime(2025, 9, 10)
         end_date = datetime(2025, 9, 15)
-        categories = ["music", "food"]
+        categories = ["food", "music"]
 
         # Act
         events = service.get_events(city, start_date, end_date, categories)
@@ -152,7 +156,7 @@ class TestEventsService:
         assert len(provider.fetch_calls) == 1
         assert len(cache.get_calls) == 1
         assert len(cache.set_calls) == 1
-        assert cache.set_calls[0][0] == f"{city}-{start_date}-{end_date}-{categories}"
+        assert cache.set_calls[0][0] == f"{city}-{start_date}-{end_date}-{sorted(categories)}"
         assert cache.set_calls[0][1] == sample_events
 
     def test_get_events_limits_results(self):
@@ -248,7 +252,7 @@ class TestEventsService:
         service.get_events(city, start_date, end_date)
 
         # Assert
-        expected_key = f"{city}-{start_date}-{end_date}-all"  # None categories becomes 'all'
+        expected_key = f"{city}-{start_date}-{end_date}-[]"  # None categories becomes empty list []
         assert len(cache.set_calls) == 1
         assert cache.set_calls[0][0] == expected_key
 
@@ -577,3 +581,220 @@ class TestEventsService:
         assert result is not None
         assert "Day 3" in result  # 2025-09-12 is 3 days after 2025-09-10
         assert "afternoon" in result["Day 3"]
+
+
+class TestEventsToolIntegration:
+    """Test cases for events tool integration."""
+
+    @pytest.fixture
+    def mock_tavily_config(self):
+        """Mock Tavily configuration settings."""
+        mock_config = Mock()
+        mock_config.tavily_api_key = "test_api_key"
+        mock_config.tavily_api_url = "https://api.tavily.com/search"
+        mock_config.tavily_include_answer = "advanced"
+        mock_config.tavily_country = "ukraine"
+        mock_config.tavily_max_results = 5
+        mock_config.tavily_timeout = 30
+        return mock_config
+
+    @pytest.fixture
+    def mock_settings(self, mock_tavily_config):
+        """Mock settings object with Tavily configuration."""
+        mock_settings = Mock()
+        mock_settings.tavily = mock_tavily_config
+        return mock_settings
+
+    @pytest.fixture
+    def sample_events(self):
+        """Sample events for tool testing."""
+        return [
+            Event(
+                title="Kyiv Music Festival",
+                category="Music",
+                date=datetime(2025, 9, 12, 18, 0),
+                venue="Maidan Nezalezhnosti",
+                url="https://example.com/event1"
+            ),
+            Event(
+                title="Food & Wine Expo",
+                category="Food",
+                date=datetime(2025, 9, 13, 12, 0),
+                venue="Expo Center",
+                url="https://example.com/event2"
+            )
+        ]
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_success(self, mock_provider_class, mock_settings, sample_events):
+        """Test successful event retrieval through the get_events tool."""
+        # Arrange
+        mock_provider = Mock(spec=TavilyEventsProvider)
+        mock_provider_class.return_value = mock_provider
+        
+        # Mock EventsService to return our sample events
+        with patch('app.agents.tools.EventsService') as mock_service_class:
+            mock_service = Mock()
+            mock_service.get_events.return_value = sample_events
+            mock_service_class.return_value = mock_service
+            
+            # Act - Call the tool function directly (not as a LangChain tool)
+            result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", ["Music", "Food"])
+            
+            # Assert
+            assert result is not None
+            result_data = json.loads(result)
+            assert len(result_data) == 2
+            assert result_data[0]["name"] == "Kyiv Music Festival"
+            assert result_data[1]["name"] == "Food & Wine Expo"
+            
+            # Verify service was called with correct parameters
+            mock_service.get_events.assert_called_once_with(
+                "Kyiv", 
+                "2025-09-10", 
+                "2025-09-15", 
+                ["Music", "Food"]
+            )
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_default_end_date(self, mock_provider_class, mock_settings, sample_events):
+        """Test that get_events tool defaults end_date to start_date when not provided."""
+        # Arrange
+        mock_provider = Mock(spec=TavilyEventsProvider)
+        mock_provider_class.return_value = mock_provider
+        
+        with patch('app.agents.tools.EventsService') as mock_service_class:
+            mock_service = Mock()
+            mock_service.get_events.return_value = sample_events
+            mock_service_class.return_value = mock_service
+            
+            # Act
+            result = get_events.func("Kyiv", "2025-09-10", None, ["Music"])
+            
+            # Assert
+            mock_service.get_events.assert_called_once_with(
+                "Kyiv", 
+                "2025-09-10", 
+                "2025-09-10",  # Should default to start_date
+                ["Music"]
+            )
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_no_categories(self, mock_provider_class, mock_settings, sample_events):
+        """Test get_events tool with no categories specified."""
+        # Arrange
+        mock_provider = Mock(spec=TavilyEventsProvider)
+        mock_provider_class.return_value = mock_provider
+        
+        with patch('app.agents.tools.EventsService') as mock_service_class:
+            mock_service = Mock()
+            mock_service.get_events.return_value = sample_events
+            mock_service_class.return_value = mock_service
+            
+            # Act
+            result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", None)
+            
+            # Assert
+            mock_service.get_events.assert_called_once_with(
+                "Kyiv", 
+                "2025-09-10", 
+                "2025-09-15", 
+                None
+            )
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_service_exception(self, mock_provider_class, mock_settings):
+        """Test get_events tool handles service exceptions gracefully."""
+        # Arrange
+        mock_provider = Mock(spec=TavilyEventsProvider)
+        mock_provider_class.return_value = mock_provider
+        
+        with patch('app.agents.tools.EventsService') as mock_service_class:
+            mock_service = Mock()
+            mock_service.get_events.side_effect = Exception("Service error")
+            mock_service_class.return_value = mock_service
+            
+            # Act
+            result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", ["Music"])
+            
+            # Assert
+            result_data = json.loads(result)
+            assert "error" in result_data
+            assert "Failed to get events: Service error" in result_data["error"]
+            assert result_data["city"] == "Kyiv"
+            assert result_data["start_date"] == "2025-09-10"
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_provider_initialization_error(self, mock_provider_class, mock_settings):
+        """Test get_events tool handles provider initialization errors."""
+        # Arrange
+        mock_provider_class.side_effect = Exception("Provider initialization failed")
+        
+        # Act
+        result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", ["Music"])
+        
+        # Assert
+        result_data = json.loads(result)
+        assert "error" in result_data
+        assert "Failed to get events: Provider initialization failed" in result_data["error"]
+
+    @patch('app.agents.tools.TavilyEventsProvider')
+    def test_get_events_tool_json_serialization(self, mock_provider_class, mock_settings, sample_events):
+        """Test that get_events tool properly serializes Event objects to JSON."""
+        # Arrange
+        mock_provider = Mock(spec=TavilyEventsProvider)
+        mock_provider_class.return_value = mock_provider
+        
+        with patch('app.agents.tools.EventsService') as mock_service_class:
+            mock_service = Mock()
+            mock_service.get_events.return_value = sample_events
+            mock_service_class.return_value = mock_service
+            
+            # Act
+            result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", ["Music"])
+            
+            # Assert
+            result_data = json.loads(result)
+            assert isinstance(result_data, list)
+            assert len(result_data) == 2
+            
+            # Verify event structure
+            event1 = result_data[0]
+            assert "name" in event1
+            assert "category" in event1
+            assert "date" in event1
+            assert "venue" in event1
+            assert "url" in event1
+            assert event1["name"] == "Kyiv Music Festival"
+            assert event1["category"] == "Music"
+
+    def test_get_events_tool_with_real_provider_mock(self, mock_settings, sample_events):
+        """Test get_events tool with mocked TavilyEventsProvider but real EventsService flow."""
+        # Arrange
+        project_root = "/test/project/root"
+        
+        with patch('app.services.events.providers.tavily.ConfigLoader') as mock_loader_class:
+            mock_loader = Mock()
+            mock_loader.get_settings.return_value = mock_settings
+            mock_loader_class.return_value = mock_loader
+            
+            # Mock the actual TavilyEventsProvider.fetch method
+            with patch.object(TavilyEventsProvider, 'fetch', return_value=sample_events) as mock_fetch:
+                # Act
+                result = get_events.func("Kyiv", "2025-09-10", "2025-09-15", ["Music"])
+                
+                # Assert
+                result_data = json.loads(result)
+                assert len(result_data) == 2
+                assert result_data[0]["name"] == "Kyiv Music Festival"
+                
+                # Verify provider was initialized with correct project_root
+                mock_loader_class.assert_called_once()
+                
+                # Verify fetch was called with correct parameters
+                mock_fetch.assert_called_once_with(
+                    "Kyiv",
+                    datetime(2025, 9, 10),
+                    datetime(2025, 9, 15),
+                    ["Music"]
+                )

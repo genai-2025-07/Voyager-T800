@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, date
-from typing import List, Optional
+from typing import Any, List, Optional, Dict
 
 
 class Event(BaseModel):
@@ -37,6 +37,19 @@ class Event(BaseModel):
         if isinstance(v, str):
             return datetime.fromisoformat(v)
         return v
+    
+    
+    def serialize(self) -> Dict[str, Any]:
+        place_data: Dict[str, Any] = {
+            "name": self.title,
+            "category": self.category,
+            "date": self.date.date().isoformat(),
+            "time": self.date.strftime("%H:%M"),
+            "venue": self.venue,
+            "url": self.url,
+        }
+
+        return place_data
 
 
 class EventQuery(BaseModel):

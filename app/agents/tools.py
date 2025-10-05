@@ -1,14 +1,17 @@
 import asyncio
 import json
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from pathlib import Path
+from typing import Optional, List
 import concurrent.futures
+from app.services.events.providers.tavily import TavilyEventsProvider
+from app.services.events.service import EventsService
 from langchain_core.tools import tool
 from app.services.weather import WeatherService
 from app.services.itinerary.itinerary import ItineraryService
 
-weather_service = WeatherService("/home/skyisthelimit/code/projects/softserve_internship/Voyager-T800/")
-itinerary_service = ItineraryService("/home/skyisthelimit/code/projects/softserve_internship/Voyager-T800/")
+weather_service = WeatherService(project_root=Path(__file__).parent.parent.parent)
+itinerary_service = ItineraryService(project_root=Path(__file__).parent.parent.parent)
 
 
 @dataclass
@@ -142,42 +145,13 @@ def get_events(city: str, start_date: str, end_date: Optional[str] = None, categ
 
         if not end_date:
             end_date = start_date
-            
-        fake_events = [
-            {
-                "event_name": "International Art Fair",
-                "date": start_date,
-                "location": f"{city} Convention Center",
-                "city": city,
-                "description": "A showcase of contemporary art from around the globe.",
-                "category": "Art"
-            },
-            {
-                "event_name": "City Marathon 2025",
-                "date": end_date,
-                "location": f"Downtown {city}",
-                "city": city,
-                "description": "The annual city marathon, a major sporting event for all ages.",
-                "category": "Sports"
-            },
-            {
-                "event_name": "Symphony Orchestra Gala",
-                "date": start_date,
-                "location": f"{city} Symphony Hall",
-                "city": city,
-                "description": "An evening of classical music with the renowned city symphony.",
-                "category": "Music"
-            }
-        ]
         
-        if categories:
-            filtered_events = [
-                event for event in fake_events if event["category"] in categories
-            ]
+        events_service = EventsService(TavilyEventsProvider(project_root=Path(__file__).parent.parent.parent))
+        events = events_service.get_events(city, start_date, end_date, categories)
 
-            return json.dumps(filtered_events, indent=2)
+        serialized_events = [event.serialize() for event in events]
 
-        return json.dumps(fake_events, indent=2)
+        return json.dumps(serialized_events, indent=2)
 
     except Exception as e:
         return json.dumps({
