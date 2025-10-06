@@ -147,6 +147,9 @@ def get_events(city: str, start_date: str, end_date: Optional[str] = None, categ
             end_date = start_date
         
         events_service = EventsService(TavilyEventsProvider(project_root=Path(__file__).parent.parent.parent))
+
+        if categories:
+            categories = sorted(categories)
         events = events_service.get_events(city, start_date, end_date, categories)
 
         serialized_events = [event.serialize() for event in events]
