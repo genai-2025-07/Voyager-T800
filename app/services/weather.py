@@ -134,14 +134,6 @@ def _aggregate_to_daily(list_items: List[Dict[str, Any]]) -> List[Dict[str, Any]
         temp_max = float(main.get("temp_max", main.get("temp", 0.0)))
 
         weather_arr = item.get("weather", []) or [{}]
-        # Process all weather objects for more accurate aggregation
-        for w in weather_arr:
-            if w:  # Skip empty weather objects
-                weather_main = w.get("main", "")
-                description = w.get("description", "")
-                # Count each weather condition and description
-                bucket["weather_counts"][weather_main] = bucket["weather_counts"].get(weather_main, 0) + 1
-                bucket["desc_counts"][description] = bucket["desc_counts"].get(description, 0) + 1
 
         rain_mm = 0.0
         snow_mm = 0.0
@@ -166,6 +158,15 @@ def _aggregate_to_daily(list_items: List[Dict[str, Any]]) -> List[Dict[str, Any]
         bucket["temp_max"] = max(bucket["temp_max"], temp_max)
         bucket["precip"] += precipitation
         bucket["wind"] = max(bucket["wind"], wind_mps)
+        
+        # Process all weather objects for more accurate aggregation
+        for w in weather_arr:
+            if w:  # Skip empty weather objects
+                weather_main = w.get("main", "")
+                description = w.get("description", "")
+                # Count each weather condition and description
+                bucket["weather_counts"][weather_main] = bucket["weather_counts"].get(weather_main, 0) + 1
+                bucket["desc_counts"][description] = bucket["desc_counts"].get(description, 0) + 1
 
     daily: List[Dict[str, Any]] = []
     for day, b in sorted(buckets.items()):
