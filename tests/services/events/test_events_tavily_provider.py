@@ -1,3 +1,4 @@
+
 """
 Unit tests for TavilyEventsProvider.
 
@@ -10,16 +11,42 @@ from datetime import datetime
 import requests
 from app.services.events.providers.tavily import TavilyEventsProvider
 from app.services.events.models import Event
+from app.config.loader import ConfigLoader
 
 
 class TestTavilyEventsProvider:
     """Test cases for TavilyEventsProvider."""
 
     @pytest.fixture
-    def provider(self):
+    def mock_tavily_config(self):
+        """Mock Tavily configuration settings."""
+        mock_config = Mock()
+        mock_config.tavily_api_key = "test_api_key"
+        mock_config.tavily_api_url = "https://api.tavily.com/search"
+        mock_config.tavily_include_answer = "advanced"
+        mock_config.tavily_country = "ukraine"
+        mock_config.tavily_max_results = 5
+        mock_config.tavily_timeout = 30
+        return mock_config
+
+    @pytest.fixture
+    def mock_settings(self, mock_tavily_config):
+        """Mock settings object with Tavily configuration."""
+        mock_settings = Mock()
+        mock_settings.tavily = mock_tavily_config
+        return mock_settings
+
+    @pytest.fixture
+    def provider(self, mock_settings):
         """Create a TavilyEventsProvider instance for testing."""
-        with patch.dict('os.environ', {'TAVILY_API_KEY': 'test_api_key'}):
-            return TavilyEventsProvider()
+        project_root = "/test/project/root"
+        
+        with patch('app.services.events.providers.tavily.ConfigLoader') as mock_loader_class:
+            mock_loader = Mock(spec=ConfigLoader)
+            mock_loader.get_settings.return_value = mock_settings
+            mock_loader_class.return_value = mock_loader
+            
+            return TavilyEventsProvider(project_root=project_root)
 
     @pytest.fixture
     def sample_events_data(self):
@@ -55,15 +82,59 @@ class TestTavilyEventsProvider:
         }
 
     def test_provider_initialization(self, provider):
-        """Test that provider initializes with correct API key and URL."""
+        """Test that provider initializes with correct configuration."""
         assert provider.api_key == "test_api_key"
         assert provider.api_url == "https://api.tavily.com/search"
+        assert provider.include_answer == "advanced"
+        assert provider.country == "ukraine"
+        assert provider.max_results == 5
+        assert provider.timeout == 30
+
+    def test_provider_initialization_missing_tavily_config(self):
+        """Test that provider raises error when Tavily config is missing."""
+        project_root = "/test/project/root"
+        
+        with patch('app.services.events.providers.tavily.ConfigLoader') as mock_loader_class:
+            mock_loader = Mock(spec=ConfigLoader)
+            mock_settings = Mock()
+            mock_settings.tavily = None  # Missing Tavily config
+            mock_loader.get_settings.return_value = mock_settings
+            mock_loader_class.return_value = mock_loader
+            
+            with pytest.raises(RuntimeError, match="Tavily events provider settings are missing in configuration"):
+                TavilyEventsProvider(project_root=project_root)
 
     def test_provider_initialization_missing_api_key(self):
         """Test that provider raises error when API key is missing."""
-        with patch.dict('os.environ', {}, clear=True):
-            with pytest.raises(ValueError, match="TAVILY_API_KEY environment variable is not set"):
-                TavilyEventsProvider()
+        project_root = "/test/project/root"
+        
+        with patch('app.services.events.providers.tavily.ConfigLoader') as mock_loader_class:
+            mock_loader = Mock(spec=ConfigLoader)
+            mock_config = Mock()
+            mock_config.tavily_api_key = None  # Missing API key
+            mock_settings = Mock()
+            mock_settings.tavily = mock_config
+            mock_loader.get_settings.return_value = mock_settings
+            mock_loader_class.return_value = mock_loader
+            
+            with pytest.raises(ValueError, match="TAVILY_API_KEY is not set or empty"):
+                TavilyEventsProvider(project_root=project_root)
+
+    def test_provider_initialization_empty_api_key(self):
+        """Test that provider raises error when API key is empty."""
+        project_root = "/test/project/root"
+        
+        with patch('app.services.events.providers.tavily.ConfigLoader') as mock_loader_class:
+            mock_loader = Mock(spec=ConfigLoader)
+            mock_config = Mock()
+            mock_config.tavily_api_key = ""  # Empty API key
+            mock_settings = Mock()
+            mock_settings.tavily = mock_config
+            mock_loader.get_settings.return_value = mock_settings
+            mock_loader_class.return_value = mock_loader
+            
+            with pytest.raises(ValueError, match="TAVILY_API_KEY is not set or empty"):
+                TavilyEventsProvider(project_root=project_root)
 
     @patch('requests.post')
     def test_fetch_events_success(self, mock_post, provider, mock_tavily_response, sample_events_data):

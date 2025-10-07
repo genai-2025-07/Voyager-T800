@@ -3,6 +3,7 @@ import logging
 import requests
 from datetime import datetime
 from typing import List, Optional
+from app.config.loader import ConfigLoader
 from app.services.events.models import Event, EventRequest
 from app.services.events.providers.base import EventsProvider
 from app.utils.events_utils import extract_events, build_query
@@ -18,22 +19,46 @@ class TavilyEventsProvider(EventsProvider):
     Includes comprehensive error handling and validation.
     """
 
-    def __init__(self):
+    def __init__(self, project_root: str):
         """Initialize the Tavily provider with API configuration."""
         logger.info("Initializing TavilyEventsProvider")
-
+        
         try:
-            self.api_key = os.getenv("TAVILY_API_KEY")
-            if not self.api_key or not self.api_key.strip():
-                raise ValueError("TAVILY_API_KEY environment variable is not set or empty")
+            tavily_config = self._load_tavily_config(project_root)
             
-            self.api_url = os.getenv("TAVILY_API_URL", "https://api.tavily.com/search")
-
+            self._validate_api_key(tavily_config.tavily_api_key)
+            
+            self._initialize_config_attributes(tavily_config)
+            
             logger.info("TavilyEventsProvider initialized successfully")
-
+            
         except Exception as e:
             logger.error(f"Failed to initialize TavilyEventsProvider: {e}")
             raise
+
+    def _load_tavily_config(self, project_root: str):
+        """Load and validate Tavily configuration from settings."""
+        loader = ConfigLoader(project_root=project_root)
+        settings = loader.get_settings()
+        
+        if not settings.tavily:
+            raise RuntimeError("Tavily events provider settings are missing in configuration.")
+        
+        return settings.tavily
+
+    def _validate_api_key(self, api_key: str) -> None:
+        """Validate that the API key is present and not empty."""
+        if not api_key or not api_key.strip():
+            raise ValueError("TAVILY_API_KEY is not set or empty")
+        self.api_key = api_key
+
+    def _initialize_config_attributes(self, config) -> None:
+        """Initialize all configuration attributes from the config object."""
+        self.api_url = config.tavily_api_url
+        self.include_answer = config.tavily_include_answer
+        self.country = config.tavily_country
+        self.max_results = config.tavily_max_results
+        self.timeout = config.tavily_timeout
 
     def fetch(
         self,
@@ -86,9 +111,9 @@ class TavilyEventsProvider(EventsProvider):
             # Prepare API request
             request_payload = {
                 "query": query,
-                "include_answer": "advanced",
-                "country": "ukraine",
-                "max_results": 5,
+                "include_answer": self.include_answer,
+                "country": self.country,
+                "max_results": self.max_results,
             }
 
             headers = {"Authorization": f"Bearer {self.api_key}"}
@@ -97,7 +122,7 @@ class TavilyEventsProvider(EventsProvider):
 
             # Make API request with timeout
             response = requests.post(
-                self.api_url, headers=headers, json=request_payload, timeout=30
+                self.api_url, headers=headers, json=request_payload, timeout=self.timeout
             )
 
             logger.debug(f"API response status: {response.status_code}")
