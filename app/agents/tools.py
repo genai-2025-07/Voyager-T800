@@ -1,6 +1,7 @@
 import asyncio
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
 import concurrent.futures
@@ -143,8 +144,17 @@ def get_events(city: str, start_date: str, end_date: Optional[str] = None, categ
     """
     try:
 
+        try:
+            datetime.strptime(start_date, "%Y-%m-%d")
+            if end_date:
+                datetime.strptime(end_date, "%Y-%m-%d")
+        except ValueError:
+            return json.dumps({"error": "Invalid date format. Use YYYY-MM-DD."})
+        
         if not end_date:
             end_date = start_date
+
+
         
         events_service = EventsService(TavilyEventsProvider(project_root=Path(__file__).parent.parent.parent))
 

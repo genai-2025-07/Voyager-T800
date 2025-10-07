@@ -63,7 +63,12 @@ class GetPlacesItem(BaseModel):
 
 
 class ItineraryService:
-    def __init__(self, project_root: str) -> None:
+    def __init__(self, project_root: str, timeout: int = 6,
+                 geo_radius: int = 1000, geo_limit: int = 10) -> None:
+        self.timeout = timeout
+        self.geo_radius = geo_radius
+        self.geo_limit = geo_limit
+
         loader = ConfigLoader(project_root=project_root)
         settings = loader.get_settings()
         if not settings.itinerary:
@@ -80,17 +85,17 @@ class ItineraryService:
         params = dict(params)
         params.setdefault("format", "json")
         headers = {"User-Agent": "ItineraryService/1.0"}
-        r = requests.get(base, params=params, headers=headers, timeout=6)
+        r = requests.get(base, params=params, headers=headers, timeout=self.timeout)
         r.raise_for_status()
         return r.json()
 
-    def _wikimedia_geosearch(self, lang: str, lat: float, lon: float, radius: int = 1000, limit: int = 10) -> List[dict]:
+    def _wikimedia_geosearch(self, lang: str, lat: float, lon: float) -> List[dict]:
         params = {
             "action": "query",
             "list": "geosearch",
             "gscoord": f"{lat}|{lon}",
-            "gsradius": radius,
-            "gslimit": limit,
+            "gsradius": self.geo_radius,
+            "gslimit": self.geo_limit,
         }
         try:
             data = self._wikimedia_api(lang, params)
@@ -154,35 +159,57 @@ class ItineraryService:
         except Exception as e:
             logger.debug("Wikimedia enrichment failed for '%s' (%s): %s", name, f"{lat},{lng}", e)
             return None
-
-    def get_places(self, query: str, city: str, k: int, language: str = "en") -> List[GetPlacesItem]:
-        places_query = f"{query} {city}"
-        try:
-            resp = self.client.places(places_query, language=language)
-            places = resp.get("results", [])
-        except gmaps_exceptions.ApiError as e:
-            # Treat Google API errors as fatal for this operation
-            raise RuntimeError(f"Google Places API error for query '{places_query}': {e}") from e
-        except Exception as e:
-            # Unexpected failure from client library or network - surface as runtime error
-            raise RuntimeError(f"Failed to call Google Places API for query '{places_query}': {e}") from e
-
-        items = [GetPlacesItem(**p) for p in places[:k]]
-
-        logger.info("Found %d places for query '%s'", len(items), places_query)
-
-        # Best-effort enrichment with Wikimedia (non-fatal)
+    
+    def _enrich_with_wikimedia(
+        self,
+        items: List[GetPlacesItem],
+        language: str,
+        query: str
+    ) -> int:
+        """
+        Best-effort enrichment of `items` using Wikimedia.
+        Returns the number of items successfully enriched.
+        Non-fatal: exceptions are logged and enrichment continues.
+        """
         enriched_count = 0
         for it in items:
             try:
-                wiki = self._best_wiki_for_place(it.location.lat, it.location.lng, name=query, lang=language)
+                wiki = self._best_wiki_for_place(
+                    it.location.lat, it.location.lng, name=query, lang=language
+                )
                 if wiki:
                     it.description = wiki.get("extract")
                     it.wiki_title = wiki.get("title")
                     it.wiki_url = wiki.get("fullurl")
                     enriched_count += 1
-            except Exception as e:
-                logger.error(f"Exception occured during _best_wiki_for_place call: {e}")
-        logger.info("Enriched %d/%d places with Wikimedia data", enriched_count, len(items))
+            except Exception:
+                logger.exception("Exception occurred during Wikimedia enrichment for item: %s", getattr(it, "name", "<unknown>"))
+        return enriched_count
+
+    def get_places(
+        self,
+        query: str,
+        city: str,
+        k: int,
+        language: str = "en"
+    ) -> List[GetPlacesItem]:
+        """
+        Retrieve places from Google Places and perform best-effort Wikimedia enrichment.
+        Google API failures are treated as fatal; Wikimedia enrichment is best-effort.
+        """
+        places_query = f"{query} {city}"
+        try:
+            resp = self.client.places(places_query, language=language)
+            places = resp.get("results", [])
+        except gmaps_exceptions.ApiError as e:
+            raise RuntimeError(f"Google Places API error for query '{places_query}': {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Failed to call Google Places API for query '{places_query}': {e}") from e
+
+        items = [GetPlacesItem(**p) for p in places[:k]]
+
+        enriched_count = self._enrich_with_wikimedia(items, language, query)
+
+        logger.info("Found %d places for query '%s' and enriched %d/%d with Wikimedia", len(items), places_query, enriched_count, len(items))
 
         return items
