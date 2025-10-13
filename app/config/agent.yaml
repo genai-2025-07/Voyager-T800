@@ -1,0 +1,7 @@
+single_agent:
+  per_call_timeout_ms: 5000
+  per_call_retries: 1
+  max_refinements: 2
+  max_paid_calls: 3
+  retry_backoff_ms: 250
+  prompt_validator_enabled: true

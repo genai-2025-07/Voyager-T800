@@ -378,22 +378,109 @@ def hydrate_sessions_from_backend(user_id: str) -> None:
         st.error(f'Failed to load sessions: {e}')
 
 
-def generate_itinerary(user_message: str, session_id: str, user_id: str = 'anonymous') -> dict | None:
-    """Generate itinerary and store it in DynamoDB using FastAPI backend."""
-    # Include feature flags from UI state
-    include_events_flag = bool(st.session_state.get('include_events', False))
-    use_weather_flag = bool(get_current_session_weather_state())
-    data = {
-        'query': user_message,
-        'session_id': session_id,
-        'user_id': user_id,
-        'include_events': include_events_flag,
-        'use_weather': use_weather_flag,
-    }
-    result = call_api_endpoint('/itinerary/generate', data, method='POST')
-    if result and 'itinerary' in result and 'itinerary_id' in result:
-        return result
-    return None
+# def generate_itinerary(user_message: str, session_id: str, user_id: str = 'anonymous') -> dict | None:
+#     """Generate itinerary and store it in DynamoDB using FastAPI backend."""
+#     # Include feature flags from UI state
+#     include_events_flag = bool(st.session_state.get('include_events', False))
+#     use_weather_flag = bool(get_current_session_weather_state())
+#     data = {
+#         'query': user_message,
+#         'session_id': session_id,
+#         'user_id': user_id,
+#         'include_events': include_events_flag,
+#         'use_weather': use_weather_flag,
+#     }
+#     result = call_api_endpoint('/itinerary/generate', data, method='POST')
+#     if result and 'itinerary' in result and 'itinerary_id' in result:
+#         return result
+#     return None
+
+
+def stream_itinerary_response(user_message: str, session_id: str, user_id: str = 'anonymous'):
+    """
+    Stream itinerary generation from the backend token-by-token.
+    
+    This is a generator function compatible with st.write_stream() for real-time display.
+    
+    Args:
+        user_message: User's query
+        session_id: Current session ID
+        user_id: Current user ID
+        
+    Yields:
+        str: Response chunks as they arrive from the backend
+        
+    The function stores metadata (itinerary_id, session_id) in st.session_state
+    for later retrieval.
+    """
+    import json
+    
+    try:
+        # Include feature flags from UI state
+        include_events_flag = bool(st.session_state.get('include_events', False))
+        use_weather_flag = bool(get_current_session_weather_state())
+        
+        url = f'{API_BASE_URL}/api/v1/itinerary/generate/stream'
+        data = {
+            'query': user_message,
+            'session_id': session_id,
+            'user_id': user_id,
+            'include_events': include_events_flag,
+            'use_weather': use_weather_flag,
+        }
+        
+        # Make streaming request with longer timeout for agent execution
+        response = requests.post(url, json=data, stream=True, timeout=300)
+        
+        if response.status_code != 200:
+            if STREAMLIT_ENV == 'dev':
+                st.error(f'API Error: {response.status_code} - {response.text}')
+            else:
+                st.error('Request failed. Please try again.')
+            return
+        
+        # Process Server-Sent Events stream
+        for line in response.iter_lines():
+            if line:
+                line_str = line.decode('utf-8')
+                
+                # Parse SSE format: "data: {...}"
+                if line_str.startswith('data: '):
+                    json_str = line_str[6:]  # Remove "data: " prefix
+                    
+                    try:
+                        event_data = json.loads(json_str)
+                        
+                        # Check if streaming is complete
+                        if event_data.get('done'):
+                            # Store metadata in session state for later use
+                            if 'itinerary_id' in event_data:
+                                st.session_state.temp_itinerary_id = event_data['itinerary_id']
+                            if 'session_id' in event_data:
+                                st.session_state.temp_session_id = event_data['session_id']
+                            if 'structured_itinerary' in event_data:
+                                st.session_state.temp_structured_itinerary = event_data['structured_itinerary']
+                            if 'error' in event_data:
+                                st.error(f'Error during generation: {event_data["error"]}')
+                            break
+                        
+                        # Yield chunk for display
+                        chunk = event_data.get('chunk', '')
+                        if chunk:
+                            yield chunk
+                            
+                    except json.JSONDecodeError:
+                        # Skip malformed JSON lines
+                        continue
+        
+    except requests.exceptions.RequestException as e:
+        st.error('Connection Error: Unable to connect to the API server.')
+        if STREAMLIT_ENV == 'dev':
+            st.error(f'Debug info: {str(e)}')
+    except Exception as e:
+        st.error(f'Unexpected Error: {str(e)}')
+        if STREAMLIT_ENV == 'dev':
+            st.error(f'Debug info: {str(e)}')
 
 
 def get_session_data(session_id: str, user_id: str = 'anonymous') -> dict | None:
@@ -845,7 +932,23 @@ if user_input:
         elif len(text_value) > MAX_INPUT_LENGTH:
             st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
         else:
-            # Add text message first
+            # Display the user message immediately before streaming starts
+            st.markdown(
+                f"""
+                <div class="message-container">
+                    <div class ="message-bubble">
+                        {text_value}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            # Display image if present
+            if has_image and image_valid and hasattr(st.session_state, 'temp_image_data'):
+                st.image(st.session_state.temp_image_data['image'], width=IMAGE_DISPLAY_WIDTH)
+            
+            # Add text message to session state
             st.session_state.messages.append({'role': 'user', 'content': text_value})
             
             # Add image message if we have one (after text, before itinerary)
@@ -859,21 +962,52 @@ if user_input:
                 # Clear temp data
                 del st.session_state.temp_image_data
             
-            with st.spinner('Voyager-T800 is analyzing your request...'):
-                result = generate_itinerary(text_value, st.session_state.session_id, st.session_state.user_id)
-            if result and isinstance(result, dict):
-                assistant_response = result.get('itinerary', '')
-                itinerary_id = result.get('itinerary_id', '')
-                if assistant_response and assistant_response.strip():
-                    cleaned = assistant_response.strip().lower()
-                    if cleaned not in ['error', 'none', 'null']:
-                        st.session_state.messages.append(
-                            {'role': 'assistant', 'content': assistant_response.strip(), 'itinerary_id': itinerary_id}
-                        )
-                    else:
-                        st.warning('Assistant returned an error message, not saved.')
+            # Stream the response token-by-token with custom styling
+            # Create a placeholder for the streaming response
+            response_container = st.empty()
+            
+            streamed_response = ''
+            with response_container.container():
+                st.markdown('<div class="message-container-left">', unsafe_allow_html=True)
+                stream_placeholder = st.empty()
+                
+                # Stream and accumulate the response
+                for chunk in stream_itinerary_response(
+                    text_value,
+                    st.session_state.session_id,
+                    st.session_state.user_id
+                ):
+                    streamed_response += chunk
+                    # Update the display with accumulated content using the same styling as chat history
+                    stream_placeholder.markdown(
+                        f'<div class="message-bubble-left">{streamed_response}</div>',
+                        unsafe_allow_html=True
+                    )
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Save the streamed response to session state
+            if streamed_response and streamed_response.strip():
+                cleaned = streamed_response.strip().lower()
+                if cleaned not in ['error', 'none', 'null']:
+                    # Get the itinerary_id that was stored during streaming
+                    itinerary_id = getattr(st.session_state, 'temp_itinerary_id', '')
+                    
+                    st.session_state.messages.append({
+                        'role': 'assistant',
+                        'content': streamed_response.strip(),
+                        'itinerary_id': itinerary_id
+                    })
+                    
+                    # Clean up temporary state
+                    if hasattr(st.session_state, 'temp_itinerary_id'):
+                        del st.session_state.temp_itinerary_id
+                    if hasattr(st.session_state, 'temp_session_id'):
+                        del st.session_state.temp_session_id
+                    if hasattr(st.session_state, 'temp_structured_itinerary'):
+                        del st.session_state.temp_structured_itinerary
                 else:
-                    st.warning('Assistant response is empty, not saved.')
+                    st.warning('Assistant returned an error message, not saved.')
             else:
                 st.warning('Failed to generate itinerary. Please try again.')
             
