@@ -11,6 +11,8 @@ import time
 from threading import Lock
 from typing import Optional
 
+from app.memory.dynamodb_checkpointer import DynamoDBSaver
+from app.memory.utils import make_filtering_checkpointer
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -20,20 +22,15 @@ from app.config.config import settings
 logger = logging.getLogger(__name__)
 
 
-# Memory configuration
-SESSION_MEMORY_TTL_SECONDS = settings.session_memory_ttl_seconds
-
-# Global agent - compiled once for efficiency
-agent_graph = None
+memory_checkpointer = make_filtering_checkpointer(MemorySaver())
+agent_graph_memory = None
+agent_graph_dynamodb = None
+dynamodb_checkpointer = None
 agent_lock = Lock()
 
-# Session state dict: session_id -> {'messages': list[BaseMessage], 'last_access': timestamp}
-# This directly stores LangGraph-compatible messages
-session_states = {}
-global checkpointer
-checkpointer = MemorySaver()
-
-def initialize_agent():
+ 
+ 
+def initialize_agent(user_id: Optional[str] = None):
     """
     Initialize the LangGraph agent (compiled graph).
     
@@ -43,125 +40,160 @@ def initialize_agent():
     Returns:
         Compiled LangGraph agent ready for invocation
     """
-    global agent_graph
+    global agent_graph_memory, agent_graph_dynamodb, dynamodb_checkpointer
+    is_authenticated = user_id and not user_id.startswith("anon_")
+    
     with agent_lock:
-        if agent_graph is None:
-            agent_graph = create_agent(checkpointer=checkpointer)
-            logger.info('LangGraph agent initialized successfully')
-    return agent_graph
+            if is_authenticated:
+                # Lazy-init DynamoDB checkpointer if needed
+                if dynamodb_checkpointer is None:
+                    logger.info("Initializing DynamoDB checkpointer...")
+                    
+                    if settings.use_local_dynamodb:
+                        dynamodb_checkpointer = DynamoDBSaver(
+                            table_name=settings.dynamodb_table,
+                            region_name=settings.aws_region,
+                            endpoint_url=settings.dynamodb_endpoint_url,
+                            aws_access_key_id=settings.aws_access_key_id,
+                            aws_secret_access_key=settings.aws_secret_access_key,
+                        )
+                        logger.info("DynamoDB checkpointer initialized (local)")
+                    else:
+                        dynamodb_checkpointer = DynamoDBSaver(
+                            table_name=settings.dynamodb_table,
+                            region_name=settings.aws_region,
+                        )
+                        logger.info("DynamoDB checkpointer initialized (AWS)")
+                
+                # Compile agent with DynamoDB checkpointer if needed
+                if agent_graph_dynamodb is None:
+                    agent_graph_dynamodb = create_agent(checkpointer=dynamodb_checkpointer)
+                    logger.info('LangGraph agent with DynamoDB checkpointer initialized')
+                
+                return agent_graph_dynamodb
+            else:
+                # Compile agent with MemorySaver if needed
+                if agent_graph_memory is None:
+                    agent_graph_memory = create_agent(checkpointer=memory_checkpointer)
+                    logger.info('LangGraph agent with MemorySaver initialized')
+                
+                return agent_graph_memory
+ 
 
-
-def _cleanup_expired_sessions():
-    """
-    Remove session states that have not been accessed within TTL to avoid memory leaks.
+# def _cleanup_expired_sessions():
+#     """
+#     Remove session states that have not been accessed within TTL to avoid memory leaks.
     
-    No-op if TTL is non-positive. Runs before each session state access to keep
-    the memory footprint bounded.
-    """
-    try:
-        ttl = SESSION_MEMORY_TTL_SECONDS
-        if ttl <= 0:
-            return
+#     No-op if TTL is non-positive. Runs before each session state access to keep
+#     the memory footprint bounded.
+#     """
+#     try:
+#         ttl = SESSION_MEMORY_TTL_SECONDS
+#         if ttl <= 0:
+#             return
 
-        now = time.time()
-        expired_session_ids = []
-        for s_id, entry in list(session_states.items()):
-            if not isinstance(entry, dict) or 'last_access' not in entry:
-                logger.warning(f'Malformed session entry for {s_id}: {entry}')
-                continue
-            if now - entry['last_access'] > ttl:
-                expired_session_ids.append(s_id)
+#         now = time.time()
+#         expired_session_ids = []
+#         for s_id, entry in list(session_states.items()):
+#             if not isinstance(entry, dict) or 'last_access' not in entry:
+#                 logger.warning(f'Malformed session entry for {s_id}: {entry}')
+#                 continue
+#             if now - entry['last_access'] > ttl:
+#                 expired_session_ids.append(s_id)
         
-        for s_id in expired_session_ids:
-            del session_states[s_id]
-            logger.info(f'Expired session {s_id} cleaned up')
+#         for s_id in expired_session_ids:
+#             del session_states[s_id]
+#             logger.info(f'Expired session {s_id} cleaned up')
             
-    except Exception as e:
-        logger.warning(f'Session cleanup failed: {e}')
+#     except Exception as e:
+#         logger.warning(f'Session cleanup failed: {e}')
 
 
-def get_session_state(session_id: str) -> list[BaseMessage]:
-    """
-    Get or initialize message state for a session.
+# def get_session_state(session_id: str) -> list[BaseMessage]:
+#     """
+#     Get or initialize message state for a session.
     
-    Returns a list of messages that is directly compatible with MessagesState.
-    This is the clean, LangGraph-native way to manage conversation history.
+#     Returns a list of messages that is directly compatible with MessagesState.
+#     This is the clean, LangGraph-native way to manage conversation history.
     
-    Args:
-        session_id: Unique session identifier
+#     Args:
+#         session_id: Unique session identifier
         
-    Returns:
-        list[BaseMessage]: List of conversation messages for this session
-    """
-    _cleanup_expired_sessions()
+#     Returns:
+#         list[BaseMessage]: List of conversation messages for this session
+#     """
+#     _cleanup_expired_sessions()
 
-    entry = session_states.get(session_id)
+#     entry = session_states.get(session_id)
 
-    if entry is not None and not isinstance(entry, dict):
-        raise TypeError(f'Session state entry must be a dict, got type: {type(entry)}')
+#     if entry is not None and not isinstance(entry, dict):
+#         raise TypeError(f'Session state entry must be a dict, got type: {type(entry)}')
 
-    if entry is None:
-        # Create new session with empty message list
-        session_states[session_id] = {
-            'messages': [],
-            'last_access': time.time()
-        }
-        logger.info(f'Initialized new session state for session_id: {session_id}')
-        return session_states[session_id]['messages']
+#     if entry is None:
+#         # Create new session with empty message list
+#         session_states[session_id] = {
+#             'messages': [],
+#             'last_access': time.time()
+#         }
+#         logger.info(f'Initialized new session state for session_id: {session_id}')
+#         return session_states[session_id]['messages']
 
-    # Update last access time (throttled to avoid excessive updates)
-    if time.time() - entry['last_access'] > 10:
-        entry['last_access'] = time.time()
+#     # Update last access time (throttled to avoid excessive updates)
+#     if time.time() - entry['last_access'] > 10:
+#         entry['last_access'] = time.time()
     
-    return entry['messages']
+#     return entry['messages']
 
 
-def save_session_state(session_id: str, messages: list[BaseMessage]):
-    """
-    Save the message state for a session.
+# def save_session_state(session_id: str, messages: list[BaseMessage]):
+#     """
+#     Save the message state for a session.
     
-    Updates the session's message list with the full conversation history.
+#     Updates the session's message list with the full conversation history.
     
-    Args:
-        session_id: Unique session identifier
-        messages: Complete list of messages to save
-    """
-    _cleanup_expired_sessions()
+#     Args:
+#         session_id: Unique session identifier
+#         messages: Complete list of messages to save
+#     """
+#     _cleanup_expired_sessions()
     
-    if session_id not in session_states:
-        session_states[session_id] = {
-            'messages': messages,
-            'last_access': time.time()
-        }
-    else:
-        session_states[session_id]['messages'] = messages
-        session_states[session_id]['last_access'] = time.time()
+#     if session_id not in session_states:
+#         session_states[session_id] = {
+#             'messages': messages,
+#             'last_access': time.time()
+#         }
+#     else:
+#         session_states[session_id]['messages'] = messages
+#         session_states[session_id]['last_access'] = time.time()
 
 
 def stream_response(
     user_input: str,
-    session_id: str = "default_session",
-    image_urls: Optional[list[str]] = None
+    session_id: str,
+    user_id: str = None,
 ):
     """
     Stream the agent's response token-by-token for real-time display.
     Avoids double LLM calls by capturing final state directly from stream metadata.
     """
 
-    agent = initialize_agent()
-    history_messages = get_session_state(session_id)
+    agent = initialize_agent(user_id)
+
+    if user_id and not user_id.startswith("anon"):
+        thread_id = f"{user_id}-{session_id}"
+    else:
+        thread_id = session_id
+    
+    config = {"configurable": {"thread_id": thread_id}}
+
+
+
+    # history_messages = get_session_state(session_id)
     full_response_text = "" 
     config = {"configurable": {"thread_id": session_id}}
 
-    if image_urls:
-        content = [{"type": "text", "text": user_input}]
-        for url in image_urls:
-            content.append({"type": "image_url", "image_url": {"url": url}})
-        user_message = HumanMessage(content=content)
-    else:
-        user_message = HumanMessage(content=user_input)
-
-    input_messages = history_messages + [user_message]
+    user_message = HumanMessage(content=user_input)
+ 
     try:
         # --- Single streaming loop ---
         for message_chunk, metadata in agent.stream(
@@ -185,9 +217,9 @@ def stream_response(
                             yield item
         logger.info(f"Streaming completed {len(full_response_text)} chars).")
 
-        final_state = agent.get_state(config)
-        if final_state and "messages" in final_state.values:
-            save_session_state(session_id, final_state.values["messages"])
+        # final_state = agent.get_state(config)
+        # if final_state and "messages" in final_state.values:
+        #     save_session_state(session_id, final_state.values["messages"])
             
 
     except Exception as e:
@@ -221,7 +253,7 @@ def full_response(
         Exception: If agent invocation fails
     """
     agent = initialize_agent()
-    history_messages = get_session_state(session_id)
+    # history_messages = get_session_state(session_id)
     
     try:
         # Build the input message
@@ -235,7 +267,7 @@ def full_response(
             user_message = HumanMessage(content=user_input)
         
         # Prepare input for agent (history + new message)
-        input_messages = history_messages + [user_message]
+        # input_messages = history_messages + [user_message]
         
         # Invoke the agent (blocking)
         result = agent.invoke({"messages": input_messages})
@@ -245,7 +277,7 @@ def full_response(
         response = final_message.content if hasattr(final_message, 'content') else str(final_message)
         
         # Save the complete conversation state
-        save_session_state(session_id, result["messages"])
+        # save_session_state(session_id, result["messages"])
         
         print(response, end='', flush=True)
         return response
