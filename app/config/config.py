@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_description: str = Field(
         default='AI-powered travel planning assistant which helps users generate personalized itineraries by combining their travel preferences (text) and inspiration images'
     )
-
+    s3_thumbnail_bucket: str = Field(default="voyager-thumbnails", env="S3_THUMBNAIL_BUCKET")
     app_env: str = Field(default='development')
     host: str = Field(default='127.0.0.1')
     port: int = Field(default=8000)

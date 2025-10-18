@@ -396,7 +396,9 @@ def hydrate_sessions_from_backend(user_id: str) -> None:
 #     return None
 
 
-def stream_itinerary_response(user_message: str, session_id: str, user_id: str = 'anonymous'):
+def stream_itinerary_response(
+        user_message: str, session_id: str,
+        user_id: str = 'anonymous', image=None):
     """
     Stream itinerary generation from the backend token-by-token.
     
@@ -416,21 +418,25 @@ def stream_itinerary_response(user_message: str, session_id: str, user_id: str =
     import json
     
     try:
-        # Include feature flags from UI state
-        include_events_flag = bool(st.session_state.get('include_events', False))
-        use_weather_flag = bool(get_current_session_weather_state())
-        
-        url = f'{API_BASE_URL}/api/v1/itinerary/generate/stream'
-        data = {
+        url = f'{API_BASE_URL}/api/v1/itinerary/generate/stream-with-image'
+
+        params = {
             'query': user_message,
             'session_id': session_id,
             'user_id': user_id,
-            'include_events': include_events_flag,
-            'use_weather': use_weather_flag,
         }
-        
-        # Make streaming request with longer timeout for agent execution
-        response = requests.post(url, json=data, stream=True, timeout=300)
+        files = None
+        if image is not None:
+            # image should be a binary-like object or Streamlit UploadedFile
+            # ensure pointer at start
+            try:
+                image.seek(0)
+            except Exception:
+                pass
+            files = {'image': (getattr(image, 'name', 'upload.jpg'), image, getattr(image, 'type', 'image/jpeg'))}
+
+        response = requests.post(url, params=params, files=files, stream=True, timeout=300)
+
         
         if response.status_code != 200:
             if STREAMLIT_ENV == 'dev':
@@ -529,7 +535,11 @@ def load_session_from_api(session_id: str, user_id: str = 'anonymous') -> dict |
                 {'role': 'assistant', 'content': msg.get('content', ''), 'itinerary_id': msg.get('message_id', '')}
             )
         elif msg.get('sender') == 'user':
-            messages.append({'role': 'user', 'content': msg.get('content', '')})
+            user_msg = {'role': 'user', 'content': msg.get('content', '')}
+            # Add image URL if present
+            if msg.get('image_url'):
+                user_msg['image_url'] = msg['image_url']
+            messages.append(user_msg)
 
     return {
         'session_id': session_data['session_id'],
@@ -850,19 +860,22 @@ chat_container = st.container()
 with chat_container:
     for _i, message in enumerate(st.session_state.messages):
         if message['role'] == 'user':
-            if 'image' in message and message['image'] is not None:
-                st.image(message['image'], width=IMAGE_DISPLAY_WIDTH)
-            else:
-                st.markdown(
-                    f"""
-                    <div class="message-container">
-                        <div class ="message-bubble">
-                            {message['content']}
-                        </div>
+            # Render text message
+            st.markdown(
+                f"""
+                <div class="message-container">
+                    <div class ="message-bubble">
+                        {message['content']}
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            # Render image from URL (history) or from uploaded file (current session)
+            if 'image_url' in message and message['image_url']:
+                st.image(message['image_url'], width=IMAGE_DISPLAY_WIDTH)
+            elif 'image' in message and message['image'] is not None:
+                st.image(message['image'], width=IMAGE_DISPLAY_WIDTH)
         else:
             st.markdown(
                 f"""
@@ -874,7 +887,6 @@ with chat_container:
                 """,
                 unsafe_allow_html=True,
             )
-
 # Weather summary card
 use_weather = get_current_session_weather_state()
 if st.session_state.weather_summary and use_weather:
@@ -949,18 +961,18 @@ if user_input:
                 st.image(st.session_state.temp_image_data['image'], width=IMAGE_DISPLAY_WIDTH)
             
             # Add text message to session state
-            st.session_state.messages.append({'role': 'user', 'content': text_value})
             
             # Add image message if we have one (after text, before itinerary)
             if has_image and image_valid and hasattr(st.session_state, 'temp_image_data'):
                 st.session_state.messages.append({
                     'role': 'user',
+                    'content': text_value,
                     'image': st.session_state.temp_image_data['image'],
                     'image_id': st.session_state.temp_image_data['image_id'],
                     'image_metadata': st.session_state.temp_image_data['image_metadata'],
                 })
-                # Clear temp data
-                del st.session_state.temp_image_data
+            else:
+                st.session_state.messages.append({'role': 'user', 'content': text_value})
             
             # Stream the response token-by-token with custom styling
             # Create a placeholder for the streaming response
@@ -973,9 +985,10 @@ if user_input:
                 
                 # Stream and accumulate the response
                 for chunk in stream_itinerary_response(
-                    text_value,
-                    st.session_state.session_id,
-                    st.session_state.user_id
+                    user_message=text_value,
+                    session_id=st.session_state.session_id,
+                    user_id=st.session_state.user_id,
+                    image=None if not has_image else st.session_state.temp_image_data['image'],
                 ):
                     streamed_response += chunk
                     # Update the display with accumulated content using the same styling as chat history
@@ -984,6 +997,8 @@ if user_input:
                         unsafe_allow_html=True
                     )
                 
+                if hasattr(st.session_state, 'temp_image_data'):
+                    del st.session_state.temp_image_data
                 st.markdown('</div>', unsafe_allow_html=True)
             
             # Save the streamed response to session state

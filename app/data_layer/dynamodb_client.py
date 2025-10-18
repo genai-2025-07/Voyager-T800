@@ -11,22 +11,13 @@ from app.config.config import settings
 
 logger = logging.getLogger(__name__)
 
-# region_name=os.getenv("AWS_REGION", 'us-east-2')
-# dynamodb= boto3.resource('dynamodb', region_name= region_name)
-
-# dynamodb= boto3.resource('dynamodb', endpoint_url='http://localhost:8000', region_name= region_name) with endpoint for local DynamoDB
-
-# table_name= os.getenv("DYNAMODB_TABLE", "session_metadata")
-# table = dynamodb.Table(table_name)
-
-
 class SessionMetadata(BaseModel):
     user_id: str
     session_id: str
     session_summary: str
     started_at: str
     messages: list[dict]
-    structured_itinerary: dict | None = None  # Store SimpleTravelItinerary as dict
+    structured_itinerary: dict | None = None
 
 
 class QueryParams(BaseModel):

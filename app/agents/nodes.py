@@ -27,10 +27,14 @@ SYSTEM_PROMPT = read_prompt_from_file('app/prompts/agent_claude_prompt.txt')
 def llm_call(state: MessagesState) -> dict:
     """
     Node that calls the LLM with tools bound.
-    
     The LLM can either:
     - Generate a final response (text)
     - Request tool calls to gather more information
+    
+    When processing messages with images:
+    - Images are treated as contextual input for travel preferences
+    - The agent extracts destination hints, style preferences, or activity types
+    - Images are NOT described in the output, only used to inform itinerary design
     
     Args:
         state: Current conversation state with messages

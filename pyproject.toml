@@ -41,7 +41,7 @@ dependencies = [
     "certifi (>=2025.10.5,<2026.0.0)",
     "python-multipart (>=0.0.20,<0.0.21)",
     "langgraph (>=0.6.9,<0.7.0)",
-    "langchain-aws (>=0.2.35,<0.3.0)"
+    "langchain-aws (>=0.2.35,<0.3.0)",
 ]
 
 [tool.poetry]
