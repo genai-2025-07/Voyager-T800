@@ -125,15 +125,13 @@ def _create_openai_llm() -> ChatOpenAI:
 def _create_claude_llm() -> ChatBedrock:
     """
     Create and configure a Claude LLM instance via AWS Bedrock.
-
     Returns:
         ChatBedrock: Configured Claude LLM instance
-
     Raises:
         ValueError: If required environment variables are missing
     """
     # AWS credentials can be loaded from environment or AWS config
-    region = "us-east-2" 
+    region = "us-east-2"
     # Claude Sonnet 4.5 requires inference profile ARN, not direct model ID
     # Use cross-region inference profile for automatic failover
     model_id = os.getenv(
@@ -141,19 +139,18 @@ def _create_claude_llm() -> ChatBedrock:
         "us.anthropic.claude-sonnet-4-5-20250929-v1:0"  # Cross-region inference profile
     )
     temperature = float(os.getenv("CLAUDE_TEMPERATURE", "0.7"))
-    max_tokens = int(os.getenv("CLAUDE_MAX_TOKENS", "4096"))
-    
+    max_tokens = int(os.getenv("CLAUDE_MAX_TOKENS", "8192"))  # Increased for vision
     # Timeout settings for Bedrock requests (in seconds)
     # Vision/multimodal requests can take longer than text-only
     read_timeout = int(os.getenv("BEDROCK_READ_TIMEOUT", "300"))  # 5 minutes default
     connect_timeout = int(os.getenv("BEDROCK_CONNECT_TIMEOUT", "10"))
-
+    
     logger.info(
         f"Creating Claude LLM via Bedrock with model: {model_id}, "
         f"region: {region}, temperature: {temperature}, "
         f"timeouts: connect={connect_timeout}s, read={read_timeout}s"
     )
-
+    
     try:
         import boto3
         from botocore.config import Config
@@ -186,4 +183,4 @@ def _create_claude_llm() -> ChatBedrock:
         )
     except Exception as e:
         logger.error(f"Failed to create Claude LLM instance: {str(e)}")
-        raise
+        raise 

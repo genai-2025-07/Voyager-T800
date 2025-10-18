@@ -13,7 +13,8 @@ from app.api.routes import images, itinerary
 from app.config.config import settings
 from app.config.logger.logger import RequestIDMiddleware, setup_logger
 from app.data_layer.dynamodb_client import DynamoDBClient
-from app.services.weaviate.weaviate_setup import setup_database_connection_only
+from app.services.image.image_storage_manager import ImageStorageManager
+from app.config.config import settings
 
 
 setup_logger()
@@ -52,6 +53,18 @@ async def lifespan(app: FastAPI):  # noqa ARG001
     logger.info('Starting Voyager-T800 application...')
 
     try:
+        app.state.image_storage_manager = ImageStorageManager(
+            s3_bucket=settings.s3_thumbnail_bucket,
+            s3_region=settings.aws_region,
+            url_expiration_seconds=3600,  # 1 hour
+            max_thumbnail_size=(400, 400),
+            thumbnail_quality=85
+        )
+    except Exception as e:
+        logger.error(f'Failed to initialize ImageStorageManager: {str(e)}')
+        raise RuntimeError(f'ImageStorageManager initialization failed: {str(e)}')
+
+    try:
         # Initialize DynamoDB client
         logger.info('Initializing DynamoDB client...')
         dynamodb_client = DynamoDBClient()
@@ -66,40 +79,12 @@ async def lifespan(app: FastAPI):  # noqa ARG001
         logger.error(f'Failed to initialize DynamoDB client: {str(e)}')
         raise RuntimeError(f'DynamoDB initialization failed: {str(e)}')
 
-    try:
-        # Initialize Weaviate client
-        logger.info('Initializing Weaviate client...')
-        logger.info(f'Connecting to Weaviate at {settings.weaviate_host}:{settings.weaviate_port}')
-
-        db_manager, weaviate_client_wrapper = setup_database_connection_only()
-
-        if db_manager is None or weaviate_client_wrapper is None:
-            logger.error('Failed to initialize Weaviate client')
-            raise RuntimeError('Weaviate initialization failed')
-
-        logger.info('Weaviate client initialized successfully')
-        app.state.weaviate_client_wrapper = weaviate_client_wrapper
-        app.state.weaviate_db_manager = db_manager
-
-    except Exception as e:
-        logger.error(f'Failed to initialize Weaviate client: {str(e)}')
-        raise RuntimeError(f'Weaviate initialization failed: {str(e)}')
-
     server_url = f'http://{settings.host}:{settings.port}'
     logger.info(f'Voyager-T800 is running at {server_url}')
 
     yield
 
     logger.info('Shutting down Voyager-T800 application...')
-
-    # Cleanup Weaviate connection
-    if weaviate_client_wrapper:
-        try:
-            weaviate_client_wrapper.disconnect()
-            logger.info('Weaviate client disconnected successfully')
-        except Exception as e:
-            logger.warning(f'Error during Weaviate disconnect: {e}')
-        weaviate_client_wrapper = None
 
     # Cleanup DynamoDB connection
     if dynamodb_client:
