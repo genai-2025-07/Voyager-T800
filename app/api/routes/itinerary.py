@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.agents.agent_runner import full_response, stream_response 
+from app.agents.agent_runner import stream_response 
 from app.data_layer.dynamodb_client import SessionMetadata
 from app.utils.itinerary import SimpleTravelItinerary
 from app.utils.llm_parser import ItineraryParserAgent
