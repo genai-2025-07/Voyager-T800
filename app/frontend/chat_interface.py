@@ -298,7 +298,7 @@ def validate_image_client(uploaded_file) -> bool:
         if file_size is not None:
             max_bytes = int(settings.image_max_size_mb * 1024 * 1024)
             if file_size > max_bytes:
-                st.warning('Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
+                st.warning(f'Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
                 return False
 
         # Resolution check
@@ -327,16 +327,15 @@ def validate_image_client(uploaded_file) -> bool:
 
         return True
 
-    except Exception:
-        # Silent fallback to allow backend to provide definitive validation
+    except Exception as e:
+        # Log unexpected errors but allow backend to provide definitive validation
+        if STREAMLIT_ENV == 'dev':
+            st.warning(f'Client-side validation error: {str(e)}')
         try:
             uploaded_file.seek(0)
         except Exception:
             pass
         return True
-    except Exception as e:
-        st.error(f'Unexpected error uploading image: {str(e)}')
-        return None
 
 
 def hydrate_sessions_from_backend(user_id: str) -> None:
@@ -378,22 +377,119 @@ def hydrate_sessions_from_backend(user_id: str) -> None:
         st.error(f'Failed to load sessions: {e}')
 
 
-def generate_itinerary(user_message: str, session_id: str, user_id: str = 'anonymous') -> dict | None:
-    """Generate itinerary and store it in DynamoDB using FastAPI backend."""
-    # Include feature flags from UI state
-    include_events_flag = bool(st.session_state.get('include_events', False))
-    use_weather_flag = bool(get_current_session_weather_state())
-    data = {
-        'query': user_message,
-        'session_id': session_id,
-        'user_id': user_id,
-        'include_events': include_events_flag,
-        'use_weather': use_weather_flag,
-    }
-    result = call_api_endpoint('/itinerary/generate', data, method='POST')
-    if result and 'itinerary' in result and 'itinerary_id' in result:
-        return result
-    return None
+# def generate_itinerary(user_message: str, session_id: str, user_id: str = 'anonymous') -> dict | None:
+#     """Generate itinerary and store it in DynamoDB using FastAPI backend."""
+#     # Include feature flags from UI state
+#     include_events_flag = bool(st.session_state.get('include_events', False))
+#     use_weather_flag = bool(get_current_session_weather_state())
+#     data = {
+#         'query': user_message,
+#         'session_id': session_id,
+#         'user_id': user_id,
+#         'include_events': include_events_flag,
+#         'use_weather': use_weather_flag,
+#     }
+#     result = call_api_endpoint('/itinerary/generate', data, method='POST')
+#     if result and 'itinerary' in result and 'itinerary_id' in result:
+#         return result
+#     return None
+
+
+def stream_itinerary_response(
+        user_message: str, session_id: str,
+        user_id: str = 'anonymous', image=None):
+    """
+    Stream itinerary generation from the backend token-by-token.
+    
+    This is a generator function compatible with st.write_stream() for real-time display.
+    
+    Args:
+        user_message: User's query
+        session_id: Current session ID
+        user_id: Current user ID
+        
+    Yields:
+        str: Response chunks as they arrive from the backend
+        
+    The function stores metadata (itinerary_id, session_id) in st.session_state
+    for later retrieval.
+    """
+    import json
+    
+    try:
+        url = f'{API_BASE_URL}/api/v1/itinerary/generate/stream-with-image'
+
+        params = {
+            'query': user_message,
+            'session_id': session_id,
+            'user_id': user_id,
+        }
+        files = None
+        if image is not None:
+            # image should be a binary-like object or Streamlit UploadedFile
+            # ensure pointer at start
+            try:
+                image.seek(0)
+            except Exception:
+                pass
+            files = {'image': (getattr(image, 'name', 'upload.jpg'), image, getattr(image, 'type', 'image/jpeg'))}
+
+        with requests.post(url, params=params, files=files, stream=True, timeout=300) as response:
+            if response.status_code != 200:
+                # Read error detail without consuming stream
+                try:
+                    error_detail = response.text
+                except Exception:
+                    error_detail = f'Status code: {response.status_code}'
+                
+                if STREAMLIT_ENV == 'dev':
+                    st.error(f'API Error: {error_detail}')
+                else:
+                    st.error('Request failed. Please try again.')
+                return
+            
+            # Process Server-Sent Events stream
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf-8')
+                    
+                    # Parse SSE format: "data: {...}"
+                    if line_str.startswith('data: '):
+                        json_str = line_str[6:]  # Remove "data: " prefix
+                        
+                        try:
+                            event_data = json.loads(json_str)
+                            
+                            # Check if streaming is complete
+                            if event_data.get('done'):
+                                # Store metadata in session state for later use
+                                if 'itinerary_id' in event_data:
+                                    st.session_state.temp_itinerary_id = event_data['itinerary_id']
+                                if 'session_id' in event_data:
+                                    st.session_state.temp_session_id = event_data['session_id']
+                                if 'structured_itinerary' in event_data:
+                                    st.session_state.temp_structured_itinerary = event_data['structured_itinerary']
+                                if 'error' in event_data:
+                                    st.error(f'Error during generation: {event_data["error"]}')
+                                break
+                            
+                            # Yield chunk for display
+                            chunk = event_data.get('chunk', '')
+                            if chunk:
+                                yield chunk
+                                
+                        except json.JSONDecodeError:
+                            # Skip malformed JSON lines
+                            continue
+        
+    except requests.exceptions.RequestException as e:
+        st.error('Connection Error: Unable to connect to the API server.')
+        if STREAMLIT_ENV == 'dev':
+            st.error(f'Debug info: {str(e)}')
+    except Exception as e:
+        st.error(f'Unexpected Error: {str(e)}')
+        if STREAMLIT_ENV == 'dev':
+            st.error(f'Debug info: {str(e)}')
 
 
 def get_session_data(session_id: str, user_id: str = 'anonymous') -> dict | None:
@@ -442,7 +538,11 @@ def load_session_from_api(session_id: str, user_id: str = 'anonymous') -> dict |
                 {'role': 'assistant', 'content': msg.get('content', ''), 'itinerary_id': msg.get('message_id', '')}
             )
         elif msg.get('sender') == 'user':
-            messages.append({'role': 'user', 'content': msg.get('content', '')})
+            user_msg = {'role': 'user', 'content': msg.get('content', '')}
+            # Add image URL if present
+            if msg.get('image_url'):
+                user_msg['image_url'] = msg['image_url']
+            messages.append(user_msg)
 
     return {
         'session_id': session_data['session_id'],
@@ -763,19 +863,22 @@ chat_container = st.container()
 with chat_container:
     for _i, message in enumerate(st.session_state.messages):
         if message['role'] == 'user':
-            if 'image' in message and message['image'] is not None:
-                st.image(message['image'], width=IMAGE_DISPLAY_WIDTH)
-            else:
-                st.markdown(
-                    f"""
-                    <div class="message-container">
-                        <div class ="message-bubble">
-                            {message['content']}
-                        </div>
+            # Render text message
+            st.markdown(
+                f"""
+                <div class="message-container">
+                    <div class ="message-bubble">
+                        {message['content']}
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            # Render image from URL (history) or from uploaded file (current session)
+            if 'image_url' in message and message['image_url']:
+                st.image(message['image_url'], width=IMAGE_DISPLAY_WIDTH)
+            elif 'image' in message and message['image'] is not None:
+                st.image(message['image'], width=IMAGE_DISPLAY_WIDTH)
         else:
             st.markdown(
                 f"""
@@ -787,7 +890,6 @@ with chat_container:
                 """,
                 unsafe_allow_html=True,
             )
-
 # Weather summary card
 use_weather = get_current_session_weather_state()
 if st.session_state.weather_summary and use_weather:
@@ -845,35 +947,85 @@ if user_input:
         elif len(text_value) > MAX_INPUT_LENGTH:
             st.warning(f'Message too long (max {MAX_INPUT_LENGTH} characters).')
         else:
-            # Add text message first
-            st.session_state.messages.append({'role': 'user', 'content': text_value})
+            # Display the user message immediately before streaming starts
+            st.markdown(
+                f"""
+                <div class="message-container">
+                    <div class ="message-bubble">
+                        {text_value}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            
+            # Display image if present
+            if has_image and image_valid and hasattr(st.session_state, 'temp_image_data'):
+                st.image(st.session_state.temp_image_data['image'], width=IMAGE_DISPLAY_WIDTH)
+            
+            # Add text message to session state
             
             # Add image message if we have one (after text, before itinerary)
             if has_image and image_valid and hasattr(st.session_state, 'temp_image_data'):
                 st.session_state.messages.append({
                     'role': 'user',
+                    'content': text_value,
                     'image': st.session_state.temp_image_data['image'],
                     'image_id': st.session_state.temp_image_data['image_id'],
                     'image_metadata': st.session_state.temp_image_data['image_metadata'],
                 })
-                # Clear temp data
-                del st.session_state.temp_image_data
+            else:
+                st.session_state.messages.append({'role': 'user', 'content': text_value})
             
-            with st.spinner('Voyager-T800 is analyzing your request...'):
-                result = generate_itinerary(text_value, st.session_state.session_id, st.session_state.user_id)
-            if result and isinstance(result, dict):
-                assistant_response = result.get('itinerary', '')
-                itinerary_id = result.get('itinerary_id', '')
-                if assistant_response and assistant_response.strip():
-                    cleaned = assistant_response.strip().lower()
-                    if cleaned not in ['error', 'none', 'null']:
-                        st.session_state.messages.append(
-                            {'role': 'assistant', 'content': assistant_response.strip(), 'itinerary_id': itinerary_id}
-                        )
-                    else:
-                        st.warning('Assistant returned an error message, not saved.')
+            # Stream the response token-by-token with custom styling
+            # Create a placeholder for the streaming response
+            response_container = st.empty()
+            
+            streamed_response = ''
+            with response_container.container():
+                st.markdown('<div class="message-container-left">', unsafe_allow_html=True)
+                stream_placeholder = st.empty()
+                
+                # Stream and accumulate the response
+                for chunk in stream_itinerary_response(
+                    user_message=text_value,
+                    session_id=st.session_state.session_id,
+                    user_id=st.session_state.user_id,
+                    image=st.session_state.temp_image_data['image'] if (has_image and hasattr(st.session_state, 'temp_image_data')) else None,
+                ):
+                    streamed_response += chunk
+                    # Update the display with accumulated content using the same styling as chat history
+                    stream_placeholder.markdown(
+                        f'<div class="message-bubble-left">{streamed_response}</div>',
+                        unsafe_allow_html=True
+                    )
+                
+                if hasattr(st.session_state, 'temp_image_data'):
+                    del st.session_state.temp_image_data
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Save the streamed response to session state
+            if streamed_response and streamed_response.strip():
+                cleaned = streamed_response.strip().lower()
+                if cleaned not in ['error', 'none', 'null']:
+                    # Get the itinerary_id that was stored during streaming
+                    itinerary_id = getattr(st.session_state, 'temp_itinerary_id', '')
+                    
+                    st.session_state.messages.append({
+                        'role': 'assistant',
+                        'content': streamed_response.strip(),
+                        'itinerary_id': itinerary_id
+                    })
+                    
+                    # Clean up temporary state
+                    if hasattr(st.session_state, 'temp_itinerary_id'):
+                        del st.session_state.temp_itinerary_id
+                    if hasattr(st.session_state, 'temp_session_id'):
+                        del st.session_state.temp_session_id
+                    if hasattr(st.session_state, 'temp_structured_itinerary'):
+                        del st.session_state.temp_structured_itinerary
                 else:
-                    st.warning('Assistant response is empty, not saved.')
+                    st.warning('Assistant returned an error message, not saved.')
             else:
                 st.warning('Failed to generate itinerary. Please try again.')
             

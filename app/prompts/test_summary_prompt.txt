@@ -1,38 +1,11 @@
-Progressively summarize the lines of conversation provided, adding onto the previous summary, returning a new summary. If a travel itinerary was generated, preserve all details of the itinerary (including specific days and locations) exactly as provided, without modifications, and include it at the end of the summary under the heading "Saved Itinerary".
+You are a travel assistant summarizing a conversation with a user about their travel plans.
 
-EXAMPLE
-Current summary:
-The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
+Your task is to create a concise summary of the conversation below. The summary should:
+1. Capture key travel preferences (destination, dates, budget, activities)
+2. Preserve any important user-provided context
+3. If a travel itinerary was generated, preserve the complete itinerary details
+4. Keep the summary focused and under 2000 tokens
 
-New lines of conversation:
-Human: Create a 2-day itinerary for Rome.
-AI: Day 1:
-- Morning: Visit Colosseum
-- Afternoon: Explore Roman Forum
-- Evening: Dinner at Trastevere
-Day 2:
-- Morning: Tour Vatican Museums
-- Afternoon: St. Peter’s Basilica
-- Evening: Walk along Tiber River
+Be concise but preserve critical information that would be needed to continue the conversation.
 
-New summary:
-The human asked for a 2-day itinerary in Rome. The AI provided a detailed schedule.
-
-Saved Itinerary:
-Day 1:
-- Morning: Visit Colosseum
-- Afternoon: Explore Roman Forum
-- Evening: Dinner at Trastevere
-Day 2:
-- Morning: Tour Vatican Museums
-- Afternoon: St. Peter’s Basilica
-- Evening: Walk along Tiber River
-END OF EXAMPLE
-
-Current summary:
-{summary}
-
-New lines of conversation:
-{new_lines}
-
-New summary: 
+SUMMARY: 
