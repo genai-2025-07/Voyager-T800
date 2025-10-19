@@ -28,16 +28,7 @@ class ItineraryGenerateRequest(BaseModel):
     query: str
     session_id: str | None = None
     user_id: str | None = None
-    include_events: bool | None = None
-    use_weather: bool | None = None
-
-class ItineraryGenerateWithImageRequest(BaseModel):
-    """Request model for itinerary generation with optional image."""
-    query: str
-    session_id: str | None = None
-    user_id: str | None = None
-    include_events: bool | None = None
-    use_weather: bool | None = None
+    image: UploadFile | None = File(None)
 
 class ItineraryGenerateResponse(BaseModel):
     """Response model for generated itinerary with storage."""
@@ -93,15 +84,17 @@ class SessionDeleteResponse(BaseModel):
 
 @router.post('/generate/stream-with-image')
 async def generate_itinerary_stream_with_image(
-    query: str = Query(...),
-    session_id: str | None = Query(None),
-    user_id: str | None = Query(None),
-    image: UploadFile | None = File(None),
-    http_request: Request = ...
+    query: str = Query(..., description="User's travel query"),
+    session_id: str = Query(None, description="Session ID"),
+    user_id: str = Query(None, description="User ID"),
+    image: UploadFile = File(None),
+    http_request: Request = None
 ):
     """
     Stream itinerary generation with optional image upload.
     Handles image resizing, thumbnail storage, and DynamoDB updates.
+    
+    Accepts query parameters for text data and multipart form data for image upload.
     """
     if not query:
         raise HTTPException(status_code=422, detail='Query is required.')
@@ -115,7 +108,6 @@ async def generate_itinerary_stream_with_image(
         now = datetime.now(UTC).isoformat()
         
         # Get clients from app state
-        dynamodb_client = http_request.app.state.dynamodb_client
         image_storage_manager = http_request.app.state.image_storage_manager
         
         # Process image if provided
@@ -145,38 +137,6 @@ async def generate_itinerary_stream_with_image(
             )
             logger.info(f'Thumbnail uploaded to S3: {thumbnail_metadata["s3_key"]}')
         
-        # Restore session history from DynamoDB if needed
-        agent_state = get_session_state(session_id)
-        if not agent_state:
-            existing_session = dynamodb_client.get_item(user_id, session_id)
-            if existing_session and existing_session.get('messages'):
-                restored_messages = []
-                for msg in existing_session['messages']:
-                    if msg.get('sender') == 'user':
-                        restored_messages.append(HumanMessage(content=msg['content']))
-                    elif msg.get('sender') == 'assistant':
-                        restored_messages.append(AIMessage(content=msg['content']))
-                
-                if restored_messages:
-                    save_session_state(session_id, restored_messages)
-                    logger.info(f'Restored {len(restored_messages)} messages from DynamoDB for session {session_id}')
-        
-        # Create user message entry with image metadata
-        user_message_entry = {
-            'message_id': str(uuid.uuid4()),
-            'sender': 'user',
-            'timestamp': datetime.now(UTC).isoformat(),
-            'content': query,
-            'metadata': {
-                'message_type': 'user_query',
-                'has_image': image is not None,
-            },
-        }
-        
-        # Add thumbnail metadata to message if image was uploaded
-        if thumbnail_metadata:
-            user_message_entry['image_metadata'] = thumbnail_metadata
-            user_message_entry['s3_key'] = thumbnail_metadata['s3_key']
         
         async def generate_stream():
             """Inner generator function for streaming response."""
@@ -188,6 +148,7 @@ async def generate_itinerary_stream_with_image(
                 for chunk in stream_response(
                     user_input=query,
                     session_id=session_id,
+                    user_id=user_id,
                     image_base64=image_base64,
                     image_media_type=image_media_type
                 ):
@@ -195,45 +156,65 @@ async def generate_itinerary_stream_with_image(
                     yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
                 
                 logger.info(f'Streaming complete. Total length: {len(itinerary_content)} chars')
+
+                if user_id and not user_id.startswith("anon"):
+                    dynamodb_client = http_request.app.state.dynamodb_client
+
+                    # Create user message entry with image metadata
+                    user_message_entry = {
+                        'message_id': str(uuid.uuid4()),
+                        'sender': 'user',
+                        'timestamp': datetime.now(UTC).isoformat(),
+                        'content': query,
+                        'metadata': {
+                            'message_type': 'user_query',
+                            'has_image': image is not None,
+                        },
+                    }
+        
+                    # Add thumbnail metadata to message if image was uploaded
+                    if thumbnail_metadata:
+                        user_message_entry['image_metadata'] = thumbnail_metadata
+                        user_message_entry['s3_key'] = thumbnail_metadata['s3_key']
+                            
+                    # Create assistant message entry
+                    itinerary_message = {
+                        'message_id': message_id,
+                        'sender': 'assistant',
+                        'timestamp': now,
+                        'content': itinerary_content,
+                        'query': query,
+                        'metadata': {'message_type': 'itinerary', 'generated': True},
+                    }
                 
-                # Create assistant message entry
-                itinerary_message = {
-                    'message_id': message_id,
-                    'sender': 'assistant',
-                    'timestamp': now,
-                    'content': itinerary_content,
-                    'query': query,
-                    'metadata': {'message_type': 'itinerary', 'generated': True},
-                }
-                
-                # Update or create session in DynamoDB
-                existing_session = dynamodb_client.get_item(user_id, session_id)
-                if existing_session:
-                    messages = existing_session.get('messages', [])
-                    messages.append(user_message_entry)
-                    messages.append(itinerary_message)
-                    session_summary = existing_session.get('session_summary', '')
-                    session_metadata = SessionMetadata(
-                        user_id=user_id,
-                        session_id=session_id,
-                        session_summary=session_summary,
-                        started_at=existing_session.get('started_at', now),
-                        messages=messages,
-                    )
-                else:
-                    session_summary = 'New Session'
-                    session_metadata = SessionMetadata(
-                        user_id=user_id,
-                        session_id=session_id,
-                        session_summary=session_summary,
-                        started_at=now,
-                        messages=[user_message_entry, itinerary_message],
-                    )
-                
-                # Store in DynamoDB
-                status_code = dynamodb_client.put_item(session_metadata)
-                if status_code != 200:
-                    logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
+                    # Update or create session in DynamoDB
+                    existing_session = dynamodb_client.get_item(user_id, session_id)
+                    if existing_session:
+                        messages = existing_session.get('messages', [])
+                        messages.append(user_message_entry)
+                        messages.append(itinerary_message)
+                        session_summary = existing_session.get('session_summary', '')
+                        session_metadata = SessionMetadata(
+                            user_id=user_id,
+                            session_id=session_id,
+                            session_summary=session_summary,
+                            started_at=existing_session.get('started_at', now),
+                            messages=messages,
+                        )
+                    else:
+                        session_summary = 'New Session'
+                        session_metadata = SessionMetadata(
+                            user_id=user_id,
+                            session_id=session_id,
+                            session_summary=session_summary,
+                            started_at=now,
+                            messages=[user_message_entry, itinerary_message],
+                        )
+                    
+                    # Store in DynamoDB
+                    status_code = dynamodb_client.put_item(session_metadata)
+                    if status_code != 200:
+                        logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
                 
                 # Send final message with metadata
                 yield f"data: {json.dumps({'chunk': '', 'done': True, 'itinerary_id': message_id, 'session_id': session_id})}\n\n"
@@ -265,45 +246,13 @@ async def generate_itinerary_stream(request: ItineraryGenerateRequest, http_requ
     """
     if not request.query:
         raise HTTPException(status_code=422, detail='Query is required.')
-
+    
     try:
         logger.info(f'Starting streaming itinerary generation for query: {request.query[:100]}...')
 
-        # Prepare session data
-        user_id = request.user_id or 'anonymous'
+        user_id = request.user_id
         session_id = request.session_id or f'voyager_session_{uuid.uuid4().hex}'
         now = datetime.now(UTC).isoformat()
-
-        # Get DynamoDB client from app state
-        dynamodb_client = http_request.app.state.dynamodb_client
-
-        # Restore session history from DynamoDB if needed
-        agent_state = get_session_state(session_id)
-        if not agent_state:  # Agent state is empty
-            existing_session = dynamodb_client.get_item(user_id, session_id)
-            if existing_session and existing_session.get('messages'):
-                # Convert DynamoDB messages to LangChain messages for agent
-                restored_messages = []
-                for msg in existing_session['messages']:
-                    if msg.get('sender') == 'user':
-                        restored_messages.append(HumanMessage(content=msg['content']))
-                    elif msg.get('sender') == 'assistant':
-                        restored_messages.append(AIMessage(content=msg['content']))
-                
-                if restored_messages:
-                    save_session_state(session_id, restored_messages)
-                    logger.info(f'Restored {len(restored_messages)} messages from DynamoDB for session {session_id}')
-
-        # Create a message entry for the USER query (for DynamoDB storage)
-        user_message_entry = {
-            'message_id': str(uuid.uuid4()),
-            'sender': 'user',
-            'timestamp': datetime.now(UTC).isoformat(),
-            'content': request.query,
-            'metadata': {
-                'message_type': 'user_query',
-            },
-        }
 
         async def generate_stream():
             """Inner generator function for streaming response."""
@@ -315,6 +264,7 @@ async def generate_itinerary_stream(request: ItineraryGenerateRequest, http_requ
                 for chunk in stream_response(
                     user_input=request.query,
                     session_id=session_id,
+                    user_id=user_id,
                 ):
                     itinerary_content += chunk
                     # Send chunk as Server-Sent Event
@@ -322,47 +272,61 @@ async def generate_itinerary_stream(request: ItineraryGenerateRequest, http_requ
                 
                 logger.info(f'Streaming complete. Total length: {len(itinerary_content)} chars')
                 
+                if user_id and not user_id.startswith("anon"):
+                    dynamodb_client = http_request.app.state.dynamodb_client
 
-                # Create a message entry for the generated itinerary
-                itinerary_message = {
-                    'message_id': message_id,
-                    'sender': 'assistant',
-                    'timestamp': now,
-                    'content': itinerary_content,
-                    'query': request.query,
-                    'metadata': {'message_type': 'itinerary', 'generated': True},
-                }
 
-                # Get existing session or create new one
-                existing_session = dynamodb_client.get_item(user_id, session_id)
+                    # Create a message entry for the USER query (for UI display)
+                    user_message_entry = {
+                        'message_id': str(uuid.uuid4()),
+                        'sender': 'user',
+                        'timestamp': now,
+                        'content': request.query,
+                        'metadata': {
+                            'message_type': 'user_query',
+                        },
+                    }
 
-                if existing_session:
-                    messages = existing_session.get('messages', [])
-                    messages.append(user_message_entry)
-                    messages.append(itinerary_message)
-                    session_summary = existing_session.get('session_summary', '')
+                    # Create a message entry for the generated itinerary
+                    itinerary_message = {
+                        'message_id': message_id,
+                        'sender': 'assistant',
+                        'timestamp': now,
+                        'content': itinerary_content,
+                        'query': request.query,
+                        'metadata': {'message_type': 'itinerary', 'generated': True},
+                    }
 
-                    session_metadata = SessionMetadata(
-                        user_id=user_id,
-                        session_id=session_id,
-                        session_summary=session_summary,
-                        started_at=existing_session.get('started_at', now),
-                        messages=messages,
-                    )
-                else:
-                    session_summary = 'New Session'
-                    session_metadata = SessionMetadata(
-                        user_id=user_id,
-                        session_id=session_id,
-                        session_summary=session_summary,
-                        started_at=now,
-                        messages=[user_message_entry, itinerary_message],
-                    )
+                    # Get existing session or create new one
+                    existing_session = dynamodb_client.get_item(user_id, session_id)
 
-                # Store in DynamoDB
-                status_code = dynamodb_client.put_item(session_metadata)
-                if status_code != 200:
-                    logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
+                    if existing_session:
+                        messages = existing_session.get('messages', [])
+                        messages.append(user_message_entry)
+                        messages.append(itinerary_message)
+                        session_summary = existing_session.get('session_summary', '')
+
+                        session_metadata = SessionMetadata(
+                            user_id=user_id,
+                            session_id=session_id,
+                            session_summary=session_summary,
+                            started_at=existing_session.get('started_at', now),
+                            messages=messages,
+                        )
+                    else:
+                        session_summary = 'New Session'
+                        session_metadata = SessionMetadata(
+                            user_id=user_id,
+                            session_id=session_id,
+                            session_summary=session_summary,
+                            started_at=now,
+                            messages=[user_message_entry, itinerary_message],
+                        )
+
+                    # Store in DynamoDB
+                    status_code = dynamodb_client.put_item(session_metadata)
+                    if status_code != 200:
+                        logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
 
                 # Send final message with metadata
                 yield f"data: {json.dumps({'chunk': '', 'done': True, 'itinerary_id': message_id, 'session_id': session_id})}\n\n"

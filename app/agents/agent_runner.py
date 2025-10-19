@@ -11,6 +11,8 @@ import time
 from threading import Lock
 from typing import Optional
 
+from app.memory.dynamodb_checkpointer import DynamoDBSaver
+from app.memory.utils import make_filtering_checkpointer
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -19,21 +21,13 @@ from app.config.config import settings
 
 logger = logging.getLogger(__name__)
 
-
-# Memory configuration
-SESSION_MEMORY_TTL_SECONDS = settings.session_memory_ttl_seconds
-
-# Global agent - compiled once for efficiency
-agent_graph = None
+memory_checkpointer = make_filtering_checkpointer(MemorySaver())
+agent_graph_memory = None
+agent_graph_dynamodb = None
+dynamodb_checkpointer = None
 agent_lock = Lock()
 
-# Session state dict: session_id -> {'messages': list[BaseMessage], 'last_access': timestamp}
-# This directly stores LangGraph-compatible messages
-session_states = {}
-global checkpointer
-checkpointer = MemorySaver()
-
-def initialize_agent():
+def initialize_agent(user_id: Optional[str] = None):
     """
     Initialize the LangGraph agent (compiled graph).
     
@@ -43,7 +37,8 @@ def initialize_agent():
     Returns:
         Compiled LangGraph agent ready for invocation
     """
-    global agent_graph
+    global agent_graph_memory, agent_graph_dynamodb, dynamodb_checkpointer
+    is_authenticated = user_id and not user_id.startswith("anon_")
     with agent_lock:
             if is_authenticated:
                 # Lazy-init DynamoDB checkpointer if needed
@@ -83,7 +78,8 @@ def initialize_agent():
 
 def stream_response(
     user_input: str,
-    session_id: str = "default_session",
+    session_id: str,
+    user_id: str = None,
     image_base64: Optional[str] = None,  # Changed from image_urls
     image_media_type: str = "image/jpeg"  # Default media type
 ):
@@ -97,10 +93,15 @@ def stream_response(
         image_media_type: Media type of the image (e.g., "image/jpeg", "image/png", "image/webp")
     """
     agent = initialize_agent()
-    history_messages = get_session_state(session_id)
+    if user_id and not user_id.startswith("anon"):
+        thread_id = f"{user_id}-{session_id}"
+    else:
+        thread_id = session_id
+
+
+    config = {"configurable": {"thread_id": thread_id}}
     full_response_text = "" 
-    config = {"configurable": {"thread_id": session_id}}
-    
+
     if image_base64:
         content = [
             {"type": "text", "text": user_input},
@@ -117,7 +118,6 @@ def stream_response(
     else:
         user_message = HumanMessage(content=user_input)
     
-    input_messages = history_messages + [user_message]
     
     try:
         for message_chunk, metadata in agent.stream(
@@ -143,60 +143,6 @@ def stream_response(
             
     except Exception as e:
         logger.error(f"Agent streaming failed: {e}", exc_info=True)
-        raise
-
-
-def full_response(
-    user_input: str, 
-    session_id: str = 'default_session',
-    image_base64: Optional[str] = None,  # Changed from image_urls
-    image_media_type: str = "image/jpeg"
-) -> str:
-    """
-    Get the complete agent response without streaming.
-    
-    Args:
-        user_input: User's current request/query
-        session_id: Unique session identifier for state isolation
-        image_base64: Optional base64-encoded image string (without data:image prefix)
-        image_media_type: Media type of the image (e.g., "image/jpeg", "image/png", "image/webp")
-        
-    Returns:
-        Complete response string
-    """
-    agent = initialize_agent()
-    history_messages = get_session_state(session_id)
-    
-    try:
-        if image_base64:
-            content = [
-                {"type": "text", "text": user_input},
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": image_media_type,
-                        "data": image_base64,
-                    }
-                }
-            ]
-            user_message = HumanMessage(content=content)
-        else:
-            user_message = HumanMessage(content=user_input)
-        
-        input_messages = history_messages + [user_message]
-        result = agent.invoke({"messages": input_messages})
-        
-        final_message = result["messages"][-1]
-        response = final_message.content if hasattr(final_message, 'content') else str(final_message)
-        
-        save_session_state(session_id, result["messages"])
-        
-        print(response, end='', flush=True)
-        return response
-        
-    except Exception as e:
-        logger.error(f'Agent invocation failed: {e}', exc_info=True)
         raise
 
 

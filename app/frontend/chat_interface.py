@@ -298,7 +298,7 @@ def validate_image_client(uploaded_file) -> bool:
         if file_size is not None:
             max_bytes = int(settings.image_max_size_mb * 1024 * 1024)
             if file_size > max_bytes:
-                st.warning('Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
+                st.warning(f'Image is too large. Maximum allowed size is {settings.image_max_size_mb} MB.')
                 return False
 
         # Resolution check
@@ -327,16 +327,15 @@ def validate_image_client(uploaded_file) -> bool:
 
         return True
 
-    except Exception:
-        # Silent fallback to allow backend to provide definitive validation
+    except Exception as e:
+        # Log unexpected errors but allow backend to provide definitive validation
+        if STREAMLIT_ENV == 'dev':
+            st.warning(f'Client-side validation error: {str(e)}')
         try:
             uploaded_file.seek(0)
         except Exception:
             pass
         return True
-    except Exception as e:
-        st.error(f'Unexpected error uploading image: {str(e)}')
-        return None
 
 
 def hydrate_sessions_from_backend(user_id: str) -> None:
@@ -435,49 +434,53 @@ def stream_itinerary_response(
                 pass
             files = {'image': (getattr(image, 'name', 'upload.jpg'), image, getattr(image, 'type', 'image/jpeg'))}
 
-        response = requests.post(url, params=params, files=files, stream=True, timeout=300)
-
-        
-        if response.status_code != 200:
-            if STREAMLIT_ENV == 'dev':
-                st.error(f'API Error: {response.status_code} - {response.text}')
-            else:
-                st.error('Request failed. Please try again.')
-            return
-        
-        # Process Server-Sent Events stream
-        for line in response.iter_lines():
-            if line:
-                line_str = line.decode('utf-8')
+        with requests.post(url, params=params, files=files, stream=True, timeout=300) as response:
+            if response.status_code != 200:
+                # Read error detail without consuming stream
+                try:
+                    error_detail = response.text
+                except Exception:
+                    error_detail = f'Status code: {response.status_code}'
                 
-                # Parse SSE format: "data: {...}"
-                if line_str.startswith('data: '):
-                    json_str = line_str[6:]  # Remove "data: " prefix
+                if STREAMLIT_ENV == 'dev':
+                    st.error(f'API Error: {error_detail}')
+                else:
+                    st.error('Request failed. Please try again.')
+                return
+            
+            # Process Server-Sent Events stream
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf-8')
                     
-                    try:
-                        event_data = json.loads(json_str)
+                    # Parse SSE format: "data: {...}"
+                    if line_str.startswith('data: '):
+                        json_str = line_str[6:]  # Remove "data: " prefix
                         
-                        # Check if streaming is complete
-                        if event_data.get('done'):
-                            # Store metadata in session state for later use
-                            if 'itinerary_id' in event_data:
-                                st.session_state.temp_itinerary_id = event_data['itinerary_id']
-                            if 'session_id' in event_data:
-                                st.session_state.temp_session_id = event_data['session_id']
-                            if 'structured_itinerary' in event_data:
-                                st.session_state.temp_structured_itinerary = event_data['structured_itinerary']
-                            if 'error' in event_data:
-                                st.error(f'Error during generation: {event_data["error"]}')
-                            break
-                        
-                        # Yield chunk for display
-                        chunk = event_data.get('chunk', '')
-                        if chunk:
-                            yield chunk
+                        try:
+                            event_data = json.loads(json_str)
                             
-                    except json.JSONDecodeError:
-                        # Skip malformed JSON lines
-                        continue
+                            # Check if streaming is complete
+                            if event_data.get('done'):
+                                # Store metadata in session state for later use
+                                if 'itinerary_id' in event_data:
+                                    st.session_state.temp_itinerary_id = event_data['itinerary_id']
+                                if 'session_id' in event_data:
+                                    st.session_state.temp_session_id = event_data['session_id']
+                                if 'structured_itinerary' in event_data:
+                                    st.session_state.temp_structured_itinerary = event_data['structured_itinerary']
+                                if 'error' in event_data:
+                                    st.error(f'Error during generation: {event_data["error"]}')
+                                break
+                            
+                            # Yield chunk for display
+                            chunk = event_data.get('chunk', '')
+                            if chunk:
+                                yield chunk
+                                
+                        except json.JSONDecodeError:
+                            # Skip malformed JSON lines
+                            continue
         
     except requests.exceptions.RequestException as e:
         st.error('Connection Error: Unable to connect to the API server.')
@@ -988,7 +991,7 @@ if user_input:
                     user_message=text_value,
                     session_id=st.session_state.session_id,
                     user_id=st.session_state.user_id,
-                    image=None if not has_image else st.session_state.temp_image_data['image'],
+                    image=st.session_state.temp_image_data['image'] if (has_image and hasattr(st.session_state, 'temp_image_data')) else None,
                 ):
                     streamed_response += chunk
                     # Update the display with accumulated content using the same styling as chat history
