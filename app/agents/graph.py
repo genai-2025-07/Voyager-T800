@@ -8,7 +8,7 @@ between LLM reasoning and tool execution.
 from langgraph.graph import END, START, StateGraph, MessagesState
 from langgraph.checkpoint.memory import MemorySaver
 
-from app.agents.nodes import llm_call, should_continue, tool_node
+from app.agents.nodes import llm_call, should_continue, summarize, tool_node
 
 
 def create_agent(checkpointer = None) -> StateGraph:
@@ -30,6 +30,7 @@ def create_agent(checkpointer = None) -> StateGraph:
     # Add nodes
     agent_builder.add_node("llm_call", llm_call)
     agent_builder.add_node("tools", tool_node)
+    agent_builder.add_node("summarization", summarize)
 
     # Define the flow
     agent_builder.add_edge(START, "llm_call")
@@ -40,12 +41,15 @@ def create_agent(checkpointer = None) -> StateGraph:
         should_continue,
         {
             "tools": "tools",
+            "summarization": "summarization",
             "end": END,
         },
     )
     
     # After tools execute, loop back to LLM
     agent_builder.add_edge("tools", "llm_call")
+
+    agent_builder.add_edge("summarization", END)
 
     # Compile the graph
     return agent_builder.compile(checkpointer=checkpointer)
