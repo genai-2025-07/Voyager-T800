@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config.config_models import (
+from src.voyager.config.config_models import (
     BaseConfigModel,
     AppSettings,
     OpenAISettings,

@@ -9,9 +9,9 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 import requests
-from app.services.events.providers.tavily import TavilyEventsProvider
-from app.services.events.models import Event
-from app.config.loader import ConfigLoader
+from src.voyager.services.events.providers.tavily import TavilyEventsProvider
+from src.voyager.services.events.models import Event
+from src.voyager.config.loader import ConfigLoader
 
 
 class TestTavilyEventsProvider:

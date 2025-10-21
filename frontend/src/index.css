@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pastel Dream Design System - All colors MUST be HSL */
+
+@layer base {
+  /* Cream-First Pastel Design System — HSL only */
+:root {
+  /* overall */
+  --background: 42 30% 98%;        /* pale warm cream */
+  --foreground: 220 12% 18%;       /* dark neutral for text */
+
+  /* cards / surfaces */
+  --card: 0 0% 100%;
+  --card-foreground: 220 12% 18%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 12% 18%;
+
+  /* primary (CTAs, user chat bubble) - soft sand */
+  --primary: 38 36% 80%;
+  --primary-foreground: 38 40% 18%;
+
+  /* secondary (friendly buttons, tags) - soft coral/peach */
+  --secondary: 15 50% 88%;
+  --secondary-foreground: 15 45% 26%;
+
+  /* muted (subtle surfaces) */
+  --muted: 42 20% 95%;
+  --muted-foreground: 220 8% 46%;
+
+  /* accent (highlights, links) - seafoam */
+  --accent: 170 30% 86%;
+  --accent-foreground: 170 40% 20%;
+
+  /* destructive (errors) - gentle pink */
+  --destructive: 350 60% 92%;
+  --destructive-foreground: 350 65% 26%;
+
+  /* inputs / borders / focus */
+  --border: 40 16% 92%;
+  --input: 40 18% 94%;
+  --ring: 38 36% 78%;
+
+  --radius: 0.875rem;
+
+  /* sidebar (light, slightly tinted) */
+  --sidebar-background: 42 28% 97%;
+  --sidebar-foreground: 220 10% 22%;
+  --sidebar-primary: 38 36% 80%;
+  --sidebar-primary-foreground: 38 40% 18%;
+  --sidebar-accent: 42 22% 94%;
+  --sidebar-accent-foreground: 220 10% 22%;
+  --sidebar-border: 40 16% 92%;
+  --sidebar-ring: 38 36% 78%;
+
+  /* chat-specific */
+  --chat-user: 38 36% 80%;
+  --chat-user-foreground: 38 40% 18%;
+  --chat-assistant: 200 22% 95%;
+  --chat-assistant-foreground: 220 10% 26%;
+
+  /* semantic */
+  --success: 140 35% 72%;
+  --info: 200 40% 76%;
+  --warning: 42 65% 80%;
+}
+
+/* Dark mode — same personality but desaturated & high contrast */
+.dark {
+  --background: 220 15% 10%;
+  --foreground: 30 10% 94%;
+
+  --card: 220 12% 12%;
+  --card-foreground: 30 10% 94%;
+
+  --popover: 220 12% 12%;
+  --popover-foreground: 30 10% 94%;
+
+  --primary: 38 30% 60%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 15 40% 62%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 220 10% 18%;
+  --muted-foreground: 30 10% 70%;
+
+  --accent: 170 28% 60%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 350 50% 66%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 220 12% 18%;
+  --input: 220 12% 16%;
+  --ring: 38 30% 60%;
+
+  --sidebar-background: 220 12% 11%;
+  --sidebar-foreground: 30 10% 90%;
+  --sidebar-primary: 38 30% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 10% 18%;
+  --sidebar-accent-foreground: 30 10% 90%;
+  --sidebar-border: 220 12% 18%;
+  --sidebar-ring: 38 30% 60%;
+
+  --chat-user: 38 30% 60%;
+  --chat-user-foreground: 0 0% 100%;
+  --chat-assistant: 220 10% 18%;
+  --chat-assistant-foreground: 30 10% 90%;
+
+  --success: 140 30% 60%;
+  --info: 200 35% 62%;
+  --warning: 42 55% 62%;
+}
+
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Smooth transitions for color changes */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
+
+/* Custom scrollbar with pastel theme */
+@layer utilities {
+  .scrollbar-pastel::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-pastel::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: var(--radius);
+  }
+
+  .scrollbar-pastel::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: var(--radius);
+  }
+
+  .scrollbar-pastel::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}

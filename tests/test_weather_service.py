@@ -17,8 +17,8 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from app.services.weather import WeatherService, get_weather_forecast_sync
-from app.utils.date_utils import derive_city_from_text, extract_date_range
+from src.voyager.services.weather import WeatherService, get_weather_forecast_sync
+from src.voyager.utils.date_utils import derive_city_from_text, extract_date_range
 
 
 class TestWeatherService:

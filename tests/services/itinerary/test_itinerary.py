@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from app.services.itinerary.itinerary import (
+from src.voyager.services.itinerary.itinerary import (
     PlacesLocation,
     GetPlacesItem,
     ItineraryService,

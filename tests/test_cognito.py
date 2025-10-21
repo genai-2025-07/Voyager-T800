@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, AsyncMock
 
 # Import your app
-from app.main import app
+from src.voyager.main import app
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ class TestAuthenticationFlow:
 
     @pytest.mark.asyncio 
     async def test_signup_duplicate_user(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import UserAlreadyExistsException
+        from src.voyager.utils.exceptions import UserAlreadyExistsException
         
         # Configure mock to raise exception
         mock_cognito_service.sign_up_user.side_effect = UserAlreadyExistsException("test@example.com")
@@ -124,7 +124,7 @@ class TestAuthenticationFlow:
 
     @pytest.mark.asyncio
     async def test_confirm_signup_invalid_code(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import UserNotFoundException
+        from src.voyager.utils.exceptions import UserNotFoundException
         
         mock_cognito_service.confirm_user.side_effect = UserNotFoundException("nonexistent@example.com")
         
@@ -174,7 +174,7 @@ class TestAuthenticationFlow:
 
     @pytest.mark.asyncio
     async def test_login_invalid_credentials(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import InvalidCredentialsException
+        from src.voyager.utils.exceptions import InvalidCredentialsException
         
         mock_cognito_service.login_user.side_effect = InvalidCredentialsException()
         
@@ -187,7 +187,7 @@ class TestAuthenticationFlow:
 
     @pytest.mark.asyncio
     async def test_login_unconfirmed_user(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import UserNotConfirmedException
+        from src.voyager.utils.exceptions import UserNotConfirmedException
         
         mock_cognito_service.login_user.side_effect = UserNotConfirmedException()
         
@@ -220,7 +220,7 @@ class TestAuthenticationFlow:
 
     @pytest.mark.asyncio
     async def test_refresh_token_invalid(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import CognitoServiceException
+        from src.voyager.utils.exceptions import CognitoServiceException
         
         mock_cognito_service.refresh_access_token.side_effect = CognitoServiceException(
             "Invalid refresh token", "InvalidParameterException"
@@ -402,7 +402,7 @@ class TestExceptionHandling:
 
     @pytest.mark.asyncio
     async def test_too_many_attempts_exception(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import TooManyAttemptsException
+        from src.voyager.utils.exceptions import TooManyAttemptsException
         
         mock_cognito_service.login_user.side_effect = TooManyAttemptsException()
         
@@ -415,7 +415,7 @@ class TestExceptionHandling:
 
     @pytest.mark.asyncio
     async def test_generic_cognito_error(self, test_client, mock_cognito_service):
-        from app.utils.exceptions import CognitoServiceException
+        from src.voyager.utils.exceptions import CognitoServiceException
         
         mock_cognito_service.sign_up_user.side_effect = CognitoServiceException(
             "Generic AWS error", "InternalError"

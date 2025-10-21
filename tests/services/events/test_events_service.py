@@ -8,11 +8,11 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 from pathlib import Path
-from app.services.events.service import EventsService
-from app.services.events.models import Event
-from app.services.events.providers.base import EventsProvider
-from app.services.events.providers.tavily import TavilyEventsProvider
-from app.agents.tools import get_events
+from src.voyager.services.events.service import EventsService
+from src.voyager.services.events.models import Event
+from src.voyager.services.events.providers.base import EventsProvider
+from src.voyager.services.events.providers.tavily import TavilyEventsProvider
+from src.voyager.agents.tools import get_events
 
 
 class MockEventsProvider(EventsProvider):

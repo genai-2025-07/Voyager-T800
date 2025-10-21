@@ -7,8 +7,8 @@ import pytest
 from fastapi import HTTPException, UploadFile
 from PIL import Image
 
-from app.services.image_validation import validate_image
-from app.config.config import settings
+from src.voyager.services.image_validation import validate_image
+from src.voyager.config.config import settings
 
 
 def _create_image_bytes(width: int, height: int, fmt: str = 'JPEG', color: tuple[int, int, int] = (200, 200, 200)) -> bytes:

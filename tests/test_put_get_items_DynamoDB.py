@@ -5,7 +5,7 @@ import pytest
 
 from moto import mock_aws
 
-from app.data_layer.dynamodb_client import DynamoDBClient, SessionMetadata
+from src.voyager.data.dynamodb import DynamoDBClient, SessionMetadata
 
 
 TABLE_NAME = 'session_metadata'

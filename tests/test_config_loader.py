@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from app.config.loader import ConfigLoader
-from app.config.config_models import Settings, AppSettings, EmbeddingSettings, BedrockSettings
+from src.voyager.config.loader import ConfigLoader
+from src.voyager.config.config_models import Settings, AppSettings, EmbeddingSettings, BedrockSettings
 from pydantic import ValidationError
 
 

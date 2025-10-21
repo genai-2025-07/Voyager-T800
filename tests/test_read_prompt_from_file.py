@@ -1,7 +1,7 @@
 import pytest
 import os
 import platform
-from app.utils.read_prompt_from_file import read_prompt_from_file
+from src.voyager.utils.read_prompt_from_file import read_prompt_from_file
 
 def test_load_valid_prompt_file(tmp_path):
     # Create a temporary test file with trailing whitespace

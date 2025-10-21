@@ -15,7 +15,7 @@ import boto3
 
 from botocore.exceptions import ClientError
 
-from app.config.config import settings
+from src.voyager.config.config import settings
 
 
 def create_dynamodb_table():
@@ -122,7 +122,7 @@ def main():
     if success:
         print('\n Setup completed successfully!')
         print('�� You can now run your application:')
-        print('   python -m app.main')
+        print('   python -m src.voyager.main')
     else:
         print('\n Setup failed!')
         print(' Please check the error messages above.')

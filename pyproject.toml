@@ -50,7 +50,7 @@ version = "0.1.0"
 description = ""
 authors = []
 packages = [
-    { include = "app" }
+    { include = "voyager", from = "src" }
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -92,7 +92,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["voyager"]
 omit = [
     "*/tests/*",
     "*/test_*.py"

@@ -3,22 +3,22 @@ Integration tests for events injection into itinerary chain.
 
 Tests the complete flow of events being injected into the itinerary generation process.
 """
-from app.chains import itinerary_chain
+from src.voyager.chains import itinerary_chain
 import pytest
 from unittest.mock import patch, Mock, MagicMock
 from datetime import datetime, date
-from app.chains.itinerary_chain import (
+from src.voyager.chains.itinerary_chain import (
     runnable_with_history,
     stream_response,
     full_response
 )
-from app.services.events.models import EventQuery, Event
+from src.voyager.services.events.models import EventQuery, Event
 
 from importlib import reload
 from unittest.mock import patch, Mock
 from datetime import date
 import app.chains.itinerary_chain as itinerary_chain_mod
-from app.services.events.models import EventQuery
+from src.voyager.services.events.models import EventQuery
 
 
 class TestItineraryEventsInjection:
@@ -259,7 +259,7 @@ class TestItineraryEventsInjection:
         )
 
         # The service should handle invalid queries gracefully
-        from app.services.events.service import EventsService
+        from src.voyager.services.events.service import EventsService
         from unittest.mock import Mock
         
         mock_provider = Mock()

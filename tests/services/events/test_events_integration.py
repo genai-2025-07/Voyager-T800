@@ -7,9 +7,9 @@ These tests use real API calls but with controlled test data.
 import pytest
 from unittest.mock import patch, Mock
 from datetime import datetime, date
-from app.services.events.service import EventsService
-from app.services.events.providers.tavily import TavilyEventsProvider
-from app.services.events.models import EventQuery
+from src.voyager.services.events.service import EventsService
+from src.voyager.services.events.providers.tavily import TavilyEventsProvider
+from src.voyager.services.events.models import EventQuery
 
 
 class TestEventsIntegration:
@@ -92,7 +92,7 @@ class TestEventsIntegration:
     def test_get_events_for_itinerary_integration(self, sample_event_query, sample_events_data):
         """Test the get_events_for_itinerary method used in the itinerary chain."""
 
-        from app.services.events.models import Event
+        from src.voyager.services.events.models import Event
         mock_events = [
             Event(**event_data) for event_data in sample_events_data
         ]
@@ -150,7 +150,7 @@ class TestEventsIntegration:
     def test_get_events_for_itinerary_with_none_categories(self, sample_events_data):
         """Test get_events_for_itinerary with None categories."""
 
-        from app.services.events.models import Event
+        from src.voyager.services.events.models import Event
         mock_events = [
             Event(**event_data) for event_data in sample_events_data
         ]
@@ -193,7 +193,7 @@ class TestEventsIntegration:
 
     def test_events_service_with_cache_integration(self, sample_events_data):
         """Test EventsService with cache integration."""
-        from app.services.events.models import Event
+        from src.voyager.services.events.models import Event
         mock_events = [
             Event(**event_data) for event_data in sample_events_data
         ]
@@ -224,7 +224,7 @@ class TestEventsIntegration:
 
     def test_events_service_cache_hit_integration(self, sample_events_data):
         """Test EventsService with cache hit."""
-        from app.services.events.models import Event
+        from src.voyager.services.events.models import Event
         cached_events = [
             Event(**event_data) for event_data in sample_events_data
         ]

@@ -26,7 +26,7 @@ ENV LANG=C.UTF-8 \
 
 # Add Poetry and venv to PATH
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
-
+ENV PYTHONPATH="/app/src:$PYSETUP_PATH/.venv/bin:$PATH"
 
 ################################
 # BUILDER-BASE
@@ -89,8 +89,7 @@ WORKDIR /app
 # Expose dev port
 
 # Hot reload server
-CMD uvicorn ${UVICORN_MODULE_DEV:-app.main}:app --reload --host ${HOST:-0.0.0.0} --port ${CONTAINER_PORT_DEV:-8000} 
-
+CMD uvicorn ${UVICORN_MODULE_DEV:-voyager.main}:app --reload --host ${HOST:-0.0.0.0} --port ${CONTAINER_PORT_DEV:-8000}
 
 ################################
 # PRODUCTION IMAGE
@@ -111,10 +110,14 @@ RUN useradd -r -m --no-log-init appuser
 COPY --from=builder-base --chown=appuser:appuser $PYSETUP_PATH $PYSETUP_PATH
 
 # Copy application source with correct ownership
-COPY --chown=appuser:appuser app /app/app
+COPY --chown=appuser:appuser src /app/src
 
 WORKDIR /app
 USER appuser
 
 # Production server with Gunicorn + Uvicorn workers
-CMD gunicorn ${UVICORN_MODULE_PROD:-app.main}:app -k uvicorn.workers.UvicornWorker -w ${GUNICORN_WORKERS:-4} -b ${HOST:-0.0.0.0}:${CONTAINER_PORT_PROD:-8001} --access-logfile ${ACCESS_LOG_FILE:-} --log-level ${LOG_LEVEL:-info}
+# use voyager.main instead of app.main
+CMD gunicorn ${UVICORN_MODULE_PROD:-voyager.main}:app \
+    -k uvicorn.workers.UvicornWorker -w ${GUNICORN_WORKERS:-4} \
+    -b ${HOST:-0.0.0.0}:${CONTAINER_PORT_PROD:-8001} \
+    --access-logfile ${ACCESS_LOG_FILE:-} --log-level ${LOG_LEVEL:-info}
