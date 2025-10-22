@@ -3,15 +3,17 @@ import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Header: React.FC<{ onToggleSidebar: () => void; onOpenAuth: () => void }> = ({ onToggleSidebar, onOpenAuth }) => {
-  const { user, isGuest, logout, logoutGlobal } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const [showLogoutMenu, setShowLogoutMenu] = useState(false);
 
   return (
     <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between shadow-md border-b border-border">
       <div className="flex items-center gap-3">
-        <button onClick={onToggleSidebar} className="hover:bg-primary/80 p-2 rounded-lg transition-colors">
-          <Menu size={24} />
-        </button>
+        {!isGuest && (
+          <button onClick={onToggleSidebar} className="hover:bg-primary/80 p-2 rounded-lg transition-colors">
+            <Menu size={24} />
+          </button>
+        )}
         <h1 className="text-xl font-bold">Voyager-T800</h1>
       </div>
 
@@ -37,12 +39,6 @@ const Header: React.FC<{ onToggleSidebar: () => void; onOpenAuth: () => void }> 
                   className="w-full text-left px-4 py-2 hover:bg-muted transition-colors rounded-md mx-1"
                 >
                   Logout
-                </button>
-                <button
-                  onClick={async () => { await logoutGlobal(); setShowLogoutMenu(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-muted transition-colors rounded-md mx-1"
-                >
-                  Logout (Global)
                 </button>
               </div>
             )}

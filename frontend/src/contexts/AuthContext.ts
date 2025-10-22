@@ -9,7 +9,6 @@ interface AuthContextType {
   signup: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   confirm: (email: string, code: string) => Promise<void>;
   logout: () => void;
-  logoutGlobal: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
 
@@ -87,14 +86,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     localStorage.removeItem('refreshToken');
   };
 
-  const logoutGlobal = async () => {
-    await apiClient.logoutGlobal();
-    logout();
-  };
-
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, isGuest, login, signup, confirm, logout, logoutGlobal, refreshToken: refreshTokenFn } },
+    { value: { user, isGuest, login, signup, confirm, logout, refreshToken: refreshTokenFn } },
     children
   );
 };
