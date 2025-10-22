@@ -13,7 +13,6 @@ import rehypeSanitize from "rehype-sanitize";
 
 const PREVIEW_IMAGE_LARGEST_SIZE = 400;
 
-
 const ChatWindow: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -21,15 +20,17 @@ const ChatWindow: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
-    const eventSourceRef = useRef<EventSource | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   // reader for fetch-based streaming
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(
+    null
+  );
   // keep the active session id for stop requests
   const activeSessionIdRef = useRef<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { user, isGuest } = useAuth();
-  const { currentSession, guestMessages, addMessageToGuest, createSession } =
+  const { currentSession, guestMessages, addMessageToGuest, updateLastGuestMessage, createSession } =
     useSessions();
 
   useEffect(() => {
@@ -128,125 +129,89 @@ const ChatWindow: React.FC = () => {
       timestamp: Date.now(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    if (isGuest) addMessageToGuest(userMessage);
-
     const assistantMessage: Message = {
       sender: "assistant",
       content: "",
       timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, assistantMessage]);
+
+    if (isGuest) {
+      // For guest: add both messages to context first
+      addMessageToGuest(userMessage);
+      addMessageToGuest(assistantMessage);
+    } else {
+      // For logged-in users: update local state directly
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    }
 
     let sessionId = currentSession?.session_id;
 
     try {
-        if (!isGuest && !sessionId) {
-          sessionId = await createSession();
-        }
+      if (!isGuest && !sessionId) {
+        sessionId = await createSession();
+      }
 
-        // remember for stop requests
-        activeSessionIdRef.current = sessionId;
+      activeSessionIdRef.current = sessionId;
 
-        const connection = apiClient.createStreamConnection(
-          input,
-          sessionId,
-          user?.sub,
-          image || undefined,
-          isGuest
-        );
+      const connection = apiClient.createStreamConnection(
+        input,
+        sessionId,
+        user?.sub,
+        image || undefined,
+        isGuest
+      );
 
-        // If EventSource (SSE)
-        if (connection instanceof EventSource) {
-          eventSourceRef.current = connection;
+      const response = await connection;
+      const reader = response.body?.getReader();
+      if (reader) readerRef.current = reader;
+      const decoder = new TextDecoder();
 
-          connection.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-              if (data.done) {
-                connection.close();
-                setIsStreaming(false);
-                activeSessionIdRef.current = undefined;
-              } else if (data.chunk) {
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  const lastMsg = updated[updated.length - 1];
-                  if (lastMsg.sender === "assistant") {
-                    lastMsg.content += data.chunk;
-                  }
-                  return updated;
-                });
-              }
-            } catch (err) {
-              console.error("Error parsing SSE data:", err);
-            }
-          };
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
 
-          connection.onerror = () => {
-            setError("Connection error. Please try again.");
-            try {
-              connection.close();
-            } catch (e) {
-              console.warn("Error closing EventSource on error:", e);
-            }
-            setIsStreaming(false);
-            activeSessionIdRef.current = undefined;
-          };
-        } else {
-          // POST streaming (fetch) — createStreamConnection returns a Promise<Response>
-          const response = await connection;
-          const reader = response.body?.getReader();
-          // track reader so stop button can cancel it
-          if (reader) readerRef.current = reader;
-          const decoder = new TextDecoder();
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
 
-          if (reader) {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              const chunk = decoder.decode(value);
-              const lines = chunk.split("\n");
-
-              for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                  try {
-                    const data = JSON.parse(line.slice(6));
-
-                    if (data.done) {
-                      setIsStreaming(false);
-                      activeSessionIdRef.current = undefined;
-                    } else if (data.chunk) {
-                      setMessages((prev) => {
-                        const updated = [...prev];
-                        const lastMsg = updated[updated.length - 1];
-                        if (lastMsg.sender === "assistant") {
-                          lastMsg.content += data.chunk;
-                        }
-                        return updated;
-                      });
-                    }
-                  } catch (err) {
-                    console.error("Error parsing stream data:", err);
+                if (data.done) {
+                  setIsStreaming(false);
+                  activeSessionIdRef.current = undefined;
+                } 
+                if (data.chunk) {
+                  if (isGuest) {
+                    // For guest: append chunks to the last message
+                    updateLastGuestMessage((prevContent) => prevContent + data.chunk);
+                  } else {
+                    // For logged-in users: update local state
+                    setMessages((prev) => {
+                      const updated = [...prev];
+                      const lastMsg = updated[updated.length - 1];
+                      if (lastMsg.sender === "assistant") {
+                        lastMsg.content += data.chunk;
+                      }
+                      return updated;
+                    });
                   }
                 }
+              } catch (err) {
+                console.error("Error parsing stream data:", err);
               }
             }
-
-            // ensure we clear reader when finished
-            readerRef.current = null;
           }
         }
 
-    if (isGuest) {
-      addMessageToGuest(assistantMessage);
-    }
+        readerRef.current = null;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setIsStreaming(false);
       activeSessionIdRef.current = undefined;
-      // also clear reader if an error occurred before finishing
       if (readerRef.current) {
         try {
           await readerRef.current.cancel();
@@ -399,9 +364,9 @@ const ChatWindow: React.FC = () => {
                     style={{
                       maxWidth: `${PREVIEW_IMAGE_LARGEST_SIZE}px`,
                       maxHeight: `${PREVIEW_IMAGE_LARGEST_SIZE}px`,
-                      width: 'auto',
-                      height: 'auto',
-                      objectFit: 'contain'
+                      width: "auto",
+                      height: "auto",
+                      objectFit: "contain",
                     }}
                   />
                 )}
