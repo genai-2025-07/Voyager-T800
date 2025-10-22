@@ -57,14 +57,6 @@ class ApiClient {
     return res.json();
   }
 
-  async logoutGlobal() {
-    const res = await fetch(`${API_BASE_URL}/api/auth/logout-global`, {
-      method: 'POST',
-      headers: this.getHeaders(true),
-    });
-    if (!res.ok) throw new Error('Global logout failed');
-  }
-
   async createSession(userId?: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/itinerary/sessions`, {
       method: 'POST',
@@ -130,23 +122,20 @@ class ApiClient {
     if (userId && !isGuest) params.append('user_id', userId);
     
     const url = `${API_BASE_URL}/api/v1/itinerary/generate/stream?${params}`;
+    const formData = new FormData();
     
     if (image) {
-      const formData = new FormData();
       formData.append('image', image);
-      
-      return fetch(url, {
+    }
+    return fetch(url, {
         method: 'POST',
         headers: {
           ...(isGuest ? {} : { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').accessToken}` }),
           ...(isGuest ? { 'X-Guest-Mode': 'true' } : {}),
         },
-        body: formData,
+        body: formData ? formData : null,
       });
-    }
-    
-    const eventSource = new EventSource(url);
-    return eventSource;
+
   }
 }
 
