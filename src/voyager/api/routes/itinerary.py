@@ -298,7 +298,7 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
             'message_id': str(uuid.uuid4()),
             'sender': 'assistant',
             'timestamp': now,
-            'content': "🚀 Welcome to Voyager-T800! I'm your intelligent AI travel assistant. Tell me about your dream trip - where would you like to go, when, and what kind of experience are you looking for?",
+            'content': "Welcome to Voyager-T800! I'm your intelligent AI travel assistant. Tell me about your dream trip - where would you like to go, when, and what kind of experience are you looking for?",
             'metadata': {'message_type': 'welcome', 'generated': True},
         }
 

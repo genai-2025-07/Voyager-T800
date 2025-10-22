@@ -119,5 +119,5 @@ USER appuser
 # use voyager.main instead of app.main
 CMD gunicorn ${UVICORN_MODULE_PROD:-voyager.main}:app \
     -k uvicorn.workers.UvicornWorker -w ${GUNICORN_WORKERS:-4} \
-    -b ${HOST:-0.0.0.0}:${CONTAINER_PORT_PROD:-8001} \
-    --access-logfile ${ACCESS_LOG_FILE:-} --log-level ${LOG_LEVEL:-info}
+    -b 0.0.0.0:${CONTAINER_PORT:-8000} \
+    --access-logfile '-' --error-logfile '-' --log-level ${LOG_LEVEL:-info}

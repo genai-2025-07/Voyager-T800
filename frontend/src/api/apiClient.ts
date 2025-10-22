@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const RUNTIME_API_BASE: string =
+  (globalThis as any)?.__ENV?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '';
 
 class ApiClient {
   private getHeaders(includeAuth = false): HeadersInit {
@@ -18,7 +19,7 @@ class ApiClient {
   }
 
   async signup(email: string, password: string) {
-    const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/auth/signup`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ email, password }),
@@ -28,7 +29,7 @@ class ApiClient {
   }
 
   async confirm(email: string, confirmation_code: string) {
-    const res = await fetch(`${API_BASE_URL}/api/auth/confirm`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/auth/confirm`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ email, confirmation_code }),
@@ -38,7 +39,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string) {
-    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ email, password }),
@@ -48,7 +49,7 @@ class ApiClient {
   }
 
   async refreshToken(refreshToken: string) {
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/auth/refresh-token`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -57,16 +58,8 @@ class ApiClient {
     return res.json();
   }
 
-  async logoutGlobal() {
-    const res = await fetch(`${API_BASE_URL}/api/auth/logout-global`, {
-      method: 'POST',
-      headers: this.getHeaders(true),
-    });
-    if (!res.ok) throw new Error('Global logout failed');
-  }
-
   async createSession(userId?: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/itinerary/sessions`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/v1/itinerary/sessions`, {
       method: 'POST',
       headers: this.getHeaders(true),
       body: JSON.stringify({ user_id: userId }),
@@ -76,7 +69,7 @@ class ApiClient {
   }
 
   async listSessions(userId: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/itinerary/sessions?user_id=${encodeURIComponent(userId)}`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/v1/itinerary/sessions?user_id=${encodeURIComponent(userId)}`, {
       headers: this.getHeaders(true),
     });
     if (!res.ok) throw new Error('Failed to list sessions');
@@ -84,7 +77,7 @@ class ApiClient {
   }
 
   async getSession(sessionId: string, userId: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/itinerary/${sessionId}?user_id=${encodeURIComponent(userId)}`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/v1/itinerary/${sessionId}?user_id=${encodeURIComponent(userId)}`, {
       headers: this.getHeaders(true),
     });
     if (!res.ok) throw new Error('Failed to get session');
@@ -92,7 +85,7 @@ class ApiClient {
   }
 
   async deleteSession(sessionId: string, userId: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/itinerary/sessions/${sessionId}?user_id=${encodeURIComponent(userId)}`, {
+    const res = await fetch(`${RUNTIME_API_BASE}/api/v1/itinerary/sessions/${sessionId}?user_id=${encodeURIComponent(userId)}`, {
       method: 'DELETE',
       headers: this.getHeaders(true),
     });
@@ -113,7 +106,7 @@ class ApiClient {
       : this.getHeaders(true);
 
     const res = await fetch(
-      `${API_BASE_URL}/api/v1/itinerary/generate/stop?${params}`,
+      `${RUNTIME_API_BASE}/api/v1/itinerary/generate/stop?${params}`,
       {
         method: 'POST',
         headers,
@@ -129,24 +122,21 @@ class ApiClient {
     if (sessionId) params.append('session_id', sessionId);
     if (userId && !isGuest) params.append('user_id', userId);
     
-    const url = `${API_BASE_URL}/api/v1/itinerary/generate/stream?${params}`;
+    const url = `${RUNTIME_API_BASE}/api/v1/itinerary/generate/stream?${params}`;
+    const formData = new FormData();
     
     if (image) {
-      const formData = new FormData();
       formData.append('image', image);
-      
-      return fetch(url, {
+    }
+    return fetch(url, {
         method: 'POST',
         headers: {
           ...(isGuest ? {} : { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user') || '{}').accessToken}` }),
           ...(isGuest ? { 'X-Guest-Mode': 'true' } : {}),
         },
-        body: formData,
+        body: formData ? formData : null,
       });
-    }
-    
-    const eventSource = new EventSource(url);
-    return eventSource;
+
   }
 }
 
