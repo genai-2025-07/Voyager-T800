@@ -138,6 +138,25 @@ def save_session_state(session_id: str, messages: list[BaseMessage]):
         session_states[session_id]['last_access'] = time.time()
 
 
+def clear_session_state(session_id: str) -> bool:
+    """
+    Clear the in-memory session state for a session.
+    
+    Used for deleting anonymous sessions that are not persisted to DynamoDB.
+    
+    Args:
+        session_id: Unique session identifier
+        
+    Returns:
+        bool: True if session existed and was cleared, False if session didn't exist
+    """
+    if session_id in session_states:
+        del session_states[session_id]
+        logger.info(f'Cleared in-memory session state for session_id: {session_id}')
+        return True
+    return False
+
+
 def stream_response(
     user_input: str,
     session_id: str = "default_session",

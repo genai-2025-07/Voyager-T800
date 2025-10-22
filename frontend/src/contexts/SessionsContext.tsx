@@ -14,6 +14,7 @@ interface SessionsContextType {
   sessions: Session[];
   currentSession: Session | null;
   guestMessages: Message[];
+  guestSessionId: string | null;
   loadSessions: () => Promise<void>;
   createSession: () => Promise<string>;
   openSession: (sessionId: string) => Promise<void>;
@@ -30,6 +31,7 @@ export const SessionsProvider: React.FC<{ children: React.ReactNode }> = ({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
+  const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
   const { user, isGuest } = useAuth();
 
   // Helper: sort sessions by started_at descending (most recent first)
@@ -54,8 +56,15 @@ export const SessionsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createSession = async () => {
     if (!user || isGuest) {
-      const guestSessionId = `guest-${Date.now()}`;
-      return guestSessionId;
+      // For guests, reuse existing session ID within the same page session
+      // or create a new one if this is the first message
+      if (guestSessionId) {
+        return guestSessionId;
+      }
+      
+      const newGuestSessionId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      setGuestSessionId(newGuestSessionId);
+      return newGuestSessionId;
     }
 
     const data = await apiClient.createSession(user.sub);
@@ -97,6 +106,7 @@ export const SessionsProvider: React.FC<{ children: React.ReactNode }> = ({
   const clearCurrentSession = () => {
     setCurrentSession(null);
     setGuestMessages([]);
+    setGuestSessionId(null);
   };
 
   useEffect(() => {
@@ -118,6 +128,7 @@ export const SessionsProvider: React.FC<{ children: React.ReactNode }> = ({
         sessions,
         currentSession,
         guestMessages,
+        guestSessionId,
         loadSessions,
         createSession,
         openSession,

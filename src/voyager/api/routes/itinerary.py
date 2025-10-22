@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi import File, UploadFile
-from src.voyager.agents.runner import stream_response, get_session_state, save_session_state, GenerationCancelledException
+from src.voyager.agents.runner import stream_response, get_session_state, save_session_state, clear_session_state, GenerationCancelledException, SESSION_MEMORY_TTL_SECONDS
 from src.voyager.data.dynamodb import SessionMetadata
 from langchain_core.messages import AIMessage, HumanMessage
 from src.voyager.services.image.processor import resize_image_for_agent
@@ -75,7 +75,7 @@ class SessionDeleteResponse(BaseModel):
     deleted: bool = True
 
 
-@router.post('/generate/stream')
+@router.api_route('/generate/stream', methods=['GET','POST'])
 async def generate_itinerary_stream_with_image(
     query: str = Query(...),
     session_id: str | None = Query(None),
@@ -121,9 +121,9 @@ async def generate_itinerary_stream_with_image(
             )
             logger.info(f'Thumbnail uploaded to S3: {thumbnail_metadata["s3_key"]}')
         
-        # Restore session history from DynamoDB if needed
+        # Restore session history from DynamoDB if needed (authenticated users only)
         agent_state = get_session_state(session_id)
-        if not agent_state:
+        if not agent_state and user_id != 'anonymous':
             existing_session = dynamodb_client.get_item(user_id, session_id)
             if existing_session and existing_session.get('messages'):
                 restored_messages = []
@@ -183,47 +183,51 @@ async def generate_itinerary_stream_with_image(
                 yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
                 return
             
-            # Only save to DynamoDB if generation completed successfully
+            # Only save to DynamoDB if generation completed successfully (authenticated users only)
             if not was_cancelled and itinerary_content:
                 try:
-                    # Create assistant message entry
-                    itinerary_message = {
-                        'message_id': message_id,
-                        'sender': 'assistant',
-                        'timestamp': now,
-                        'content': itinerary_content,
-                        'query': query,
-                        'metadata': {'message_type': 'itinerary', 'generated': True},
-                    }
-                    
-                    # Update or create session in DynamoDB
-                    existing_session = dynamodb_client.get_item(user_id, session_id)
-                    if existing_session:
-                        messages = existing_session.get('messages', [])
-                        messages.append(user_message_entry)
-                        messages.append(itinerary_message)
-                        session_summary = existing_session.get('session_summary', '')
-                        session_metadata = SessionMetadata(
-                            user_id=user_id,
-                            session_id=session_id,
-                            session_summary=session_summary,
-                            started_at=existing_session.get('started_at', now),
-                            messages=messages,
-                        )
+                    # For authenticated users, save to DynamoDB
+                    if user_id != 'anonymous':
+                        # Create assistant message entry
+                        itinerary_message = {
+                            'message_id': message_id,
+                            'sender': 'assistant',
+                            'timestamp': now,
+                            'content': itinerary_content,
+                            'query': query,
+                            'metadata': {'message_type': 'itinerary', 'generated': True},
+                        }
+                        
+                        # Update or create session in DynamoDB
+                        existing_session = dynamodb_client.get_item(user_id, session_id)
+                        if existing_session:
+                            messages = existing_session.get('messages', [])
+                            messages.append(user_message_entry)
+                            messages.append(itinerary_message)
+                            session_summary = existing_session.get('session_summary', '')
+                            session_metadata = SessionMetadata(
+                                user_id=user_id,
+                                session_id=session_id,
+                                session_summary=session_summary,
+                                started_at=existing_session.get('started_at', now),
+                                messages=messages,
+                            )
+                        else:
+                            session_summary = 'New Session'
+                            session_metadata = SessionMetadata(
+                                user_id=user_id,
+                                session_id=session_id,
+                                session_summary=session_summary,
+                                started_at=now,
+                                messages=[user_message_entry, itinerary_message],
+                            )
+                        
+                        # Store in DynamoDB
+                        status_code = dynamodb_client.put_item(session_metadata)
+                        if status_code != 200:
+                            logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
                     else:
-                        session_summary = 'New Session'
-                        session_metadata = SessionMetadata(
-                            user_id=user_id,
-                            session_id=session_id,
-                            session_summary=session_summary,
-                            started_at=now,
-                            messages=[user_message_entry, itinerary_message],
-                        )
-                    
-                    # Store in DynamoDB
-                    status_code = dynamodb_client.put_item(session_metadata)
-                    if status_code != 200:
-                        logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
+                        logger.info(f'Anonymous session {session_id} - conversation kept in memory only (TTL: {SESSION_MEMORY_TTL_SECONDS}s)')
                     
                     # Send final message with metadata
                     yield f"data: {json.dumps({'chunk': '', 'done': True, 'itinerary_id': message_id, 'session_id': session_id})}\n\n"
@@ -275,16 +279,18 @@ async def stop_generation(
 
 @router.post('/sessions', response_model=SessionCreateResponse)
 async def create_session(request: SessionCreateRequest, http_request: Request):
-    """Create a new session."""
+    """
+    Create a new session.
+    
+    For authenticated users: Session is persisted to DynamoDB.
+    For anonymous users: Session exists in-memory only (TTL-based expiration).
+    """
     try:
-        logger.info(f'Creating new session for user: {request.user_id or "anonymous"}')
-
-        # Get DynamoDB client from app state
-        dynamodb_client = http_request.app.state.dynamodb_client
+        user_id = request.user_id or 'anonymous'
+        logger.info(f'Creating new session for user: {user_id}')
 
         # Generate unique session ID
         session_id = f'voyager_session_{uuid.uuid4().hex}'
-        user_id = request.user_id or 'anonymous'
         now = datetime.now(UTC).isoformat()
 
         # Create welcome message
@@ -296,21 +302,26 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
             'metadata': {'message_type': 'welcome', 'generated': True},
         }
 
-        # Create session metadata
-        session_metadata = SessionMetadata(
-            user_id=user_id,
-            session_id=session_id,
-            session_summary='Session',
-            started_at=now,
-            messages=[welcome_message],
-        )
+        # For authenticated users, store in DynamoDB
+        if user_id != 'anonymous':
+            dynamodb_client = http_request.app.state.dynamodb_client
+            
+            session_metadata = SessionMetadata(
+                user_id=user_id,
+                session_id=session_id,
+                session_summary='Session',
+                started_at=now,
+                messages=[welcome_message],
+            )
 
-        # Store in DynamoDB
-        status_code = dynamodb_client.put_item(session_metadata)
+            status_code = dynamodb_client.put_item(session_metadata)
 
-        if status_code != 200:
-            logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
-            raise HTTPException(status_code=500, detail='Failed to create session. Please try again.')
+            if status_code != 200:
+                logger.error(f'Failed to store session in DynamoDB. Status code: {status_code}')
+                raise HTTPException(status_code=500, detail='Failed to create session. Please try again.')
+        else:
+            # For anonymous users, just initialize in-memory session
+            logger.info(f'Anonymous session {session_id} created (in-memory only, TTL: {SESSION_MEMORY_TTL_SECONDS}s)')
 
         return SessionCreateResponse(session_id=session_id, user_id=user_id, session_summary='Session', started_at=now)
 
@@ -321,11 +332,21 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
 
 @router.get('/sessions', response_model=SessionsListResponse)
 async def list_sessions(user_id: str = Query('anonymous'), http_request: Request = ...):
-    """List all sessions for a given user_id."""
+    """
+    List all sessions for a given user_id.
+    
+    For authenticated users: Returns sessions from DynamoDB.
+    For anonymous users: Returns empty list (sessions are in-memory only and not persistent).
+    """
     try:
+        # Anonymous users don't have persistent sessions
+        if user_id == 'anonymous':
+            logger.info('Anonymous user - returning empty session list (sessions are in-memory only)')
+            return SessionsListResponse(user_id=user_id, sessions=[])
+        
+        # For authenticated users, fetch from DynamoDB
         dynamodb_client = http_request.app.state.dynamodb_client  # type: ignore[attr-defined]
         items = dynamodb_client.list_sessions(user_id)
-        # Do not refactor message structure; return as-is
         return SessionsListResponse(user_id=user_id, sessions=items)
     except Exception as e:
         logger.error(f'Failed to list sessions: {str(e)}')
@@ -334,8 +355,25 @@ async def list_sessions(user_id: str = Query('anonymous'), http_request: Request
 
 @router.delete('/sessions/{session_id}', response_model=SessionDeleteResponse)
 async def delete_session(session_id: str, user_id: str = Query('anonymous'), http_request: Request = ...):
-    """Delete a specific session for a user and remove associated images from S3."""
+    """
+    Delete a specific session for a user and remove associated images from S3.
+    
+    For authenticated users: Deletes from DynamoDB and removes S3 images.
+    For anonymous users: Clears in-memory session only.
+    """
     try:
+        # For anonymous users, just clear in-memory session
+        if user_id == 'anonymous':
+            was_cleared = clear_session_state(session_id)
+            if was_cleared:
+                logger.info(f'Cleared anonymous session {session_id} from memory')
+                return SessionDeleteResponse(session_id=session_id, user_id=user_id, deleted=True)
+            else:
+                # Session not found in memory - this is fine for anonymous sessions (may have expired)
+                logger.info(f'Anonymous session {session_id} not found in memory (may have expired)')
+                return SessionDeleteResponse(session_id=session_id, user_id=user_id, deleted=True)
+        
+        # For authenticated users, delete from DynamoDB and S3
         dynamodb_client = http_request.app.state.dynamodb_client
         image_storage_manager = http_request.app.state.image_storage_manager
 
@@ -396,10 +434,50 @@ async def delete_session(session_id: str, user_id: str = Query('anonymous'), htt
 
 @router.get('/{session_id}', response_model=ItineraryRetrieveResponse)
 async def get_session_data(session_id: str, user_id: str = 'anonymous', http_request: Request = ...):
-    """Retrieve session data with enriched image URLs."""
+    """
+    Retrieve session data with enriched image URLs.
+    
+    For authenticated users: Retrieves from DynamoDB.
+    For anonymous users: Retrieves from in-memory session state (if available).
+    """
     try:
-        logger.info(f'Retrieving session data for session_id: {session_id}')
+        logger.info(f'Retrieving session data for session_id: {session_id}, user_id: {user_id}')
         
+        # For anonymous users, try to retrieve from memory
+        if user_id == 'anonymous':
+            in_memory_messages = get_session_state(session_id)
+            
+            # If no in-memory session exists, return 404
+            if not in_memory_messages:
+                logger.info(f'Anonymous session {session_id} not found in memory (may have expired)')
+                raise HTTPException(status_code=404, detail='Session not found or expired.')
+            
+            # Convert in-memory messages to API format
+            formatted_messages = []
+            for msg in in_memory_messages:
+                if isinstance(msg, HumanMessage):
+                    formatted_messages.append({
+                        'sender': 'user',
+                        'content': msg.content if isinstance(msg.content, str) else str(msg.content),
+                        'timestamp': datetime.now(UTC).isoformat(),
+                    })
+                elif isinstance(msg, AIMessage):
+                    formatted_messages.append({
+                        'sender': 'assistant',
+                        'content': msg.content if isinstance(msg.content, str) else str(msg.content),
+                        'timestamp': datetime.now(UTC).isoformat(),
+                    })
+            
+            return ItineraryRetrieveResponse(
+                user_id='anonymous',
+                session_id=session_id,
+                session_summary='Anonymous Session',
+                started_at=datetime.now(UTC).isoformat(),
+                messages=formatted_messages,
+                structured_itinerary=None,
+            )
+        
+        # For authenticated users, retrieve from DynamoDB
         dynamodb_client = http_request.app.state.dynamodb_client
         image_storage_manager = http_request.app.state.image_storage_manager
         

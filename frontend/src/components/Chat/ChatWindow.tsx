@@ -29,7 +29,7 @@ const ChatWindow: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { user, isGuest } = useAuth();
-  const { currentSession, guestMessages, addMessageToGuest, createSession } =
+  const { currentSession, guestMessages, guestSessionId, addMessageToGuest, createSession, openSession } =
     useSessions();
 
   useEffect(() => {
@@ -138,11 +138,17 @@ const ChatWindow: React.FC = () => {
     };
     setMessages((prev) => [...prev, assistantMessage]);
 
-    let sessionId = currentSession?.session_id;
+    // For guests, use guestSessionId from context; for authenticated users, use currentSession
+    let sessionId = isGuest ? guestSessionId : currentSession?.session_id;
 
     try {
-        if (!isGuest && !sessionId) {
+        // Create session if we don't have one (for both guests and authenticated users)
+        if (!sessionId) {
           sessionId = await createSession();
+          // For authenticated users, load the session to set currentSession state
+          if (!isGuest && user?.sub) {
+            await openSession(sessionId);
+          }
         }
 
         // remember for stop requests
