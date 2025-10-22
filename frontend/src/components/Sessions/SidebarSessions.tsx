@@ -9,7 +9,7 @@ const SidebarSessions: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ i
   const { sessions, openSession, deleteSession, clearCurrentSession } = useSessions();
   const { isGuest } = useAuth();
 
-  if (!isOpen) return null;
+  if (!isOpen || isGuest) return null;
 
   return (
     <>
