@@ -235,7 +235,7 @@ const ChatWindow: React.FC = () => {
             <h2 className="text-2xl font-bold mb-2 text-foreground">
               Welcome to Voyager-T800
             </h2>
-            <p>Start a conversation to generate your perfect itinerary</p>
+            <p>I'm your intelligent AI travel assistant. Tell me about your dream trip - where would you like to go, when, and what kind of experience are you looking for?</p>
           </div>
         ) : (
           messages.map((msg, idx) => (
