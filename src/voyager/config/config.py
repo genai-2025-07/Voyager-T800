@@ -30,8 +30,9 @@ class Settings(BaseSettings):
     dynamodb_endpoint_url: str = Field(default='http://localhost:8003', description='Local DynamoDB endpoint URL')
     dynamodb_table: str = Field(default='session_metadata', description='DynamoDB table name')
     aws_region: str = Field(default='us-east-2', description='AWS region for DynamoDB')
-    aws_access_key_id: str | None = Field(default='dummy', description='AWS access key ID')
-    aws_secret_access_key: str | None = Field(default='dummy', description='AWS secret access key')
+    aws_access_key_id: str | None = Field(default=None, description='AWS access key ID', env='AWS_ACCESS_KEY_ID')
+    aws_secret_access_key: str | None = Field(default=None, description='AWS secret access key', env='AWS_SECRET_ACCESS_KEY')
+    aws_session_token: str | None = Field(default=None, description='AWS session token', env='AWS_SESSION_TOKEN')
     session_memory_ttl_seconds: int = Field(default=3600)
     
     logging_config_file: str = Field(default='logger.yaml')

@@ -27,21 +27,11 @@ weaviate_client_wrapper = None
 # Check if we should use local DynamoDB
 use_local_dynamodb = settings.use_local_dynamodb
 
-# Only require AWS credentials if not using local DynamoDB
-if not use_local_dynamodb:
-    missing_aws = []
-    if not settings.aws_access_key_id:
-        missing_aws.append('AWS_ACCESS_KEY_ID')
-    if not settings.aws_secret_access_key:
-        missing_aws.append('AWS_SECRET_ACCESS_KEY')
-
-    if missing_aws:
-        error_msg = f'Missing required AWS environment variables: {", ".join(missing_aws)}'
-        logger.error(error_msg)
-        logger.error('Application cannot start without AWS credentials. Please export them in the shell.')
-        logger.error('Alternatively, set USE_LOCAL_DYNAMODB=true to use local DynamoDB for development.')
-        raise RuntimeError(error_msg)
-else:
+# Note: When running on AWS (e.g., ECS Fargate), credentials are provided via the
+# task role and fetched automatically by boto3 using the default credential chain.
+# Therefore, we do NOT hard-require AWS_ACCESS_KEY_ID/SECRET here. We simply log
+# when using local and rely on boto3 otherwise.
+if use_local_dynamodb:
     logger.info('Using local DynamoDB - AWS credentials not required')
 
 
@@ -140,6 +130,23 @@ async def root():
         'version': settings.app_version,
         'description': settings.app_description,
     }
+
+
+@app.get('/healthz')
+async def healthz():
+    """Liveness probe endpoint for container orchestrators."""
+    return {"status": "ok"}
+
+
+@app.get('/readyz')
+async def readyz():
+    """Readiness probe to verify dependencies are initialized."""
+    try:
+        # Verify DynamoDB client is initialized
+        _ = app.state.dynamodb_client  # type: ignore[attr-defined]
+        return {"status": "ready"}
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "not_ready"})
 
 
 if __name__ == '__main__':
