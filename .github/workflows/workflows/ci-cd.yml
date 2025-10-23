@@ -1,0 +1,81 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ release/v1.0.0 ]
+
+env:
+  AWS_REGION: us-east-2
+  PROJECT_NAME: voyager
+
+jobs:
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set repo URLs
+        id: repo
+        run: |
+          API_REPO="${{ env.PROJECT_NAME }}-api"
+          FE_REPO="${{ env.PROJECT_NAME }}-frontend"
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "api_repo_url=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$API_REPO" >> $GITHUB_OUTPUT
+          echo "fe_repo_url=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$FE_REPO" >> $GITHUB_OUTPUT
+
+      - name: Build API image
+        run: |
+          docker build -t api:ci .
+          docker tag api:ci ${{ steps.repo.outputs.api_repo_url }}:latest
+      
+      - name: Build Frontend image
+        run: |
+          docker build -t fe:ci -f frontend/Dockerfile frontend
+          docker tag fe:ci ${{ steps.repo.outputs.fe_repo_url }}:latest
+
+      - name: Push images
+        run: |
+          docker push ${{ steps.repo.outputs.api_repo_url }}:latest
+          docker push ${{ steps.repo.outputs.fe_repo_url }}:latest
+
+  deploy:
+    name: Deploy ECS Services
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update services to latest task defs
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-cluster"
+          API_TD=$(aws ecs describe-task-definition --task-definition ${{ env.PROJECT_NAME }}-api --query 'taskDefinition.taskDefinitionArn' --output text)
+          FE_TD=$(aws ecs describe-task-definition --task-definition ${{ env.PROJECT_NAME }}-frontend --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          aws ecs update-service --cluster "$CLUSTER" --service ${{ env.PROJECT_NAME }}-api --task-definition "$API_TD"
+          aws ecs update-service --cluster "$CLUSTER" --service ${{ env.PROJECT_NAME }}-frontend --task-definition "$FE_TD"
+
+
