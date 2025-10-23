@@ -35,3 +35,26 @@ htmlcov/
 
 # Docker secrets
 /secrets/*
+
+# terraform
+# Terraform .terraform directory
+.terraform/
+
+# Terraform state files and backups
+*.tfstate
+*.tfstate.*
+
+# Terraform plan files
+*.tfplan
+*.tfplan.out
+
+# Terraform variable definition files (if sensitive data is present)
+*.tfvars
+*.tfvars.json
+
+# Crash log files
+crash.log
+
+# Specific provider cache directories (if not handled by .terraform/)
+# For example, for AWS provider:
+# .terraform/plugins/linux_amd64/hashicorp/aws/

@@ -1,26 +1,20 @@
 from __future__ import annotations
-
 from typing import Literal, Optional
-
 from pydantic import BaseModel, Field
-
 
 def supported_extensions_factory() -> list[str]:
     return [".txt", ".json"]
-
 
 class BaseConfigModel(BaseModel):
     model_config = {
         "extra": "forbid",
     }
 
-
 class AppSettings(BaseConfigModel):
     name: str = Field(...)
     env: Literal["dev", "prod", "test"] = Field(...)
     version: str = Field(...)
     api_key: Optional[str] = None
-
 
 class WeatherSettings(BaseConfigModel):
     api_key: Optional[str] = None
@@ -32,10 +26,8 @@ class WeatherSettings(BaseConfigModel):
     retry_backoff_min: float = Field(..., ge=0.0, description="Min backoff seconds for retries.")
     retry_backoff_max: float = Field(..., ge=0.0, description="Max backoff seconds for retries.")
 
-
 class ItinerarySettings(BaseConfigModel):
     api_key: Optional[str] = None
-
 
 class TavilySettings(BaseConfigModel):
     tavily_api_key: Optional[str] = None
@@ -44,7 +36,6 @@ class TavilySettings(BaseConfigModel):
     tavily_country: str = Field(..., description="Country to search in.")
     tavily_include_answer: str = Field(..., description="Include answer in the response.")
     tavily_timeout: int = Field(..., gt=0, description="Timeout for the API request in seconds.")
-
 
 class BedrockSettings(BaseConfigModel):
     enabled: bool = Field(...)
@@ -60,6 +51,12 @@ class BedrockSettings(BaseConfigModel):
     top_p: Optional[float] = None
     top_k: Optional[int] = None
 
+class CognitoSettings(BaseConfigModel):
+    aws_region: str = Field(..., description="AWS region for Cognito service")
+    user_pool_id: str = Field(..., description="Cognito User Pool ID")
+    client_id: str = Field(..., description="Cognito App Client ID")
+    client_secret: Optional[str] = Field(None, description="Cognito App Client Secret (for confidential clients)")
+    jwt_algorithm: str = Field(default="RS256", description="JWT signature algorithm")
 
 class Settings(BaseConfigModel):
     app: AppSettings = Field(default_factory=AppSettings)
@@ -67,8 +64,8 @@ class Settings(BaseConfigModel):
     weather: Optional[WeatherSettings] = None
     itinerary: ItinerarySettings = Field(default_factory=ItinerarySettings)
     tavily: TavilySettings = Field(default_factory=TavilySettings)
+    cognito: Optional[CognitoSettings] = None
     logging_config_file: Optional[str] = Field(default=None)
-
 
 __all__ = [
     "AppSettings",
@@ -76,7 +73,6 @@ __all__ = [
     "WeatherSettings",
     "ItinerarySettings",
     "TavilySettings",
+    "CognitoSettings",
     "Settings",
 ]
-
-

@@ -11,8 +11,8 @@ from langchain_core.tools import tool
 from src.voyager.services.weather import WeatherService
 from src.voyager.services.itinerary import ItineraryService
 
-weather_service = WeatherService(project_root=Path(__file__).parent.parent.parent)
-itinerary_service = ItineraryService(project_root=Path(__file__).parent.parent.parent)
+weather_service = WeatherService(project_root=Path(__file__).parent.parent.parent.parent)
+itinerary_service = ItineraryService(project_root=Path(__file__).parent.parent.parent.parent)
 
 
 @dataclass

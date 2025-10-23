@@ -18,13 +18,20 @@ from src.voyager.models.auth.auth import (
     ResendConfirmationRequest, RefreshTokenRequest, RefreshTokenResponse,
     ErrorResponse
 )
-from src.voyager.services.cognito import cognito_service
+from src.voyager.services.cognito import create_cognito_service_from_config
 from src.voyager.utils.auth_utils import decode_cognito_token, get_password_policy_description, hash_email_for_logging
 from src.voyager.utils.exceptions import (
     AuthException, CognitoServiceException,
     PasswordPolicyException
 )
+from src.voyager.config import ConfigLoader
+from src.voyager.services.cognito import create_cognito_service_from_config
+from pathlib import Path
+# Load configuration
+config_loader = ConfigLoader(project_root=Path(__file__).parent.parent.parent.parent)
 
+# Create Cognito service from config
+cognito_service = create_cognito_service_from_config(config_loader)
 logger = logging.getLogger(__name__)
 
 # Security scheme for protected endpoints
