@@ -310,18 +310,16 @@ resource "aws_ecs_task_definition" "api" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.api_cpu
   memory                   = var.api_memory
-  # execution_role_arn       = aws_iam_role.task_execution.arn
-  # task_role_arn            = aws_iam_role.task.arn
   execution_role_arn       = var.ecs_task_execution_role_arn
   task_role_arn            = var.ecs_task_role_arn
-
-
+  
   container_definitions = jsonencode([
     {
       name      = "api"
       image     = "${aws_ecr_repository.api.repository_url}:latest"
       essential = true
       portMappings = [{ containerPort = 8000, protocol = "tcp" }]
+      
       environment = [
         { name = "CONTAINER_PORT", value = "8000" },
         { name = "USE_LOCAL_DYNAMODB", value = "false" },
@@ -330,6 +328,34 @@ resource "aws_ecs_task_definition" "api" {
         { name = "HOST", value = "0.0.0.0" },
         { name = "AWS_REGION", value = var.aws_region }
       ]
+      
+      secrets = [
+        {
+          name      = "OPENWEATHER_API_KEY"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:OPENWEATHER_API_KEY::"
+        },
+        {
+          name      = "MAP_API_KEY"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:MAP_API_KEY::"
+        },
+        {
+          name      = "TAVILY_API_KEY"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:TAVILY_API_KEY::"
+        },
+        {
+          name      = "COGNITO_USER_POOL_ID"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:COGNITO_USER_POOL_ID::"
+        },
+        {
+          name      = "COGNITO_CLIENT_ID"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:COGNITO_CLIENT_ID::"
+        },
+        {
+          name      = "COGNITO_CLIENT_SECRET"
+          valueFrom = "${aws_secretsmanager_secret.api_secrets.arn}:COGNITO_CLIENT_SECRET::"
+        }
+      ]
+      
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -341,7 +367,6 @@ resource "aws_ecs_task_definition" "api" {
     }
   ])
 }
-
 resource "aws_ecs_task_definition" "frontend" {
   family                   = "${var.project_name}-frontend"
   network_mode             = "awsvpc"

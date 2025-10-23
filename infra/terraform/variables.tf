@@ -74,4 +74,38 @@ variable "frontend_desired_count" {
   default     = 1
 }
 
+variable "openweather_api_key" {
+  type        = string
+  description = "OpenWeather API key"
+  sensitive   = true
+}
 
+variable "map_api_key" {
+  type        = string
+  description = "Map API key"
+  sensitive   = true
+}
+
+variable "tavily_api_key" {
+  type        = string
+  description = "Tavily API key"
+  sensitive   = true
+}
+
+variable "cognito_user_pool_id" {
+  type        = string
+  description = "Cognito User Pool ID"
+  sensitive   = true
+}
+
+variable "cognito_client_id" {
+  type        = string
+  description = "Cognito Client ID"
+  sensitive   = true
+}
+
+variable "cognito_client_secret" {
+  type        = string
+  description = "Cognito Client Secret"
+  sensitive   = true
+}
