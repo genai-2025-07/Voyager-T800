@@ -1,5 +1,4 @@
 import boto3
-import os
 import logging
 import hmac
 import hashlib
@@ -8,10 +7,6 @@ import jwt
 import threading
 from typing import Dict, Any, Optional
 from botocore.exceptions import ClientError
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 from src.voyager.utils.exceptions import (
     UserAlreadyExistsException,
@@ -24,18 +19,6 @@ from src.voyager.utils.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Import validation function from auth_utils
-from src.voyager.utils.auth_utils import validate_environment
-
-# Validate environment on module load
-validate_environment()
-
-# Environment variables
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
-COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
-COGNITO_CLIENT_SECRET = os.getenv("COGNITO_CLIENT_SECRET")
 
 
 class TokenStore:
@@ -81,16 +64,20 @@ class CognitoService:
         token_store: Thread-safe storage for refresh token mappings
     """
     
-    def __init__(self):
+    def __init__(self, aws_region: str, user_pool_id: str, client_id: str, client_secret: Optional[str] = None):
         """
         Initialize CognitoService with AWS configuration.
         
-        Creates boto3 client and validates required configuration.
+        Args:
+            aws_region (str): AWS region for Cognito service
+            user_pool_id (str): Cognito User Pool ID
+            client_id (str): Cognito App Client ID
+            client_secret (Optional[str]): Cognito App Client Secret for confidential clients
         """
-        self.cognito_client = boto3.client("cognito-idp", region_name=AWS_REGION)
-        self.user_pool_id = COGNITO_USER_POOL_ID
-        self.client_id = COGNITO_CLIENT_ID
-        self.client_secret = COGNITO_CLIENT_SECRET
+        self.cognito_client = boto3.client("cognito-idp", region_name=aws_region)
+        self.user_pool_id = user_pool_id
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.token_store = TokenStore()
 
     def _calculate_secret_hash(self, username: str) -> Optional[str]:
@@ -473,5 +460,28 @@ class CognitoService:
             self._handle_cognito_error(e)
 
 
-# Create singleton instance
-cognito_service = CognitoService()
+def create_cognito_service_from_config(config_loader) -> CognitoService:
+    """
+    Factory function to create CognitoService from configuration.
+    
+    Args:
+        config_loader: ConfigLoader instance with loaded settings
+        
+    Returns:
+        CognitoService: Initialized Cognito service instance
+    """
+    settings = config_loader.get_settings()
+    
+    # Get Cognito settings from config
+    # Note: You'll need to add these to your config_models.py
+    cognito_config = getattr(settings, 'cognito', None)
+    
+    if not cognito_config:
+        raise ValueError("Cognito configuration not found in settings")
+    
+    return CognitoService(
+        aws_region=cognito_config.aws_region,
+        user_pool_id=cognito_config.user_pool_id,
+        client_id=cognito_config.client_id,
+        client_secret=cognito_config.client_secret
+    )

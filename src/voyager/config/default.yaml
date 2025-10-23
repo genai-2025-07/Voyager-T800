@@ -38,6 +38,13 @@ tavily:
   tavily_include_answer: advanced
   tavily_timeout: 30
 
+cognito:
+  aws_region: ${AWS_REGION:us-east-1}
+  user_pool_id: ${COGNITO_USER_POOL_ID:""}
+  client_id: ${COGNITO_CLIENT_ID:""}
+  client_secret: ${COGNITO_CLIENT_SECRET:""}
+  jwt_algorithm: ${JWT_ALGORITHM:RS256}
+
 logging_config_file: app/config/logger/logger.yaml
 
 

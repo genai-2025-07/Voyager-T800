@@ -7,16 +7,22 @@ import requests
 import json
 import threading
 import re
-from jose import JWTError, jwt as jose_jwt
+from jose import JWTError
 import logging
+from src.voyager.config import ConfigLoader
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+config_loader = ConfigLoader(project_root=Path(__file__).parent.parent.parent.parent)
+settings = config_loader.get_settings()
+cognito_config = getattr(settings, 'cognito', None)
+
 # Configuration
-COGNITO_REGION = os.getenv("AWS_REGION", "us-east-1")
-COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
-COGNITO_CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "RS256")
+COGNITO_REGION = cognito_config.aws_region
+COGNITO_USER_POOL_ID = cognito_config.user_pool_id
+COGNITO_CLIENT_ID = cognito_config.client_id
+JWT_ALGORITHM = cognito_config.jwt_algorithm
 
 
 class PasswordValidator:
@@ -125,27 +131,6 @@ def verify_password_strength(password: str) -> bool:
 def get_password_policy_description() -> str:
     """Get password policy description for user feedback."""
     return password_validator.get_policy_description()
-
-
-def validate_environment() -> None:
-    """
-    Validate that all required environment variables are present.
-    
-    Raises:
-        ValueError: If any required environment variables are missing.
-    """
-    required_vars = [
-        "AWS_REGION",
-        "COGNITO_USER_POOL_ID", 
-        "COGNITO_CLIENT_ID"
-    ]
-    
-    missing_vars = [var for var in required_vars if not os.getenv(var) or os.getenv(var).strip() == ""]
-
-    if missing_vars:
-        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-    
-    logger.info("Environment validation passed")
 
 
 class ThreadSafeJWKSClient:

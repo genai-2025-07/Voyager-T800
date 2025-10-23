@@ -55,7 +55,7 @@ class ConfigLoader:
         self.project_root = Path(project_root)
         if not self.project_root.exists():
             raise FileNotFoundError(f"Project root not found: {self.project_root}")
-        self.config_dir = self.project_root /  "voyager" / "config"
+        self.config_dir = self.project_root / "src" /  "voyager" / "config"
         self.base_config_path = self.config_dir / "default.yaml"
         # Load .env early to populate environment for expansion
         dotenv_path = os.path.join(self.project_root, '.env')
@@ -67,7 +67,7 @@ class ConfigLoader:
         self._raw_config: Dict[str, Any] = {}
         self.settings: Settings | None = None
 
-        self._load_config()
+        self._raw_config = self._load_yaml_file(self.base_config_path)
         self._expand_env_vars()
         self._validate_and_expose()
 
@@ -93,54 +93,6 @@ class ConfigLoader:
             if not isinstance(data, dict):
                 raise ValueError(f"Config file must contain a mapping at top-level: {path}")
             return data
-
-    def _load_config(self) -> None:
-        """
-        Load and merge configuration files.
-
-        This method:
-        1. Loads the base configuration from `default.yaml`
-        2. Determines the override file path based on:
-           - Explicit config_path argument
-           - VOYAGER_CONFIG environment variable
-           - APP_ENV environment variable or app.env setting
-        3. Loads and merges the override configuration if it exists
-        4. Stores the merged configuration in `_raw_config`
-
-        The override file path is determined in this order:
-        1. Explicit config_path argument to __init__
-        2. VOYAGER_CONFIG environment variable
-        3. Environment-based file (dev.yaml/prod.yaml) based on APP_ENV or app.env
-
-        Raises:
-            FileNotFoundError: If base configuration file is not found
-            ValueError: If configuration files contain invalid structure
-        """
-        base = self._load_yaml_file(self.base_config_path)
-        merged = deepcopy(base)
-
-        if self.override_path is None:
-            # Environment-based convenience: if APP_ENV is set to dev/prod, try that file
-            app_env_from_os = os.getenv("APP_ENV")
-            # Attempt to get 'app.env' from base config and expand it if it's a placeholder
-            app_env_from_base_raw = base.get("app", {}).get("env")
-            app_env_from_base_expanded = self._expand_string(app_env_from_base_raw) if isinstance(app_env_from_base_raw, str) else app_env_from_base_raw
-
-            app_env = app_env_from_os or app_env_from_base_expanded
-
-            if app_env:
-                candidate = self.config_dir / f"{app_env}.yaml"
-                if candidate.exists():
-                    self.override_path = candidate
-                else:
-                    warnings.warn(f"Config file not found: {candidate}")
-
-
-        if self.override_path:
-            override_data = self._load_yaml_file(self.override_path)
-            merged = self._recursive_merge(merged, override_data)
-
-        self._raw_config = merged
 
     def _recursive_merge(self, base_dict: Dict[str, Any], override_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
