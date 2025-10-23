@@ -54,7 +54,7 @@ def build_query(
 
         # Read template from file
         try:
-            template = read_prompt_from_file("app/prompts/events_query_template.txt")
+            template = read_prompt_from_file("src/voyager/prompts/events_query_template.txt")
             logger.debug("Successfully loaded query template")
         except FileNotFoundError as e:
             logger.error(f"Template file not found: {e}")

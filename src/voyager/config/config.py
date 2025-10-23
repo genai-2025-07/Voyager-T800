@@ -25,6 +25,24 @@ class Settings(BaseSettings):
     api_base_url: str = Field(default='http://localhost:8000')
     api_timeout: int = Field(default=120)
 
+    # Memory and Token Management Configuration
+    memory_token_soft_limit: int = Field(
+        default=80000, 
+        description='Soft token limit - when to start summarizing conversation history'
+    )
+    memory_token_hard_limit: int = Field(
+        default=100000,
+        description='Hard token limit - maximum tokens allowed (Claude has ~200k context)'
+    )
+    memory_keep_recent_messages: int = Field(
+        default=4,
+        description='Number of recent messages to keep when summarizing (rest get summarized)'
+    )
+    memory_summarization_enabled: bool = Field(
+        default=True,
+        description='Enable automatic conversation summarization when soft limit is reached'
+    )
+    
     # DynamoDB Configuration
     use_local_dynamodb: bool = Field(default=False, description='Use local DynamoDB instead of AWS')
     dynamodb_endpoint_url: str = Field(default='http://localhost:8003', description='Local DynamoDB endpoint URL')

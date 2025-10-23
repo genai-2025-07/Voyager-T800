@@ -63,7 +63,7 @@ class Settings(BaseConfigModel):
     bedrock: BedrockSettings = Field(default_factory=BedrockSettings)
     weather: Optional[WeatherSettings] = None
     itinerary: ItinerarySettings = Field(default_factory=ItinerarySettings)
-    tavily: TavilySettings = Field(default_factory=TavilySettings)
+    tavily: Optional[TavilySettings] = None
     cognito: Optional[CognitoSettings] = None
     logging_config_file: Optional[str] = Field(default=None)
 

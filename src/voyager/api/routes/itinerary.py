@@ -167,8 +167,14 @@ async def generate_itinerary_stream_with_image(
                     image_base64=image_base64,
                     image_media_type=image_media_type
                 ):
-                    itinerary_content += chunk
-                    yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
+                    if chunk == "__SUMMARIZATION_OCCURRED__":
+                        if user_id == 'anonymous':
+                            yield f"data: {json.dumps({'chunk': '', 'done': False, 'page_refresh_required': True})}\n\n"
+                        else:
+                            yield f"data: {json.dumps({'chunk': '', 'done': False, 'summarization_occurred': True})}\n\n"
+                    else:
+                        itinerary_content += chunk
+                        yield f"data: {json.dumps({'chunk': chunk, 'done': False, 'summarization_occurred': False, 'page_refresh_required': False})}\n\n"
                 
                 logger.info(f'Streaming complete. Total length: {len(itinerary_content)} chars')
                 
@@ -188,39 +194,72 @@ async def generate_itinerary_stream_with_image(
                 try:
                     # For authenticated users, save to DynamoDB
                     if user_id != 'anonymous':
-                        # Create assistant message entry
-                        itinerary_message = {
-                            'message_id': message_id,
-                            'sender': 'assistant',
-                            'timestamp': now,
-                            'content': itinerary_content,
-                            'query': query,
-                            'metadata': {'message_type': 'itinerary', 'generated': True},
-                        }
+                        # Get the ACTUAL agent state (includes summarization if it happened)
+                        agent_messages = get_session_state(session_id)
                         
-                        # Update or create session in DynamoDB
+                        # Convert LangChain messages to DynamoDB format
+                        formatted_messages = []
+                        for msg in agent_messages:
+                            if isinstance(msg, HumanMessage):
+                                # Extract text content (handles both str and list formats)
+                                content = msg.content
+                                if isinstance(content, list):
+                                    text_parts = [
+                                        item.get("text", "")
+                                        for item in content
+                                        if isinstance(item, dict) and item.get("type") == "text"
+                                    ]
+                                    content = " ".join(text_parts) if text_parts else str(content)
+                                
+                                # Clean metadata - remove float types (DynamoDB doesn't support them)
+                                metadata = msg.metadata if hasattr(msg, 'metadata') else {}
+                                safe_metadata = {k: str(v) if isinstance(v, float) else v for k, v in metadata.items()}
+                                
+                                formatted_messages.append({
+                                    'sender': 'user',
+                                    'content': content,
+                                    'timestamp': now,  # Always use current ISO timestamp
+                                    'metadata': safe_metadata,
+                                })
+                            elif isinstance(msg, AIMessage):
+                                # Extract text content (handles both str and list formats)
+                                content = msg.content
+                                if isinstance(content, list):
+                                    text_parts = [
+                                        item.get("text", "")
+                                        for item in content
+                                        if isinstance(item, dict) and item.get("type") == "text"
+                                    ]
+                                    content = " ".join(text_parts) if text_parts else str(content)
+                                
+                                # Clean metadata - remove float types (DynamoDB doesn't support them)
+                                metadata = msg.metadata if hasattr(msg, 'metadata') else {}
+                                safe_metadata = {k: str(v) if isinstance(v, float) else v for k, v in metadata.items()}
+                                
+                                formatted_messages.append({
+                                    'sender': 'assistant',
+                                    'content': content,
+                                    'timestamp': now,  # Always use current ISO timestamp
+                                    'metadata': safe_metadata,
+                                })
+                        
+                        # Get existing session metadata (for summary and started_at)
                         existing_session = dynamodb_client.get_item(user_id, session_id)
                         if existing_session:
-                            messages = existing_session.get('messages', [])
-                            messages.append(user_message_entry)
-                            messages.append(itinerary_message)
                             session_summary = existing_session.get('session_summary', '')
-                            session_metadata = SessionMetadata(
-                                user_id=user_id,
-                                session_id=session_id,
-                                session_summary=session_summary,
-                                started_at=existing_session.get('started_at', now),
-                                messages=messages,
-                            )
+                            started_at = existing_session.get('started_at', now)
                         else:
                             session_summary = 'New Session'
-                            session_metadata = SessionMetadata(
-                                user_id=user_id,
-                                session_id=session_id,
-                                session_summary=session_summary,
-                                started_at=now,
-                                messages=[user_message_entry, itinerary_message],
-                            )
+                            started_at = now
+                        
+                        # Save with the ACTUAL agent state (summarized if applicable)
+                        session_metadata = SessionMetadata(
+                            user_id=user_id,
+                            session_id=session_id,
+                            session_summary=session_summary,
+                            started_at=started_at,
+                            messages=formatted_messages,  # This includes summary if it happened!
+                        )
                         
                         # Store in DynamoDB
                         status_code = dynamodb_client.put_item(session_metadata)
@@ -293,15 +332,6 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
         session_id = f'voyager_session_{uuid.uuid4().hex}'
         now = datetime.now(UTC).isoformat()
 
-        # Create welcome message
-        welcome_message = {
-            'message_id': str(uuid.uuid4()),
-            'sender': 'assistant',
-            'timestamp': now,
-            'content': "Welcome to Voyager-T800! I'm your intelligent AI travel assistant. Tell me about your dream trip - where would you like to go, when, and what kind of experience are you looking for?",
-            'metadata': {'message_type': 'welcome', 'generated': True},
-        }
-
         # For authenticated users, store in DynamoDB
         if user_id != 'anonymous':
             dynamodb_client = http_request.app.state.dynamodb_client
@@ -311,7 +341,7 @@ async def create_session(request: SessionCreateRequest, http_request: Request):
                 session_id=session_id,
                 session_summary='Session',
                 started_at=now,
-                messages=[welcome_message],
+                messages=[],
             )
 
             status_code = dynamodb_client.put_item(session_metadata)

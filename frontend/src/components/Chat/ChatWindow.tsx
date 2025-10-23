@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { X, Send, Image as ImageIcon, Loader2, StopCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSessions } from "../../contexts/SessionsContext";
+import { useToast } from "../../ui/toast-provider";
 import { apiClient } from "../../api/apiClient";
 import { compressImage, MAX_IMAGE_SIZE } from "../../utils/image";
 import type { Message } from "../../types";
@@ -20,6 +21,8 @@ const ChatWindow: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
+  const [summarizationTriggered, setSummarizationTriggered] = useState(false);
+  const [tokenLimitReached, setTokenLimitReached] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   // reader for fetch-based streaming
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(
@@ -28,20 +31,60 @@ const ChatWindow: React.FC = () => {
   // keep the active session id for stop requests
   const activeSessionIdRef = useRef<string | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isStreamingRef = useRef<boolean>(false);
 
   const { user, isGuest } = useAuth();
-  const { currentSession, guestMessages, addMessageToGuest, updateLastGuestMessage, createSession, openSession } =
+  const { currentSession, guestMessages, guestSessionId, addMessageToGuest, updateLastGuestMessage, createSession, openSession } =
     useSessions();
+  const { showToast } = useToast();
+
+  const startNewConversation = () => {
+    setMessages([]);
+    setTokenLimitReached(false);
+    setSummarizationTriggered(false);
+    setError("");
+    setInput("");
+    setImage(null);
+    setImagePreview(null);
+    
+    // Create a new session
+    if (isGuest) {
+      // For guests, we don't need to create a new session on the backend
+      // The session will be created automatically on the next request
+      showToast(
+        "New conversation started",
+        "You can now continue chatting in a fresh session."
+      );
+    }
+  };
 
   useEffect(() => {
     if (isGuest) {
       setMessages(guestMessages);
     } else if (currentSession?.messages) {
-      setMessages(currentSession.messages);
+      // Only prevent updating if we're currently streaming (to avoid overwriting user input)
+      // Otherwise, always update when switching sessions
+      setMessages(prev => isStreamingRef.current ? prev : currentSession.messages);
     } else {
       setMessages([]);
     }
   }, [currentSession, guestMessages, isGuest]);
+
+  // Sync ref with streaming state
+  useEffect(() => {
+    isStreamingRef.current = isStreaming;
+  }, [isStreaming]);
+
+  // Show toast notification when summarization is triggered
+  useEffect(() => {
+    if (summarizationTriggered && !isGuest) {
+      showToast(
+        'Conversation Summarized',
+        'Your chat history has been summarized to save memory. Recent messages are preserved.'
+      );
+      setSummarizationTriggered(false);
+    }
+  }, [summarizationTriggered, isGuest, showToast]);
 
   // Debug: log messages whenever they change
   useEffect(() => {
@@ -144,20 +187,19 @@ const ChatWindow: React.FC = () => {
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
     }
 
-    let sessionId = currentSession?.session_id;
+    // For guests, use guestSessionId from context; for authenticated users, use currentSession
+    let sessionId = isGuest ? guestSessionId : currentSession?.session_id;
 
     try {
-      if (!isGuest && !sessionId) {
+      // Create session if we don't have one (for both guests and authenticated users)
+      if (!sessionId) {
         sessionId = await createSession();
-      }
-        // Create session if we don't have one (for both guests and authenticated users)
-        if (!sessionId) {
-          sessionId = await createSession();
-          // For authenticated users, load the session to set currentSession state
-          if (!isGuest && user?.sub) {
-            await openSession(sessionId);
-          }
+        
+        // For authenticated users, load the session to set currentSession
+        if (!isGuest && user?.sub) {
+          await openSession(sessionId);
         }
+      }
 
       activeSessionIdRef.current = sessionId;
 
@@ -207,6 +249,17 @@ const ChatWindow: React.FC = () => {
                     });
                   }
                 }
+                
+                if (data.summarization_occurred === true) {
+                  setSummarizationTriggered(true);
+                }
+                else if (data.page_refresh_required === true) {
+                  setTokenLimitReached(true);
+                  showToast(
+                    "Token limit reached",
+                    "Your conversation has reached the token limit. Please start a new conversation to continue."
+                  );
+                }
               } catch (err) {
                 console.error("Error parsing stream data:", err);
               }
@@ -238,6 +291,7 @@ const ChatWindow: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-pastel">
+        
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground mt-20">
             <h2 className="text-2xl font-bold mb-2 text-foreground">
@@ -391,6 +445,28 @@ const ChatWindow: React.FC = () => {
         </div>
       )}
 
+      {tokenLimitReached && (
+        <div className="mx-4 mb-2 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-destructive rounded-full"></div>
+              <div>
+                <h3 className="font-semibold text-destructive">Token Limit Reached</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your conversation has reached the tokens limit. Start a new conversation or log in to continue chatting.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={startNewConversation}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+            >
+              Start New Conversation
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-border p-4 bg-card">
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           {imagePreview && (
@@ -414,14 +490,14 @@ const ChatWindow: React.FC = () => {
           )}
 
           <div className="flex gap-2">
-            <label className="cursor-pointer hover:bg-muted p-2 rounded-lg flex items-center justify-center border border-border transition-colors">
+            <label className={`cursor-pointer hover:bg-muted p-2 rounded-lg flex items-center justify-center border border-border transition-colors ${tokenLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <ImageIcon size={24} className="text-muted-foreground" />
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
                 className="hidden"
-                disabled={isStreaming}
+                disabled={isStreaming || tokenLimitReached}
               />
             </label>
 
@@ -429,9 +505,9 @@ const ChatWindow: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe your dream trip..."
+              placeholder={tokenLimitReached ? "Token limit reached - start a new conversation" : "Describe your dream trip..."}
               className="flex-1 px-4 py-2 bg-input border border-border text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-              disabled={isStreaming}
+              disabled={isStreaming || tokenLimitReached}
             />
 
             {isStreaming ? (
@@ -447,7 +523,7 @@ const ChatWindow: React.FC = () => {
               <button
                 type="submit"
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                disabled={!input.trim() && !image}
+                disabled={(!input.trim() && !image) || tokenLimitReached}
               >
                 <Send size={20} />
                 Send

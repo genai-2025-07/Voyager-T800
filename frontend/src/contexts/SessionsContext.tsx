@@ -72,6 +72,8 @@ export const SessionsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const data = await apiClient.getSession(sessionId, user.sub);
       setCurrentSession(data);
+      // Save current session ID to localStorage for persistence across page refreshes
+      localStorage.setItem('currentSessionId', sessionId);
     } catch (error) {
       console.error('Failed to open session:', error);
     }
@@ -119,6 +121,8 @@ const updateLastGuestMessage = (contentOrUpdater: string | ((prevContent: string
     setCurrentSession(null);
     setGuestMessages([]);
     setGuestSessionId(null);
+    // Clear current session ID from localStorage
+    localStorage.removeItem('currentSessionId');
   };
 
   useEffect(() => {
@@ -126,6 +130,23 @@ const updateLastGuestMessage = (contentOrUpdater: string | ((prevContent: string
       loadSessions();
     }
   }, [user, isGuest, loadSessions]);
+
+  // Restore current session after page refresh
+  useEffect(() => {
+    if (user && !isGuest && sessions.length > 0 && !currentSession) {
+      const savedSessionId = localStorage.getItem('currentSessionId');
+      if (savedSessionId) {
+        // Check if the saved session still exists
+        const sessionExists = sessions.some(s => s.session_id === savedSessionId);
+        if (sessionExists) {
+          openSession(savedSessionId);
+        } else {
+          // Session no longer exists, clear the saved ID
+          localStorage.removeItem('currentSessionId');
+        }
+      }
+    }
+  }, [user, isGuest, sessions, currentSession, openSession]);
 
   return React.createElement(
     SessionsContext.Provider,

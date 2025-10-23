@@ -15,8 +15,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.voyager.agents.graph import create_agent
+from src.voyager.agents.memory.messages_filter import make_filtering_checkpointer
 from src.voyager.config.config import settings
 from src.voyager.agents.cancellation_manager  import get_cancellation_manager
+from src.voyager.utils.token_logging import log_token_usage
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +33,7 @@ agent_lock = Lock()
 # This directly stores LangGraph-compatible messages
 session_states = {}
 global checkpointer
-checkpointer = MemorySaver()
+checkpointer = make_filtering_checkpointer(MemorySaver())
 
 def initialize_agent():
     """
@@ -204,9 +206,12 @@ def stream_response(
     
     input_messages = history_messages + [user_message]
     
+    # Log token usage before streaming
+    log_token_usage(input_messages, session_id, "before_stream")
+    
     try:
         for message_chunk, metadata in agent.stream(
-            {"messages": [user_message]},
+            {"messages": input_messages},
             config=config,
             stream_mode="messages"
         ):
@@ -219,6 +224,12 @@ def stream_response(
                 )
             
             node_name = metadata.get("langgraph_node", "")
+            
+            # Check if summarization node was executed
+            if node_name == "summarize":
+                # Yield a special marker to indicate summarization occurred
+                yield "__SUMMARIZATION_OCCURRED__"
+            
             if node_name == "llm_call" and message_chunk.content:
                 chunk_text = message_chunk.content
                 if isinstance(chunk_text, str):
@@ -236,6 +247,8 @@ def stream_response(
         logger.info(f"Streaming completed ({len(full_response_text)} chars).")
         final_state = agent.get_state(config)
         if final_state and "messages" in final_state.values:
+            # Log token usage after streaming
+            log_token_usage(final_state.values["messages"], session_id, "after_stream")
             save_session_state(session_id, final_state.values["messages"])
             
     except GenerationCancelledException:

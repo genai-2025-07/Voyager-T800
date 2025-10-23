@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { SessionsProvider } from './contexts/SessionsContext';
+import { ToastProvider } from './ui/toast-provider';
 import Header from './components/Header/Header';
 import SidebarSessions from './components/Sessions/SidebarSessions';
 import ChatWindow from './components/Chat/ChatWindow';
@@ -34,27 +35,29 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <SessionsProvider>
-        <div className="h-screen flex flex-col bg-background">
-          <Header
-            onToggleSidebar={() => setSidebarOpen((v) => !v)}
-            onOpenAuth={() => setAuthModalOpen(true)}
-          />
-
-          <div className="flex flex-1 overflow-hidden" role="main">
-            <SidebarSessions
-              isOpen={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
+        <ToastProvider>
+          <div className="h-screen flex flex-col bg-background">
+            <Header
+              onToggleSidebar={() => setSidebarOpen((v) => !v)}
+              onOpenAuth={() => setAuthModalOpen(true)}
             />
 
-            <main className="flex-1 overflow-hidden">
-              <ChatWindow />
-            </main>
-          </div>
+            <div className="flex flex-1 overflow-hidden" role="main">
+              <SidebarSessions
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+              />
 
-          {authModalOpen && (
-            <AuthModal onClose={() => setAuthModalOpen(false)} />
-          )}
-        </div>
+              <main className="flex-1 overflow-hidden">
+                <ChatWindow />
+              </main>
+            </div>
+
+            {authModalOpen && (
+              <AuthModal onClose={() => setAuthModalOpen(false)} />
+            )}
+          </div>
+        </ToastProvider>
       </SessionsProvider>
     </AuthProvider>
   );

@@ -156,7 +156,7 @@ def get_events(city: str, start_date: str, end_date: Optional[str] = None, categ
 
 
         
-        events_service = EventsService(TavilyEventsProvider(project_root=Path(__file__).parent.parent.parent))
+        events_service = EventsService(TavilyEventsProvider(project_root=Path(__file__).parent.parent.parent.parent))
 
         if categories:
             categories = sorted(categories)
