@@ -382,7 +382,7 @@ resource "aws_ecs_task_definition" "frontend" {
       image        = "${aws_ecr_repository.frontend.repository_url}:latest"
       essential    = true
       portMappings = [{ containerPort = 80, protocol = "tcp" }]
-      environment  = [{ name = "API_BASE_URL", value = aws_lb.this.dns_name }]
+      environment  = [{ name = "API_BASE_URL", value = "http://${aws_lb.this.dns_name}" }]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
