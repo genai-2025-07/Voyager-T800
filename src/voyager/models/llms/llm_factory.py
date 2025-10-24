@@ -90,12 +90,12 @@ def _create_openai_llm() -> ChatOpenAI:
         raise ValueError(error_msg)
 
     model_name = _get_config("OPENAI_MODEL_NAME", "gpt-4o-mini")
-    temperature_raw = _get_config("OPENAI_TEMPERATURE", "0.7")
+    temperature_raw = _get_config("OPENAI_TEMPERATURE", "0.3")
     try:
         temperature = float(temperature_raw)
     except Exception:
-        logger.warning("OPENAI_TEMPERATURE invalid, defaulting to 0.7")
-        temperature = 0.7
+        logger.warning("OPENAI_TEMPERATURE invalid, defaulting to 0.3")
+        temperature = 0.3
 
     logger.info(f"Creating OpenAI LLM with model: {model_name}, temperature: {temperature}")
 
@@ -124,12 +124,12 @@ def _create_claude_llm() -> ChatBedrock:
     model_id = _get_config("CLAUDE_MODEL_ID", _get_config("BEDROCK_MODEL_ID",
                                                           "us.anthropic.claude-sonnet-4-5-20250929-v1:0"))
 
-    temperature_raw = _get_config("CLAUDE_TEMPERATURE", _get_config("BEDROCK_TEMPERATURE", "0.7"))
+    temperature_raw = _get_config("CLAUDE_TEMPERATURE", _get_config("BEDROCK_TEMPERATURE", "0.3"))
     try:
         temperature = float(temperature_raw)
     except Exception:
-        logger.warning("CLAUDE/BEDROCK temperature invalid, defaulting to 0.7")
-        temperature = 0.7
+        logger.warning("CLAUDE/BEDROCK temperature invalid, defaulting to 0.3")
+        temperature = 0.3
 
     max_tokens_raw = _get_config("CLAUDE_MAX_TOKENS", _get_config("BEDROCK_MAX_TOKENS", "8192"))
     try:
