@@ -111,15 +111,16 @@ async def generate_itinerary_stream_with_image(
             resized_bytes, media_type = resize_image_for_agent(image_bytes, image.content_type)
             image_base64 = base64.b64encode(resized_bytes).decode('utf-8')
             image_media_type = media_type
+            if user_id != 'anonymous':
+                thumbnail_metadata = image_storage_manager.upload_thumbnail(
+                    image_bytes=image_bytes,
+                    user_id=user_id,
+                    session_id=session_id,
+                    mime_type=image.content_type or 'image/jpeg',
+                    original_filename=image.filename or 'unknown'  # Pass the actual filename
+                )
+                logger.info(f'Thumbnail uploaded to S3: {thumbnail_metadata["s3_key"]}')
             
-            thumbnail_metadata = image_storage_manager.upload_thumbnail(
-                image_bytes=image_bytes,
-                user_id=user_id,
-                session_id=session_id,
-                mime_type=image.content_type or 'image/jpeg'
-            )
-            logger.info(f'Thumbnail uploaded to S3: {thumbnail_metadata["s3_key"]}')
-        
         # Restore session history from DynamoDB if needed (authenticated users only)
         agent_state = get_session_state(session_id)
         if not agent_state and user_id != 'anonymous':

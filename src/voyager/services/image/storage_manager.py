@@ -102,7 +102,8 @@ class ImageStorageManager:
         image_bytes: bytes,
         user_id: str,
         session_id: str,
-        mime_type: str = "image/jpeg"
+        mime_type: str = "image/jpeg",
+        original_filename: str = "unknown"  # Add this parameter
     ) -> Dict[str, any]:
         """
         Upload thumbnail to S3 and return metadata
@@ -112,18 +113,13 @@ class ImageStorageManager:
             user_id: User identifier
             session_id: Session/conversation identifier
             mime_type: MIME type
+            original_filename: Original filename (will be sanitized)
             
         Returns:
-            Dictionary with:
-            - s3_key: S3 object key
-            - s3_bucket: Bucket name
-            - content_hash: SHA256 hash
-            - size_bytes: File size
-            - upload_timestamp: ISO format timestamp
-            - mime_type: Content type
+            Dictionary with metadata
         """
         # Resize image to thumbnail
-        logger.info("upploading thumbnail")
+        logger.info("uploading thumbnail")
         thumbnail_bytes = self._resize_image(image_bytes, self.max_thumbnail_size)
         
         # Generate unique key
@@ -133,6 +129,19 @@ class ImageStorageManager:
         # Calculate hash for integrity
         content_hash = self._calculate_content_hash(thumbnail_bytes)
         
+        # Sanitize filename to ASCII-only for S3 metadata
+        # Option 1: Use base64 encoding for non-ASCII filenames
+        try:
+            # Try to encode as ASCII first
+            sanitized_filename = original_filename.encode('ascii').decode('ascii')
+        except UnicodeEncodeError:
+            # If it fails, base64 encode the UTF-8 bytes
+            import base64
+            encoded_bytes = original_filename.encode('utf-8')
+            sanitized_filename = f"b64:{base64.b64encode(encoded_bytes).decode('ascii')}"
+            logger.info(f"Non-ASCII filename detected, encoded as base64: {original_filename}")
+        
+        
         # Upload to S3
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
@@ -140,7 +149,7 @@ class ImageStorageManager:
             Body=thumbnail_bytes,
             ContentType=mime_type,
             Metadata={
-                'original-filename': 'unknown',
+                'original-filename': sanitized_filename,  # Now ASCII-safe
                 'user-id': user_id,
                 'session-id': session_id,
                 'content-hash': content_hash
@@ -150,7 +159,8 @@ class ImageStorageManager:
             # Prevent public access
             ACL='private'
         )
-        logger.info("finished upploading thumbnail")
+        logger.info("finished uploading thumbnail")
+        
         # Return metadata for DynamoDB
         return {
             's3_key': s3_key,
@@ -159,9 +169,10 @@ class ImageStorageManager:
             'content_hash': content_hash,
             'size_bytes': len(thumbnail_bytes),
             'upload_timestamp': datetime.utcnow().isoformat(),
-            'mime_type': mime_type
+            'mime_type': mime_type,
+            'original_filename': original_filename  # Store the real filename in DynamoDB
         }
-    
+
     def generate_presigned_url(
         self,
         s3_key: str,
