@@ -116,7 +116,6 @@ async def generate_itinerary_stream_with_image(
                 image_bytes=image_bytes,
                 user_id=user_id,
                 session_id=session_id,
-                original_filename=image.filename,
                 mime_type=image.content_type or 'image/jpeg'
             )
             logger.info(f'Thumbnail uploaded to S3: {thumbnail_metadata["s3_key"]}')

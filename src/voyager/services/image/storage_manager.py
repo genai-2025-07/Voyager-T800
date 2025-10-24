@@ -102,7 +102,6 @@ class ImageStorageManager:
         image_bytes: bytes,
         user_id: str,
         session_id: str,
-        original_filename: Optional[str] = None,
         mime_type: str = "image/jpeg"
     ) -> Dict[str, any]:
         """
@@ -112,7 +111,6 @@ class ImageStorageManager:
             image_bytes: Original image bytes
             user_id: User identifier
             session_id: Session/conversation identifier
-            original_filename: Original filename (optional)
             mime_type: MIME type
             
         Returns:
@@ -122,7 +120,6 @@ class ImageStorageManager:
             - content_hash: SHA256 hash
             - size_bytes: File size
             - upload_timestamp: ISO format timestamp
-            - original_filename: Original filename if provided
             - mime_type: Content type
         """
         # Resize image to thumbnail
@@ -143,7 +140,7 @@ class ImageStorageManager:
             Body=thumbnail_bytes,
             ContentType=mime_type,
             Metadata={
-                'original-filename': original_filename or 'unknown',
+                'original-filename': 'unknown',
                 'user-id': user_id,
                 'session-id': session_id,
                 'content-hash': content_hash
@@ -162,7 +159,6 @@ class ImageStorageManager:
             'content_hash': content_hash,
             'size_bytes': len(thumbnail_bytes),
             'upload_timestamp': datetime.utcnow().isoformat(),
-            'original_filename': original_filename,
             'mime_type': mime_type
         }
     
