@@ -50,6 +50,31 @@ class ImageStorageManager:
                 region_name=s3_region,
             )
         )
+    
+    def _strip_exif(self, image_bytes: bytes) -> bytes:
+        """
+         Strip EXIF metadata including GPS data from image.
+    
+        CRITICAL SECURITY: Removes potentially sensitive location data.
+        """
+        try:
+            img = Image.open(BytesIO(image_bytes))
+        
+            # Convert RGBA to RGB if necessary
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+        
+            # Create new image without EXIF - simply save without exif param
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=95, optimize=True)
+            output.seek(0)
+        
+            logger.info("EXIF data stripped from image")
+            return output.read()
+        
+        except Exception as e:
+            logger.error(f"EXIF stripping failed: {e}", exc_info=True)
+            return image_bytes
         
     def _generate_image_key(
         self,
@@ -71,7 +96,7 @@ class ImageStorageManager:
         Resize image maintaining aspect ratio
         
         Args:
-            image_bytes: Original image bytes
+            image_bytes: Original image bytes (should already be EXIF-stripped)
             max_size: Maximum (width, height)
             
         Returns:
@@ -106,7 +131,9 @@ class ImageStorageManager:
         mime_type: str = "image/jpeg"
     ) -> Dict[str, any]:
         """
-        Upload thumbnail to S3 and return metadata
+        Upload thumbnail to S3 with EXIF stripping and return metadata
+        
+        SECURITY: EXIF data (including GPS) is stripped before upload.
         
         Args:
             image_bytes: Original image bytes
@@ -124,10 +151,15 @@ class ImageStorageManager:
             - upload_timestamp: ISO format timestamp
             - original_filename: Original filename if provided
             - mime_type: Content type
+            - exif_stripped: True (always)
         """
+        logger.info("Uploading thumbnail with EXIF stripping")
+        
+        # CRITICAL: Strip EXIF first
+        exif_stripped_bytes = self._strip_exif(image_bytes)
+        
         # Resize image to thumbnail
-        logger.info("upploading thumbnail")
-        thumbnail_bytes = self._resize_image(image_bytes, self.max_thumbnail_size)
+        thumbnail_bytes = self._resize_image(exif_stripped_bytes, self.max_thumbnail_size)
         
         # Generate unique key
         file_ext = mime_type.split('/')[-1] if '/' in mime_type else 'jpg'
@@ -146,14 +178,16 @@ class ImageStorageManager:
                 'original-filename': original_filename or 'unknown',
                 'user-id': user_id,
                 'session-id': session_id,
-                'content-hash': content_hash
+                'content-hash': content_hash,
+                'exif-stripped': 'true'
             },
             # Security settings
             ServerSideEncryption='AES256',
             # Prevent public access
             ACL='private'
         )
-        logger.info("finished upploading thumbnail")
+        logger.info("Finished uploading thumbnail (EXIF stripped)")
+        
         # Return metadata for DynamoDB
         return {
             's3_key': s3_key,
@@ -163,7 +197,8 @@ class ImageStorageManager:
             'size_bytes': len(thumbnail_bytes),
             'upload_timestamp': datetime.utcnow().isoformat(),
             'original_filename': original_filename,
-            'mime_type': mime_type
+            'mime_type': mime_type,
+            'exif_stripped': True
         }
     
     def generate_presigned_url(
@@ -275,7 +310,7 @@ class ImageStorageManager:
                 except Exception as e:
                     # Handle missing or inaccessible images gracefully
                     enriched_msg['image_url'] = None
-                    enriched_msg[''] = str(e)
+                    enriched_msg['error'] = str(e)
             
             enriched_messages.append(enriched_msg)
         

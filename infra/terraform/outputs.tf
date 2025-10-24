@@ -26,3 +26,12 @@ output "secrets_manager_secret_arn" {
   value       = aws_secretsmanager_secret.api_secrets.arn
   description = "ARN of the Secrets Manager secret"
 }
+output "kms_key_id" {
+  value       = aws_kms_key.secrets.id
+  description = "KMS key ID"
+}
+
+output "sns_topic_arn" {
+  value       = aws_sns_topic.alerts.arn
+  description = "SNS alerts topic"
+}

@@ -109,3 +109,13 @@ variable "cognito_client_secret" {
   description = "Cognito Client Secret"
   sensitive   = true
 }
+variable "alert_email" {
+  type        = string
+  description = "Email for budget/alarm alerts"
+}
+
+variable "monthly_budget_usd" {
+  type        = number
+  description = "Monthly budget in USD"
+  default     = 100
+}

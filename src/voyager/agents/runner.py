@@ -17,6 +17,14 @@ from langgraph.checkpoint.memory import MemorySaver
 from src.voyager.agents.graph import create_agent
 from src.voyager.config.config import settings
 from src.voyager.agents.cancellation_manager  import get_cancellation_manager
+
+from src.voyager.agents.budget_tracker import (
+    BudgetExceededError, 
+    get_budget_tracker, 
+    clear_budget_tracker
+)
+from src.voyager.config.guardrails import guardrails_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -155,11 +163,20 @@ def stream_response(
         
     Raises:
         GenerationCancelledException: If generation is cancelled mid-stream
+        BudgetExceededError: If budget limits exceeded
     """
     agent = initialize_agent()
     history_messages = get_session_state(session_id)
     full_response_text = "" 
     config = {"configurable": {"thread_id": session_id}}
+    
+    # Initialize budget tracker for this request
+    tracker = get_budget_tracker(
+        session_id=session_id,
+        max_tool_calls=guardrails_settings.MAX_TOOL_CALLS,
+        max_paid_calls=guardrails_settings.MAX_PAID_CALLS,
+        per_call_timeout=guardrails_settings.PER_CALL_TIMEOUT
+    )
     
     # Get cancellation manager
     cancellation_mgr = get_cancellation_manager()
@@ -218,6 +235,11 @@ def stream_response(
         final_state = agent.get_state(config)
         if final_state and "messages" in final_state.values:
             save_session_state(session_id, final_state.values["messages"])
+    
+    except BudgetExceededError as e:
+        logger.error(f"Budget exceeded for session {session_id}: {e}")
+        yield f"\n\n⚠️ Budget limit exceeded: {e.budget_type}. Please start a new session."
+        raise
             
     except GenerationCancelledException:
         # Re-raise cancellation exceptions
@@ -228,6 +250,7 @@ def stream_response(
     finally:
         # Always clear cancellation flag when done
         cancellation_mgr.clear(session_id)
+        clear_budget_tracker(session_id)
 
 
 class GenerationCancelledException(Exception):
@@ -251,9 +274,20 @@ def full_response(
         
     Returns:
         Complete response string
+        
+    Raises:
+        BudgetExceededError: If budget limits exceeded
     """
     agent = initialize_agent()
     history_messages = get_session_state(session_id)
+    
+    # Initialize budget tracker
+    tracker = get_budget_tracker(
+        session_id=session_id,
+        max_tool_calls=guardrails_settings.MAX_TOOL_CALLS,
+        max_paid_calls=guardrails_settings.MAX_PAID_CALLS,
+        per_call_timeout=guardrails_settings.PER_CALL_TIMEOUT
+    )
     
     try:
         if image_base64:
@@ -282,10 +316,17 @@ def full_response(
         
         print(response, end='', flush=True)
         return response
+    
+    except BudgetExceededError as e:
+        logger.error(f"Budget exceeded for session {session_id}: {e}")
+        return f"Error: Budget limit exceeded ({e.budget_type}). Please start a new session."
         
     except Exception as e:
         logger.error(f'Agent invocation failed: {e}', exc_info=True)
         raise
+    
+    finally:
+        clear_budget_tracker(session_id)
 
 
 def main():
