@@ -1,6 +1,6 @@
 # Create AWS Secrets Manager secret for API keys and credentials
 resource "aws_secretsmanager_secret" "api_secrets" {
-  name        = "${var.project_name}-api-secrets"
+  name        = "${var.project_name}-api-secrets-v2"
   description = "API keys and credentials for ${var.project_name}"
 }
 

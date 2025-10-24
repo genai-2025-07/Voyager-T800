@@ -74,7 +74,7 @@ jobs:
       - name: Update secrets in AWS Secrets Manager
         run: |
           SECRET_ARN=$(aws secretsmanager list-secrets \
-            --query "SecretList[?Name=='${{ env.PROJECT_NAME }}-api-secrets'].ARN | [0]" \
+            --query "SecretList[?Name=='${{ env.PROJECT_NAME }}-api-secrets-v2'].ARN | [0]" \
             --output text)
           
           if [ "$SECRET_ARN" != "None" ] && [ -n "$SECRET_ARN" ]; then
